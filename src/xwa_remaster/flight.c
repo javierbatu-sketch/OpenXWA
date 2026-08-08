@@ -439,6 +439,9 @@ static int fl_cfg_validate(const AeronConfigFile* config, const char** error_pat
 		"hyperspace_tunnel.twist",
 		"hyperspace_tunnel.cap_radius",
 		"hyperspace_tunnel.cap_falloff",
+		"hyperspace_tunnel.mesh_ambient_strength",
+		"hyperspace_tunnel.mesh_environment_roughness",
+		"hyperspace_tunnel.mesh_key_strength",
 		"hyperspace_tunnel.dark_color_r",
 		"hyperspace_tunnel.dark_color_g",
 		"hyperspace_tunnel.dark_color_b",
@@ -567,7 +570,12 @@ static int fl_hyperspace_config_valid(const XwaFlightHyperspaceTunnelParams* p) 
 		  p->highlight_strength <= 16.0f && isfinite(p->focal_length) && p->focal_length >= 0.25f &&
 		  p->focal_length <= 4.0f && isfinite(p->twist) && p->twist >= -2.0f && p->twist <= 2.0f &&
 		  isfinite(p->cap_radius) && p->cap_radius >= 0.001f && p->cap_radius <= 1.0f &&
-		  isfinite(p->cap_falloff) && p->cap_falloff >= 0.1f && p->cap_falloff <= 64.0f)) {
+		  isfinite(p->cap_falloff) && p->cap_falloff >= 0.1f && p->cap_falloff <= 64.0f &&
+		  isfinite(p->mesh_ambient_strength) && p->mesh_ambient_strength >= 0.0f &&
+		  p->mesh_ambient_strength <= 4.0f && isfinite(p->mesh_environment_roughness) &&
+		  p->mesh_environment_roughness >= 0.0f && p->mesh_environment_roughness <= 1.0f &&
+		  isfinite(p->mesh_key_strength) &&
+		  p->mesh_key_strength >= 0.0f && p->mesh_key_strength <= 4.0f)) {
 		return 0;
 	}
 	for (int channel = 0; channel < 3; channel++) {
@@ -601,6 +609,12 @@ static int fl_load_hyperspace_config(const AeronConfigFile* config, const char* 
 		(float)AeronConfigFile_GetFloat(config, "hyperspace_tunnel.cap_radius", 0.0);
 	s.hyperspace_params.cap_falloff =
 		(float)AeronConfigFile_GetFloat(config, "hyperspace_tunnel.cap_falloff", 0.0);
+	s.hyperspace_params.mesh_ambient_strength =
+		(float)AeronConfigFile_GetFloat(config, "hyperspace_tunnel.mesh_ambient_strength", 0.0);
+	s.hyperspace_params.mesh_environment_roughness =
+		(float)AeronConfigFile_GetFloat(config, "hyperspace_tunnel.mesh_environment_roughness", 0.0);
+	s.hyperspace_params.mesh_key_strength =
+		(float)AeronConfigFile_GetFloat(config, "hyperspace_tunnel.mesh_key_strength", 0.0);
 	static const char* dark_color_paths[3] = { "hyperspace_tunnel.dark_color_r",
 											   "hyperspace_tunnel.dark_color_g",
 											   "hyperspace_tunnel.dark_color_b" };
@@ -1353,6 +1367,12 @@ void XwaRemasterFlight_SetHyperspaceTunnel(const XwaFlightHyperspaceTunnelParams
 		p.cap_radius = s.hyperspace_params_default.cap_radius;
 	if (!isfinite(p.cap_falloff))
 		p.cap_falloff = s.hyperspace_params_default.cap_falloff;
+	if (!isfinite(p.mesh_ambient_strength))
+		p.mesh_ambient_strength = s.hyperspace_params_default.mesh_ambient_strength;
+	if (!isfinite(p.mesh_environment_roughness))
+		p.mesh_environment_roughness = s.hyperspace_params_default.mesh_environment_roughness;
+	if (!isfinite(p.mesh_key_strength))
+		p.mesh_key_strength = s.hyperspace_params_default.mesh_key_strength;
 	p.travel_speed = fminf(fmaxf(p.travel_speed, 0.01f), 64.0f);
 	p.rotation_speed = fminf(fmaxf(p.rotation_speed, -8.0f), 8.0f);
 	p.noise_scale = fminf(fmaxf(p.noise_scale, 0.125f), 8.0f);
@@ -1362,6 +1382,9 @@ void XwaRemasterFlight_SetHyperspaceTunnel(const XwaFlightHyperspaceTunnelParams
 	p.twist = fminf(fmaxf(p.twist, -2.0f), 2.0f);
 	p.cap_radius = fminf(fmaxf(p.cap_radius, 0.001f), 1.0f);
 	p.cap_falloff = fminf(fmaxf(p.cap_falloff, 0.1f), 64.0f);
+	p.mesh_ambient_strength = fminf(fmaxf(p.mesh_ambient_strength, 0.0f), 4.0f);
+	p.mesh_environment_roughness = fminf(fmaxf(p.mesh_environment_roughness, 0.0f), 1.0f);
+	p.mesh_key_strength = fminf(fmaxf(p.mesh_key_strength, 0.0f), 4.0f);
 	for (int channel = 0; channel < 3; channel++) {
 		if (!isfinite(p.dark_color[channel]))
 			p.dark_color[channel] = s.hyperspace_params_default.dark_color[channel];
@@ -2838,8 +2861,9 @@ static void fl_submit_lens_flares(const XwaSnapshot* snap, const XwaRemasterFlig
  *     type switch + intensity tables), with the classic append gates;
  *   - capital engine glows via the cooked glb extras (collected in
  *     the instance walk where mesh + articulation exist);
- *   - the local player's weapon-fire pulses (classic cycle/fade
- *     envelope replayed from game_time_ms at the hardpoint).
+ *   - the local player's semantic pulses, including weapon fire and
+ *     hyperspace effects (classic cycle/fade envelope replayed from
+ *     game_time_ms at the hardpoint).
  * The classic Local Lights config level is NOT honored (period option).
  * Aeron assigns the submitted sources to spatial light clusters. */
 
@@ -2940,12 +2964,13 @@ static void fl_derive_point_lights(const XwaSnapshot* snap) {
 	}
 }
 
-/* Weapon-fire pulse lights: the classic cycle/fade envelope
+/* Local-player pulse lights: the classic cycle/fade envelope
  * (FlightLight_AppendLocalPlayerPulses) replayed from the sim clock;
  * position = the weapon hardpoint in the player craft's model space,
- * carried to world through the player basis. */
+ * carried to world through the player basis. Callers may exclude semantic
+ * slots whose visual role is replaced by a dedicated HD scene. */
 static void fl_derive_pulse_lights(const XwaSnapshot* snap, const float player_bw[9],
-								   const float player_pos[3]) {
+								   const float player_pos[3], uint32_t excluded_slots) {
 	if (!s.plight.enabled || !snap->light_pulse_active || !player_bw) {
 		return;
 	}
@@ -2957,6 +2982,9 @@ static void fl_derive_pulse_lights(const XwaSnapshot* snap, const float player_b
 				   player_bw[2 * 3 + r] * k->hardpoint_local[2];
 	}
 	for (int p = 0; p < XWA_SNAP_MAX_LIGHT_PULSES; p++) {
+		if (excluded_slots & (1u << (uint32_t)p)) {
+			continue;
+		}
 		const XwaLightPulse* pl = &snap->light_pulses[p];
 		if (!pl->enabled) {
 			continue;
@@ -3525,6 +3553,19 @@ static void fl_set_temporal(uint64_t host_time_us, int scene_supported) {
 	s.fsr_reset_reasons = 0;
 }
 
+static void fl_add_ambient_cube(XwaShipAmbientCube* base, const XwaShipAmbientCube* add) {
+	float* const base_lobes[6] = { base->pos_x, base->neg_x, base->pos_y,
+								   base->neg_y, base->pos_z, base->neg_z };
+	const float* const add_lobes[6] = {
+		add->pos_x, add->neg_x, add->pos_y, add->neg_y, add->pos_z, add->neg_z
+	};
+	for (int lobe = 0; lobe < 6; lobe++) {
+		for (int channel = 0; channel < 3; channel++) {
+			base_lobes[lobe][channel] += add_lobes[lobe][channel];
+		}
+	}
+}
+
 static AeronTexture* fl_render_hyperspace(AeronCommandBuffer* cmd, const XwaSnapshot* snap,
 										  XwaRemasterAssets* assets, const XwaRemasterFlightView* flight_view,
 										  uint64_t host_time_us, int direct_present, int preview) {
@@ -3546,6 +3587,8 @@ static AeronTexture* fl_render_hyperspace(AeronCommandBuffer* cmd, const XwaSnap
 									   s.rt_w, s.rt_h, preview, preview_time, &tunnel_view)) {
 		return NULL;
 	}
+	XwaRemasterHyperspaceLighting hyperspace_lighting;
+	const int lighting_ready = XwaRemasterHyperspace_GetPreparedLighting(s.hyperspace, &hyperspace_lighting);
 	/* Cockpit glow texture is the only ordinary-flight atlas dependency
 	 * retained by the special scene. */
 	s.glow_ok = XwaRemasterAssets_FlightAtlasFrame(assets, 1000, 0, &s.glow_ref);
@@ -3586,7 +3629,8 @@ static AeronTexture* fl_render_hyperspace(AeronCommandBuffer* cmd, const XwaSnap
 	AeronScene_SetMotionContext(s.scene, NULL, 1);
 
 	if (player_found && player_f) {
-		fl_derive_pulse_lights(snap, player_bw, player_local);
+		enum { FL_HYPERSPACE_PULSE_MASK = (1u << 3) | (1u << 4) | (1u << 5) };
+		fl_derive_pulse_lights(snap, player_bw, player_local, FL_HYPERSPACE_PULSE_MASK);
 	}
 	XwaShipPointLightTuning point_tuning;
 	fl_submit_point_lights(fl_finalize_point_lights(&point_tuning));
@@ -3605,9 +3649,22 @@ static AeronTexture* fl_render_hyperspace(AeronCommandBuffer* cmd, const XwaSnap
 		.direct = s.ssao.direct,
 	};
 	const int ao_on = s.ssao.quality > 0 && s.ssao.intensity > 0.0f;
-	XwaRemasterShip_SetPbrEnv(s.scene, snap->dir_lights, snap->dir_light_count, NULL, s.camera_local,
-							  ao_on ? &ao : NULL, s.plight.enabled ? &point_tuning : NULL,
-							  /*ambient_cube=*/NULL);
+	XwaShipAmbientCube ambient;
+	XwaRemasterShip_GetAmbientCube(&ambient);
+	if (lighting_ready) {
+		fl_add_ambient_cube(&ambient, &hyperspace_lighting.ambient_add);
+	}
+	const uint8_t phase = preview ? XWA_HYPERSPACE_TUNNEL : snap->hyperspace.phase;
+	const XwaDirLight* directional_lights = snap->dir_lights;
+	uint32_t directional_light_count = snap->dir_light_count;
+	if (phase == XWA_HYPERSPACE_TUNNEL) {
+		directional_lights = lighting_ready ? &hyperspace_lighting.key : NULL;
+		directional_light_count = lighting_ready ? hyperspace_lighting.key_count : 0;
+	}
+	XwaRemasterShip_SetPbrEnv(s.scene, directional_lights, directional_light_count, NULL, s.camera_local,
+							  ao_on ? &ao : NULL, s.plight.enabled ? &point_tuning : NULL, &ambient,
+							  phase == XWA_HYPERSPACE_TUNNEL && lighting_ready
+								  ? &hyperspace_lighting.environment : NULL);
 	fl_submit_hyperspace_cockpit(cmd, assets, snap, &snap->flight_camera, anchor_bw, anchor_found, player_f);
 
 	if (!AeronScene_Render(s.scene, cmd)) {
@@ -3733,7 +3790,7 @@ static AeronTexture* fl_render_map(AeronCommandBuffer* cmd, const XwaSnapshot* s
 	XwaRemasterTrails_SubmitRegion(s.trails, s.scene, snap->flight_camera.region);
 	fl_submit_billboards();
 	XwaRemasterShip_SetPbrEnv(s.scene, snap->dir_lights, snap->dir_light_count, NULL, s.camera_local, NULL,
-							  NULL, NULL);
+							  NULL, NULL, NULL);
 	if (!AeronScene_Render(s.scene, cmd)) {
 		s.snap = NULL;
 		return NULL;
@@ -4274,10 +4331,10 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 		AeronScene_AddMeshInstance(s.scene, &s.bolts[bi]);
 	}
 
-	/* Weapon-fire pulse lights (player basis known after the walk),
+	/* Local-player pulse lights (player basis known after the walk),
 	 * then the finalized punctual set + the lit PBR env. */
 	if (player_found && player_f) {
-		fl_derive_pulse_lights(snap, player_bw, player_local);
+		fl_derive_pulse_lights(snap, player_bw, player_local, 0);
 	}
 	XwaShipPointLightTuning point_tuning;
 	fl_submit_point_lights(fl_finalize_point_lights(&point_tuning));
@@ -4288,7 +4345,7 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 	}
 	XwaRemasterShip_SetPbrEnv(s.scene, scene_lighting.lights, scene_lighting.light_count, NULL,
 							  s.camera_local, ao_on ? &ao : NULL, s.plight.enabled ? &point_tuning : NULL,
-							  scene_lighting.ambient);
+							  scene_lighting.ambient, NULL);
 
 	/* Player cockpit (lit; classic runs the normal light setup). Gates
 	 * mirror the classic draw sites: the hangar draws it whenever the

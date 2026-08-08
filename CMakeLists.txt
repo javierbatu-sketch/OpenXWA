@@ -288,6 +288,7 @@ aeron_compile_hlsl(XWA_SHADER_OUTPUTS ${CMAKE_BINARY_DIR}/shaders
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_streak.frag.hlsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_tunnel.vert.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_tunnel.frag.hlsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_environment.comp.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/d3d_projected_triangle.vert.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/d3d_projected_triangle.frag.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/sky_stars.vert.hlsl

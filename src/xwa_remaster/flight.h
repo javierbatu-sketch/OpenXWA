@@ -188,6 +188,9 @@ typedef struct XwaFlightHyperspaceTunnelParams {
 	float twist;
 	float cap_radius;
 	float cap_falloff;
+	float mesh_ambient_strength;
+	float mesh_environment_roughness;
+	float mesh_key_strength;
 	float dark_color[3];
 	float body_color[3];
 	float highlight_color[3];

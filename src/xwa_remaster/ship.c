@@ -352,8 +352,13 @@ typedef struct PbrLightFS {
 	float extra_col[3][4];
 	/* Point-light evaluation: min distance, spec weight, diffuse wrap, cap. */
 	float point_params[4];
+	/* Detailed diffuse environment intensity and world-to-local basis. */
+	float environment_params[4];
+	float environment_right[4];
+	float environment_up[4];
+	float environment_forward[4];
 } PbrLightFS;
-typedef char PbrLightFSSizeCheck[sizeof(PbrLightFS) == 304 ? 1 : -1];
+typedef char PbrLightFSSizeCheck[sizeof(PbrLightFS) == 368 ? 1 : -1];
 
 void XwaRemasterShip_GetPbrTuning(XwaShipPbrTuning* out) {
 	if (out) {
@@ -374,6 +379,18 @@ void XwaRemasterShip_ConfigurePbrTuning(const XwaShipPbrTuning* in) {
 void XwaRemasterShip_GetPbrTuningDefault(XwaShipPbrTuning* out) {
 	if (out) {
 		*out = g_pbr_tuning_default;
+	}
+}
+
+void XwaRemasterShip_GetAmbientCube(XwaShipAmbientCube* out) {
+	if (!out) {
+		return;
+	}
+	for (int channel = 0; channel < 3; channel++) {
+		const float ambient = g_pbr_tuning.ambient[channel];
+		out->pos_x[channel] = out->neg_x[channel] = ambient;
+		out->pos_y[channel] = out->neg_y[channel] = ambient;
+		out->pos_z[channel] = out->neg_z[channel] = ambient;
 	}
 }
 
@@ -420,7 +437,8 @@ const XwaDirLight* XwaRemasterShip_SelectKeyDirectionalLight(const XwaDirLight* 
 void XwaRemasterShip_SetPbrEnv(AeronScene3D* scene, const XwaDirLight* lights, uint32_t light_count,
 							   const float cam_rows[9], const float cam_pos[3], const XwaShipAoParams* ao,
 							   const XwaShipPointLightTuning* point_tuning,
-							   const XwaShipAmbientCube* ambient_cube) {
+							   const XwaShipAmbientCube* ambient_cube,
+							   const XwaShipEnvironmentMap* environment_map) {
 	if (!scene) {
 		return;
 	}
@@ -469,6 +487,29 @@ void XwaRemasterShip_SetPbrEnv(AeronScene3D* scene, const XwaDirLight* lights, u
 			env.amb_pos_y[c] = env.amb_neg_y[c] = amb;
 			env.amb_pos_z[c] = env.amb_neg_z[c] = amb;
 		}
+	}
+	if (environment_map && environment_map->texture && environment_map->sampler &&
+		isfinite(environment_map->strength) && environment_map->strength > 0.0f) {
+		const float* const source_basis[3] = {
+			environment_map->right, environment_map->up, environment_map->forward
+		};
+		float* const destination_basis[3] = {
+			env.environment_right, env.environment_up, env.environment_forward
+		};
+		for (int basis = 0; basis < 3; basis++) {
+			if (cam_rows) {
+				for (int row = 0; row < 3; row++) {
+					destination_basis[basis][row] =
+						cam_rows[row * 3 + 0] * source_basis[basis][0] +
+						cam_rows[row * 3 + 1] * source_basis[basis][1] +
+						cam_rows[row * 3 + 2] * source_basis[basis][2];
+				}
+			} else {
+				memcpy(destination_basis[basis], source_basis[basis], 3 * sizeof(float));
+			}
+		}
+		env.environment_params[0] = environment_map->strength;
+		AeronScene_SetPbrEnvironmentMap(scene, environment_map->texture, environment_map->sampler);
 	}
 
 	/* A backdrop sun is the key even when a planet has slightly greater

@@ -529,7 +529,7 @@ static void xwa_tool_motion_blur(int* open, void* user) {
 
 static void xwa_tool_hyperspace_tunnel(int* open, void* user) {
 	(void)user;
-	ImGui::SetNextWindowSize(ImVec2(460, 520), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(460, 620), ImGuiCond_FirstUseEver);
 	bool b = *open != 0;
 	if (!ImGui::Begin("Hyperspace Tunnel", &b)) {
 		ImGui::End();
@@ -577,13 +577,23 @@ static void xwa_tool_hyperspace_tunnel(int* open, void* user) {
 		ImGui::ColorEdit3("Cap color", p.cap_color, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR);
 
 	ImGui::Separator();
+	ImGui::TextUnformatted("Mesh lighting");
+	changed |= ImGui::SliderFloat("Mesh ambient strength", &p.mesh_ambient_strength, 0.0f, 4.0f, "%.2f");
+	changed |=
+		ImGui::SliderFloat("Environment roughness", &p.mesh_environment_roughness, 0.0f, 1.0f, "%.2f");
+	changed |= ImGui::SliderFloat("Mesh key strength", &p.mesh_key_strength, 0.0f, 4.0f, "%.2f");
+	ImGui::TextDisabled("Ambient controls diffuse tunnel color on the cockpit.\n"
+						"Roughness controls angular blur: 0 is sharp, 1 is diffuse.\n"
+						"Key controls cap-colored directional/specular response.");
+
+	ImGui::Separator();
 	if (ImGui::Button("Reset to YAML defaults")) {
 		XwaRemasterFlight_GetHyperspaceTunnelDefault(&p);
 		changed = true;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Copy YAML")) {
-		char yaml[1024];
+		char yaml[1280];
 		std::snprintf(yaml, sizeof yaml,
 					  "hyperspace_tunnel:\n"
 					  "  travel_speed: %.4g\n"
@@ -595,6 +605,9 @@ static void xwa_tool_hyperspace_tunnel(int* open, void* user) {
 					  "  twist: %.4g\n"
 					  "  cap_radius: %.4g\n"
 					  "  cap_falloff: %.4g\n"
+					  "  mesh_ambient_strength: %.4g\n"
+					  "  mesh_environment_roughness: %.4g\n"
+					  "  mesh_key_strength: %.4g\n"
 					  "  dark_color_r: %.4g\n"
 					  "  dark_color_g: %.4g\n"
 					  "  dark_color_b: %.4g\n"
@@ -607,9 +620,11 @@ static void xwa_tool_hyperspace_tunnel(int* open, void* user) {
 					  "  cap_color_r: %.4g\n"
 					  "  cap_color_g: %.4g\n"
 					  "  cap_color_b: %.4g\n",
-					  (double)p.travel_speed, (double)p.rotation_speed, (double)p.noise_scale, (double)p.brightness,
-					  (double)p.highlight_strength, (double)p.focal_length, (double)p.twist,
-					  (double)p.cap_radius, (double)p.cap_falloff, (double)p.dark_color[0],
+					  (double)p.travel_speed, (double)p.rotation_speed, (double)p.noise_scale,
+					  (double)p.brightness, (double)p.highlight_strength, (double)p.focal_length,
+					  (double)p.twist, (double)p.cap_radius, (double)p.cap_falloff,
+					  (double)p.mesh_ambient_strength, (double)p.mesh_environment_roughness,
+					  (double)p.mesh_key_strength, (double)p.dark_color[0],
 					  (double)p.dark_color[1], (double)p.dark_color[2], (double)p.body_color[0],
 					  (double)p.body_color[1], (double)p.body_color[2], (double)p.highlight_color[0],
 					  (double)p.highlight_color[1], (double)p.highlight_color[2], (double)p.cap_color[0],

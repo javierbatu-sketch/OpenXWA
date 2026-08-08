@@ -141,6 +141,20 @@ typedef struct XwaShipAmbientCube {
 	float neg_z[3];
 } XwaShipAmbientCube;
 
+/* Fill every lobe with the current process-wide linear ambient tuning. */
+void XwaRemasterShip_GetAmbientCube(XwaShipAmbientCube* out);
+
+/* Optional detailed diffuse environment. The cubemap is linear HDR and
+ * indexed in the supplied world-space orthonormal basis. */
+typedef struct XwaShipEnvironmentMap {
+	AeronTexture* texture;
+	AeronSampler* sampler;
+	float right[3];
+	float up[3];
+	float forward[3];
+	float strength;
+} XwaShipEnvironmentMap;
+
 /* Classic engine-glow POINT LIGHTS (the modelIndex branch of
  * FlightLight_AppendScenePointLightForObject): every glow with raw
  * dims.x/y over 2000 emits a light at its (articulated) anchor —
@@ -174,11 +188,13 @@ const XwaDirLight* XwaRemasterShip_SelectKeyDirectionalLight(const XwaDirLight* 
  * colors are decoded to linear and scaled by their intensity. Punctual
  * records are submitted separately through AeronScene_AddLight;
  * `point_tuning` controls their evaluation. `ambient_cube` optionally
- * replaces the uniform ambient fill for scene-specific environments. */
+ * replaces the uniform ambient fill; `environment_map` adds detailed
+ * diffuse radiance in a scene-specific world-space basis. */
 void XwaRemasterShip_SetPbrEnv(AeronScene3D* scene, const XwaDirLight* lights, uint32_t light_count,
 							   const float cam_rows[9], const float cam_pos[3], const XwaShipAoParams* ao,
 							   const XwaShipPointLightTuning* point_tuning,
-							   const XwaShipAmbientCube* ambient_cube);
+							   const XwaShipAmbientCube* ambient_cube,
+							   const XwaShipEnvironmentMap* environment_map);
 
 /* Classic per-object engine-glow intensity scale — the float mirror
  * of EngineGlow_RenderObjectGlows' scale derivation from the captured

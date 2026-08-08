@@ -208,15 +208,18 @@ skybox:
                          # DrawBrightStarFlare ±1px plus/L pattern
 hyperspace_tunnel:
   # Ship-relative 3D simplex tunnel used by the remaster renderer.
-  travel_speed: 8.0      # forward rate; 8 matches the reference shader
+  travel_speed: 13.0      # forward rate; 8 matches the reference shader
   rotation_speed: -2.3   # radians per second around the tunnel axis
-  noise_scale: 1.0       # multiplier for all simplex octave frequencies
+  noise_scale: 0.5       # multiplier for all simplex octave frequencies
   brightness: 1.0        # final linear emission before bloom and tonemapping
   highlight_strength: 3.0 # cyan-white noise highlights and cap light; independent of the blue body
-  focal_length: 1.15     # tunnel perspective; larger values narrow the apparent opening
-  twist: 0.1989437       # reference angular shear: 1.25 / (2 * pi)
+  focal_length: 0.9     # tunnel perspective; larger values narrow the apparent opening
+  twist: 0.1       # reference angular shear: 1.25 / (2 * pi)
   cap_radius: 0.001       # normalized-screen radius of the full-strength white core
   cap_falloff: 30.0        # exponential falloff outside the core
+  mesh_ambient_strength: 0.7  # tunnel radiance contribution to HD cockpit diffuse lighting
+  mesh_environment_roughness: 0.6 # 0 = sharp field, 1 = cosine-hemisphere diffuse convolution
+  mesh_key_strength: 0.15      # cap-colored HD cockpit directional/specular lighting
   dark_color_r: 0.0      # reference tunnel reaches black between noise structures
   dark_color_g: 0.0
   dark_color_b: 0.0

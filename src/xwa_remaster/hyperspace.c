@@ -3,8 +3,10 @@
 #include "xwa_remaster/hyperspace.h"
 
 #include "aeron/aeron.h"
+#include "xwa_remaster/color.h"
 #include "xwa_remaster/flight.h"
 
+#include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +31,17 @@ typedef struct HyperTunnelUniform {
 	float cap_color[4];
 } HyperTunnelUniform;
 
+typedef struct HyperEnvironmentUniform {
+	float roughness;
+	float _pad[3];
+} HyperEnvironmentUniform;
+typedef char HyperEnvironmentUniformSizeCheck[sizeof(HyperEnvironmentUniform) == 16 ? 1 : -1];
+
+enum {
+	HYPER_ENVIRONMENT_FACE_SIZE = 32,
+	HYPER_ENVIRONMENT_ATLAS_WIDTH = HYPER_ENVIRONMENT_FACE_SIZE * 6,
+};
+
 struct XwaRemasterHyperspace {
 	AeronShader* streak_vs;
 	AeronShader* streak_fs;
@@ -36,6 +49,10 @@ struct XwaRemasterHyperspace {
 	AeronShader* tunnel_fs;
 	AeronGraphicsPipeline* streak_pipeline;
 	AeronGraphicsPipeline* tunnel_pipeline;
+	AeronComputePipeline* environment_pipeline;
+	AeronTexture* environment_atlas;
+	AeronTexture* environment_cube;
+	AeronSampler* environment_sampler;
 	AeronSampleCount pipeline_samples;
 	AeronBuffer* streak_vb;
 	uint32_t streak_vb_capacity;
@@ -44,6 +61,7 @@ struct XwaRemasterHyperspace {
 	float view_proj[16];
 	XwaFlightHyperspaceTunnelParams params;
 	HyperTunnelUniform tunnel_uniform;
+	XwaRemasterHyperspaceLighting lighting;
 };
 
 static AeronBlendStateDesc hyper_blend_additive(void) {
@@ -167,7 +185,40 @@ XwaRemasterHyperspace* XwaRemasterHyperspace_Create(const XwaFlightHyperspaceTun
 		&(AeronShaderDesc) { .name = "hyperspace_tunnel.vert", .stage = AERON_SHADER_STAGE_VERTEX });
 	h->tunnel_fs = Aeron_CreateShader(&(AeronShaderDesc) {
 		.name = "hyperspace_tunnel.frag", .stage = AERON_SHADER_STAGE_FRAGMENT, .uniform_buffer_count = 1 });
-	if (!h->streak_vs || !h->streak_fs || !h->tunnel_vs || !h->tunnel_fs) {
+	h->environment_pipeline = Aeron_CreateComputePipeline(&(AeronComputePipelineDesc) {
+		.name = "hyperspace_environment.comp",
+		.readwrite_storage_texture_count = 1,
+		.uniform_buffer_count = 2,
+		.thread_count_x = 8,
+		.thread_count_y = 8,
+		.thread_count_z = 1,
+	});
+	h->environment_atlas = Aeron_CreateTexture(&(AeronTextureDesc) {
+		.width = HYPER_ENVIRONMENT_ATLAS_WIDTH,
+		.height = HYPER_ENVIRONMENT_FACE_SIZE,
+		.format = AERON_TEXTURE_FORMAT_RGBA16_FLOAT,
+		.usage = AERON_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE | AERON_TEXTURE_USAGE_TRANSFER_SRC,
+		.debug_name = "xwa.hyperspace.environment_atlas",
+	});
+	h->environment_cube = Aeron_CreateTexture(&(AeronTextureDesc) {
+		.width = HYPER_ENVIRONMENT_FACE_SIZE,
+		.height = HYPER_ENVIRONMENT_FACE_SIZE,
+		.format = AERON_TEXTURE_FORMAT_RGBA16_FLOAT,
+		.usage = AERON_TEXTURE_USAGE_SAMPLED | AERON_TEXTURE_USAGE_TRANSFER_DST,
+		.cube = 1,
+		.debug_name = "xwa.hyperspace.environment",
+	});
+	h->environment_sampler = Aeron_CreateSampler(&(AeronSamplerDesc) {
+		.min_filter = AERON_FILTER_LINEAR,
+		.mag_filter = AERON_FILTER_LINEAR,
+		.mip_filter = AERON_FILTER_LINEAR,
+		.address_u = AERON_ADDRESS_CLAMP_TO_EDGE,
+		.address_v = AERON_ADDRESS_CLAMP_TO_EDGE,
+		.address_w = AERON_ADDRESS_CLAMP_TO_EDGE,
+	});
+	if (!h->streak_vs || !h->streak_fs || !h->tunnel_vs || !h->tunnel_fs ||
+		!h->environment_pipeline || !h->environment_atlas || !h->environment_cube ||
+		!h->environment_sampler) {
 		Aeron_LogError("xwa.remaster", "hyperspace: GPU resource creation failed");
 		XwaRemasterHyperspace_Destroy(h);
 		return NULL;
@@ -198,6 +249,14 @@ void XwaRemasterHyperspace_Destroy(XwaRemasterHyperspace* h) {
 		Aeron_DestroyShader(h->tunnel_vs);
 	if (h->tunnel_fs)
 		Aeron_DestroyShader(h->tunnel_fs);
+	if (h->environment_pipeline)
+		Aeron_DestroyComputePipeline(h->environment_pipeline);
+	if (h->environment_atlas)
+		Aeron_DestroyTexture(h->environment_atlas);
+	if (h->environment_cube)
+		Aeron_DestroyTexture(h->environment_cube);
+	if (h->environment_sampler)
+		Aeron_DestroySampler(h->environment_sampler);
 	free(h);
 }
 
@@ -277,6 +336,136 @@ static float hyper_transition_center_y(const XwaFlightCamera* camera) {
 	return 1.0f - ((float)camera->vp_center_y - (float)camera->proj_offset_y) / (float)camera->vp_h;
 }
 
+static float hyper_dot3(const float a[3], const float b[3]) {
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+static int hyper_normalize(float value[3]) {
+	const float length = sqrtf(hyper_dot3(value, value));
+	if (!isfinite(length) || length <= 0.0001f) {
+		return 0;
+	}
+	value[0] /= length;
+	value[1] /= length;
+	value[2] /= length;
+	return 1;
+}
+
+static void hyper_view_to_world(const float camera_rows[9], const float view[3], float world[3]) {
+	for (int component = 0; component < 3; component++) {
+		world[component] = camera_rows[0 * 3 + component] * view[0] +
+						   camera_rows[1 * 3 + component] * view[1] +
+						   camera_rows[2 * 3 + component] * view[2];
+	}
+}
+
+static void hyper_add_uniform_ambient(XwaShipAmbientCube* cube, const float color[3]) {
+	float* const lobes[6] = { cube->pos_x, cube->neg_x, cube->pos_y, cube->neg_y, cube->pos_z, cube->neg_z };
+	for (int lobe = 0; lobe < 6; lobe++) {
+		memcpy(lobes[lobe], color, 3 * sizeof(float));
+	}
+}
+
+static void hyper_build_transition_lighting(XwaRemasterHyperspace* h, float flash_alpha) {
+	float color[3];
+	const float scale = h->params.brightness * h->params.highlight_strength *
+						h->params.mesh_ambient_strength * flash_alpha;
+	for (int channel = 0; channel < 3; channel++) {
+		color[channel] = h->params.cap_color[channel] * scale;
+	}
+	hyper_add_uniform_ambient(&h->lighting.ambient_add, color);
+	h->lighting.active = 1;
+}
+
+static int hyper_generate_environment(XwaRemasterHyperspace* h, AeronCommandBuffer* cmd) {
+	const AeronComputeTextureBinding output = { .texture = h->environment_atlas };
+	AeronComputePass* pass = Aeron_BeginComputePass(&(AeronComputePassDesc) {
+		.command_buffer = cmd,
+		.write_textures = &output,
+		.write_texture_count = 1,
+		.debug_label = "Hyperspace diffuse environment",
+	});
+	if (!pass) {
+		return 0;
+	}
+	const HyperEnvironmentUniform environment = {
+		.roughness = h->params.mesh_environment_roughness,
+	};
+	Aeron_BindComputePipeline(pass, h->environment_pipeline);
+	Aeron_BindComputeUniformData(pass, 0, &h->tunnel_uniform, sizeof h->tunnel_uniform);
+	Aeron_BindComputeUniformData(pass, 1, &environment, sizeof environment);
+	Aeron_DispatchCompute(pass, HYPER_ENVIRONMENT_ATLAS_WIDTH / 8, HYPER_ENVIRONMENT_FACE_SIZE / 8, 1);
+	Aeron_EndComputePass(pass);
+
+	/* Metal cannot expose one face of a cube as a writable storage view.
+	 * Generate into a 2D atlas and copy each completed face into the sampled cube. */
+	for (uint32_t face = 0; face < 6; face++) {
+		if (!Aeron_CopyTextureCmd(cmd, &(AeronTextureCopyDesc) {
+				.source = h->environment_atlas,
+				.source_x = face * HYPER_ENVIRONMENT_FACE_SIZE,
+				.destination = h->environment_cube,
+				.destination_layer = face,
+				.width = HYPER_ENVIRONMENT_FACE_SIZE,
+				.height = HYPER_ENVIRONMENT_FACE_SIZE,
+			})) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static void hyper_build_tunnel_lighting(XwaRemasterHyperspace* h, const float camera_rows[9]) {
+	float* const world_basis[3] = {
+		h->lighting.environment.right,
+		h->lighting.environment.up,
+		h->lighting.environment.forward,
+	};
+	const float* const view_basis[3] = {
+		h->tunnel_uniform.tunnel_right,
+		h->tunnel_uniform.tunnel_up,
+		h->tunnel_uniform.tunnel_forward,
+	};
+	for (int basis = 0; basis < 3; basis++) {
+		hyper_view_to_world(camera_rows, view_basis[basis], world_basis[basis]);
+		if (!hyper_normalize(world_basis[basis])) {
+			h->lighting.active = 1;
+			return;
+		}
+	}
+	h->lighting.environment.texture = h->environment_cube;
+	h->lighting.environment.sampler = h->environment_sampler;
+	h->lighting.environment.strength = h->params.mesh_ambient_strength;
+
+	float key_direction[3] = { h->tunnel_uniform.tunnel_forward[0], h->tunnel_uniform.tunnel_forward[1],
+							   h->tunnel_uniform.tunnel_forward[2] };
+	hyper_view_to_world(camera_rows, key_direction, h->lighting.key.world_dir);
+	float linear_key[3];
+	float intensity = 0.0f;
+	const float key_scale = h->params.brightness * h->params.highlight_strength * h->params.mesh_key_strength;
+	for (int channel = 0; channel < 3; channel++) {
+		linear_key[channel] = h->params.cap_color[channel] * key_scale;
+		intensity = fmaxf(intensity, linear_key[channel]);
+	}
+	if (hyper_normalize(h->lighting.key.world_dir) && isfinite(intensity) && intensity > 0.0f) {
+		h->lighting.key.intensity = intensity;
+		for (int channel = 0; channel < 3; channel++) {
+			h->lighting.key.color[channel] = XwaRemaster_LinearToSrgb(linear_key[channel] / intensity);
+		}
+		h->lighting.key.source_backdrop_model_type = 0;
+		h->lighting.key_count = 1;
+	}
+	h->lighting.active = 1;
+}
+
+int XwaRemasterHyperspace_GetPreparedLighting(const XwaRemasterHyperspace* h,
+											  XwaRemasterHyperspaceLighting* out) {
+	if (!h || !out || !h->lighting.active) {
+		return 0;
+	}
+	*out = h->lighting;
+	return 1;
+}
+
 int XwaRemasterHyperspace_Prepare(XwaRemasterHyperspace* h, AeronCommandBuffer* cmd, const XwaSnapshot* snap,
 								  const float view_proj[16], const float camera_rows[9], int rt_w, int rt_h, int force_tunnel,
 								  float tunnel_time_seconds,
@@ -286,6 +475,7 @@ int XwaRemasterHyperspace_Prepare(XwaRemasterHyperspace* h, AeronCommandBuffer* 
 	}
 	h->streak_vertex_count = 0;
 	h->draw_background = 0;
+	memset(&h->lighting, 0, sizeof h->lighting);
 	memset(&h->tunnel_uniform, 0, sizeof h->tunnel_uniform);
 	h->tunnel_uniform.view[0] = (float)rt_w;
 	h->tunnel_uniform.view[1] = (float)rt_h;
@@ -318,6 +508,10 @@ int XwaRemasterHyperspace_Prepare(XwaRemasterHyperspace* h, AeronCommandBuffer* 
 			memcpy(h->tunnel_uniform.dark_color, h->params.dark_color, 3 * sizeof(float));
 			memcpy(h->tunnel_uniform.body_color, h->params.body_color, 3 * sizeof(float));
 			memcpy(h->tunnel_uniform.highlight_color, h->params.highlight_color, 3 * sizeof(float));
+			if (h->params.mesh_ambient_strength > 0.0f && !hyper_generate_environment(h, cmd)) {
+				return 0;
+			}
+			hyper_build_tunnel_lighting(h, camera_rows);
 			h->draw_background = 1;
 			return 1;
 		}
@@ -363,6 +557,7 @@ int XwaRemasterHyperspace_Prepare(XwaRemasterHyperspace* h, AeronCommandBuffer* 
 		h->tunnel_uniform.appearance[3] = 1.0f;
 		h->draw_background = 1;
 	}
+	hyper_build_transition_lighting(h, flash_alpha);
 
 	uint32_t count = snap->hyperspace_streak_count;
 	if (count > XWA_SNAP_MAX_HYPERSPACE_STREAKS)

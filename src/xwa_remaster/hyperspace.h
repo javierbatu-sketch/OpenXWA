@@ -3,6 +3,7 @@
 
 #include "aeron/render.h"
 #include "xwa_remaster/flight.h"
+#include "xwa_remaster/ship.h"
 #include "xwa_runtime/snapshot/snapshot.h"
 
 #ifdef __cplusplus
@@ -21,6 +22,14 @@ typedef struct XwaRemasterHyperspaceTunnelView {
 	float proj_offset_y;
 } XwaRemasterHyperspaceTunnelView;
 
+typedef struct XwaRemasterHyperspaceLighting {
+	XwaShipAmbientCube ambient_add;
+	XwaShipEnvironmentMap environment;
+	XwaDirLight key;
+	uint32_t key_count;
+	uint8_t active;
+} XwaRemasterHyperspaceLighting;
+
 XwaRemasterHyperspace* XwaRemasterHyperspace_Create(const XwaFlightHyperspaceTunnelParams* params);
 void XwaRemasterHyperspace_Destroy(XwaRemasterHyperspace* hyperspace);
 void XwaRemasterHyperspace_SetParams(XwaRemasterHyperspace* hyperspace,
@@ -33,6 +42,10 @@ int XwaRemasterHyperspace_Prepare(XwaRemasterHyperspace* hyperspace, AeronComman
 								  const float camera_rows[9], int rt_w, int rt_h,
 								  int force_tunnel, float tunnel_time_seconds,
 								  const XwaRemasterHyperspaceTunnelView* tunnel_view);
+
+/* Returns the lighting contribution built by the latest successful Prepare. */
+int XwaRemasterHyperspace_GetPreparedLighting(const XwaRemasterHyperspace* hyperspace,
+											  XwaRemasterHyperspaceLighting* out);
 
 /* AeronScene BEFORE_OPAQUE hook. The analytic background is drawn first and
  * additive streak quads follow, leaving the normal attachment untouched. */
