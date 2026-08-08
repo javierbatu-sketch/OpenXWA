@@ -1967,6 +1967,11 @@ int Mission_ObjectMatchesTriggerVariableEx(uint16_t objectIdx, uint16_t variable
 			break;
 
 		case TRIGVAR_PLAYER_NUM:
+#ifdef XWA_MODERN
+			if (object->playerOwnerIdx == -1) {
+				break;
+			}
+#endif
 			if (variable ==
 				g_missionFlightGroups[g_players[object->playerOwnerIdx].boundFlightGroupIdx].fg.playerNumber -
 					1) {
