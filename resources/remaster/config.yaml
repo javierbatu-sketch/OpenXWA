@@ -218,15 +218,15 @@ hyperspace_tunnel:
   cap_radius: 0.001       # normalized-screen radius of the full-strength white core
   cap_falloff: 30.0        # exponential falloff outside the core
   mesh_ambient_strength: 0.7  # tunnel radiance contribution to HD cockpit diffuse lighting
-  mesh_environment_roughness: 0.6 # 0 = sharp field, 1 = cosine-hemisphere diffuse convolution
+  mesh_environment_roughness: 1.0 # 0 = sharp field, 1 = cosine-hemisphere diffuse convolution
   mesh_key_strength: 0.15      # cap-colored HD cockpit directional/specular lighting
   dark_color_r: 0.0      # reference tunnel reaches black between noise structures
   dark_color_g: 0.0
   dark_color_b: 0.0
-  body_color_r: 0.0   # reference 1.25 * (0.15, 0.4, 0.9)
-  body_color_g: 0.06
+  body_color_r: 0.0
+  body_color_g: 0.0
   body_color_b: 1
-  highlight_color_r: 0.05 # reference additive white noise highlights
+  highlight_color_r: 0.05
   highlight_color_g: 0.24
   highlight_color_b: 0.99
   cap_color_r: 0.09       # linear HDR color of the distant additive light
