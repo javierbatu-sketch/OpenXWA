@@ -33,6 +33,7 @@ extern int g_frontendFileStreamDefaultDelayMs;
 extern int g_frontendFileStreamCapacityBytes[2];
 extern int g_frontendFileStreamField38F8[2];
 extern int g_frontendFileStreamPreloadChunkCount[2];
+extern int g_unusedFrontendFileStreamSlotField3918[2];
 extern int g_frontendFileStreamServiceSlot;
 extern int g_frontendFileStreamStateStartTime[2];
 extern int g_frontendFileStreamHalfCapacityBytes[2];
@@ -49,7 +50,7 @@ extern int g_frontendFileStreamLastSlotSwitchTime;
 
 int FrontendFileStream_InitSlotBuffer(int slot, int totalBytes, int initialBufferedBytes);
 int FrontendFileStream_SetSlotDriveAndFastRead(int slot, char fastRead, char driveLetter);
-void FrontendFileStream_FreeSlot(int slot);
+int FrontendFileStream_FreeSlot(int slot);
 int FrontendFileStream_ServiceSlots(void);
 unsigned int FrontendFileStream_ReadBytes(int slot, void* dst, int dstOffset, unsigned int byteCount,
 										  int blockUntilAvailable);
@@ -62,6 +63,7 @@ void* FrontendFileStream_ReserveWriteChunk(void);
 int FrontendFileStream_ReadNextChunk(void);
 void FrontendFileStream_AppendRequest(int slot, FrontendFileStreamRequest* request);
 void FrontendFileStream_UnlinkAndFreeRequest(int slot, FrontendFileStreamRequest* request);
+void FrontendFileStream_ClearQueue(int slot);
 
 #ifdef __cplusplus
 }

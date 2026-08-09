@@ -35,6 +35,8 @@ int g_frontendFileStreamCapacityBytes[2];
 int g_frontendFileStreamField38F8[2];
 // GLOBAL: XWA 0x783908
 int g_frontendFileStreamPreloadChunkCount[2];
+// GLOBAL: XWA 0x783918
+int g_unusedFrontendFileStreamSlotField3918[2];
 // GLOBAL: XWA 0x783930
 int g_frontendFileStreamReadOffset[2];
 // GLOBAL: XWA 0x783910
@@ -62,21 +64,126 @@ int g_frontendFileStreamNormalDelayMs[2];
 // GLOBAL: XWA 0x7838C0
 int g_frontendFileStreamLastSlotSwitchTime;
 
+// FUNCTION: XWA 0x55ECF0
+int FrontendFileStream_SetSlotDriveAndFastRead(int slot, char fastRead, char driveLetter) {
+	g_frontendFileStreamFastRead[slot] = (uint8_t)fastRead;
+	g_frontendFileStreamDriveLetter[slot] = driveLetter;
+	return slot;
+}
+
 // FUNCTION: XWA 0x55ED10
 int FrontendFileStream_InitSlotBuffer(int slot, int totalBytes, int initialBufferedBytes) {
-	(void)slot;
-	(void)totalBytes;
-	(void)initialBufferedBytes;
+	int clampedSlot;
+	int preloadBytes;
+	int chunkIndex;
+	void* chunk;
 
-	/* TODO: Reimplement FrontendFileStream_InitSlotBuffer @ 0x55ED10. */
+	clampedSlot = slot;
+	if (slot > 1) {
+		clampedSlot = 1;
+	}
+	preloadBytes = initialBufferedBytes;
+	if (initialBufferedBytes > totalBytes) {
+		preloadBytes = totalBytes;
+	}
+	g_frontendFileStreamNormalDelayMs[clampedSlot] = g_frontendFileStreamDefaultDelayMs;
+	g_frontendFileStreamPreloadChunkCount[clampedSlot] = preloadBytes / 0x2000;
+	g_frontendFileStreamCapacityBytes[clampedSlot] = (totalBytes / 0x2000) << 13;
+	g_frontendFileStreamChunkCount[clampedSlot] = totalBytes / 0x2000;
+	g_frontendFileStreamHalfCapacityBytes[clampedSlot] = ((totalBytes / 0x2000) << 13) >> 1;
+	g_frontendFileStreamChunkPtrs[clampedSlot] =
+		(void**)Mem_Alloc(sizeof(void*) * (size_t)(totalBytes / 0x2000));
+	if (g_frontendFileStreamChunkPtrs[clampedSlot] == NULL) {
+		return 0;
+	}
+
+	chunkIndex = 0;
+	while (chunkIndex < g_frontendFileStreamChunkCount[clampedSlot]) {
+		chunk = Mem_Alloc(0x2000);
+		memset(chunk, 0, 0x2000);
+		g_frontendFileStreamChunkPtrs[clampedSlot][chunkIndex] = chunk;
+		if (chunk == NULL) {
+			if (chunkIndex > 0) {
+				void** chunkPtrs;
+
+				chunkPtrs = g_frontendFileStreamChunkPtrs[clampedSlot];
+				do {
+					Mem_Free(*chunkPtrs);
+					++chunkPtrs;
+					--chunkIndex;
+				} while (chunkIndex != 0);
+			}
+			Mem_Free(g_frontendFileStreamChunkPtrs[clampedSlot]);
+			g_frontendFileStreamChunkPtrs[clampedSlot] = NULL;
+			return 0;
+		}
+		++chunkIndex;
+	}
+
+	g_frontendFileStreamQueueHead[clampedSlot] = NULL;
+	g_frontendFileStreamCurrentRequest[clampedSlot] = NULL;
+	g_frontendFileStreamState[clampedSlot] = FFS_OPEN_PENDING;
+	g_frontendFileStreamReadChunkIdx[clampedSlot] = 0;
+	g_frontendFileStreamWriteChunkIdx[clampedSlot] = 0;
+	g_frontendFileStreamReadOffset[clampedSlot] = 0;
+	g_frontendFileStreamFiles[clampedSlot] = NULL;
+	g_frontendFileStreamField38F8[clampedSlot] = 0;
+	g_unusedFrontendFileStreamSlotField3918[clampedSlot] = 0;
+	g_frontendFileStreamStateStartTime[clampedSlot] = 0;
+	if (!g_frontendFileStreamFastRead[clampedSlot]) {
+		g_frontendFileStreamReadDelayMs[clampedSlot] = g_frontendFileStreamNormalDelayMs[clampedSlot];
+	} else {
+		g_frontendFileStreamReadDelayMs[clampedSlot] = 3;
+	}
+	g_frontendFileStreamSlotEnabled[clampedSlot] = 1;
+	g_frontendFileStreamServiceSlot = 0;
+	g_frontendFileStreamLastSlotSwitchTime = 0;
 	return 1;
 }
 
 // FUNCTION: XWA 0x55F120
-void FrontendFileStream_FreeSlot(int slot) {
-	(void)slot;
+int FrontendFileStream_FreeSlot(int slot) {
+	int clampedSlot;
+	int chunkIndex;
+	XwaFile* stream;
 
-	/* TODO: Reimplement FrontendFileStream_FreeSlot @ 0x55F120. */
+	clampedSlot = slot;
+	if (slot > 1) {
+		clampedSlot = 1;
+	}
+	if (g_frontendFileStreamChunkPtrs[clampedSlot] != NULL) {
+		for (chunkIndex = 0; chunkIndex < g_frontendFileStreamChunkCount[clampedSlot]; ++chunkIndex) {
+			if (g_frontendFileStreamChunkPtrs[clampedSlot][chunkIndex] != NULL) {
+				Mem_Free(g_frontendFileStreamChunkPtrs[clampedSlot][chunkIndex]);
+			}
+		}
+		Mem_Free(g_frontendFileStreamChunkPtrs[clampedSlot]);
+		stream = g_frontendFileStreamFiles[clampedSlot];
+		g_frontendFileStreamChunkPtrs[clampedSlot] = NULL;
+		if (stream != NULL) {
+#ifdef XWA_MODERN
+			File_Close(stream);
+#else
+			fclose((FILE*)stream);
+#endif
+		}
+		FrontendFileStream_ClearQueue(clampedSlot);
+		g_frontendFileStreamQueueHead[clampedSlot] = NULL;
+		g_frontendFileStreamCurrentRequest[clampedSlot] = NULL;
+		g_frontendFileStreamState[clampedSlot] = FFS_INACTIVE;
+		g_frontendFileStreamReadChunkIdx[clampedSlot] = 0;
+		g_frontendFileStreamWriteChunkIdx[clampedSlot] = 0;
+		g_frontendFileStreamReadOffset[clampedSlot] = 0;
+		g_frontendFileStreamFiles[clampedSlot] = NULL;
+		g_frontendFileStreamField38F8[clampedSlot] = 0;
+		g_unusedFrontendFileStreamSlotField3918[clampedSlot] = 0;
+		g_frontendFileStreamStateStartTime[clampedSlot] = 0;
+		g_frontendFileStreamNormalDelayMs[clampedSlot] = g_frontendFileStreamDefaultDelayMs;
+		g_frontendFileStreamReadDelayMs[clampedSlot] = g_frontendFileStreamDefaultDelayMs;
+		g_frontendFileStreamSlotEnabled[clampedSlot] = 0;
+	}
+
+	return 1;
 }
 
 // FUNCTION: XWA 0x55EEA0
@@ -584,5 +691,16 @@ void FrontendFileStream_UnlinkAndFreeRequest(int slot, FrontendFileStreamRequest
 			keepSearching = 0;
 		}
 		cursor = cursor->next;
+	}
+}
+
+// FUNCTION: XWA 0x55FA60
+void FrontendFileStream_ClearQueue(int slot) {
+	FrontendFileStreamRequest* next;
+
+	while (g_frontendFileStreamQueueHead[slot] != NULL) {
+		next = g_frontendFileStreamQueueHead[slot]->next;
+		Mem_Free(g_frontendFileStreamQueueHead[slot]);
+		g_frontendFileStreamQueueHead[slot] = next;
 	}
 }
