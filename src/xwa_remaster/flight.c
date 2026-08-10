@@ -3688,6 +3688,19 @@ typedef struct FlSceneLighting {
 	int hangar_override;
 } FlSceneLighting;
 
+static int fl_is_default_hangar_lighting(const XwaSnapshot* snap) {
+	if (!snap || snap->dir_light_count != 1) {
+		return 0;
+	}
+
+	const XwaDirLight* light = &snap->dir_lights[0];
+	const float epsilon = 0.0001f;
+	return fabsf(light->world_dir[0]) <= epsilon && fabsf(light->world_dir[1]) <= epsilon &&
+		   fabsf(light->world_dir[2] - 1.0f) <= epsilon && fabsf(light->intensity - 0.75f) <= epsilon &&
+		   fabsf(light->color[0] - 1.0f) <= epsilon && fabsf(light->color[1] - 1.0f) <= epsilon &&
+		   fabsf(light->color[2] - 1.0f) <= epsilon;
+}
+
 static void fl_build_scene_lighting(const XwaSnapshot* snap, const XwaFlightCamera* cam,
 									FlSceneLighting* out) {
 	memset(out, 0, sizeof *out);
@@ -3697,18 +3710,43 @@ static void fl_build_scene_lighting(const XwaSnapshot* snap, const XwaFlightCame
 		return;
 	}
 
-	memcpy(out->hangar_key.world_dir, s.hangar_lighting.direction, sizeof out->hangar_key.world_dir);
-	out->hangar_key.intensity = s.hangar_lighting.intensity;
-	memcpy(out->hangar_key.color, s.hangar_lighting.color, sizeof out->hangar_key.color);
-	out->lights = &out->hangar_key;
-	out->light_count = 1;
+	/* The configured HD relight replaces only the classic hangar's fixed
+	 * white key. Preserve state-driven hangar lighting such as carrier alarms. */
 	out->hangar_override = 1;
+	if (fl_is_default_hangar_lighting(snap)) {
+		memcpy(out->hangar_key.world_dir, s.hangar_lighting.direction, sizeof out->hangar_key.world_dir);
+		out->hangar_key.intensity = s.hangar_lighting.intensity;
+		memcpy(out->hangar_key.color, s.hangar_lighting.color, sizeof out->hangar_key.color);
+		out->lights = &out->hangar_key;
+		out->light_count = 1;
+	}
 
+	const XwaDirLight* ambient_light =
+		XwaRemasterShip_SelectKeyDirectionalLight(out->lights, out->light_count);
+	float ambient_color[3] = { 1.0f, 1.0f, 1.0f };
+	if (ambient_light) {
+		float radiance[3];
+		float peak = 0.0f;
+		for (int channel = 0; channel < 3; channel++) {
+			radiance[channel] =
+				XwaRemaster_SrgbToLinear(ambient_light->color[channel]) * ambient_light->intensity;
+			peak = fmaxf(peak, radiance[channel]);
+		}
+		if (peak > 0.0f) {
+			const float influence = fminf(peak, 1.0f);
+			for (int channel = 0; channel < 3; channel++) {
+				const float hue = radiance[channel] / peak;
+				ambient_color[channel] = 1.0f + (hue - 1.0f) * influence;
+			}
+		}
+	}
 	for (int channel = 0; channel < 3; channel++) {
-		out->ambient_cube.pos_x[channel] = out->ambient_cube.neg_x[channel] = s.hangar_lighting.ambient_sides;
-		out->ambient_cube.pos_y[channel] = out->ambient_cube.neg_y[channel] = s.hangar_lighting.ambient_sides;
-		out->ambient_cube.pos_z[channel] = s.hangar_lighting.ambient_ceiling;
-		out->ambient_cube.neg_z[channel] = s.hangar_lighting.ambient_floor;
+		out->ambient_cube.pos_x[channel] = out->ambient_cube.neg_x[channel] =
+			s.hangar_lighting.ambient_sides * ambient_color[channel];
+		out->ambient_cube.pos_y[channel] = out->ambient_cube.neg_y[channel] =
+			s.hangar_lighting.ambient_sides * ambient_color[channel];
+		out->ambient_cube.pos_z[channel] = s.hangar_lighting.ambient_ceiling * ambient_color[channel];
+		out->ambient_cube.neg_z[channel] = s.hangar_lighting.ambient_floor * ambient_color[channel];
 	}
 	out->ambient = &out->ambient_cube;
 }

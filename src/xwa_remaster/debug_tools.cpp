@@ -349,8 +349,8 @@ static void xwa_tool_hangar_lighting(int* open, void* user) {
 		changed = true;
 	}
 	const XwaSnapshot* snap = XwaSnapshot_Current();
-	const bool active = snap && snap->flight_camera_valid && snap->flight_camera.in_hangar && enabled;
-	ImGui::TextDisabled("Scene override: %s", active ? "active" : "inactive");
+	const bool in_hangar = snap && snap->flight_camera_valid && snap->flight_camera.in_hangar;
+	ImGui::TextDisabled("Hangar policy: %s", in_hangar && enabled ? "active" : "inactive");
 
 	if (!enabled) {
 		ImGui::BeginDisabled();
