@@ -776,23 +776,43 @@ int XwaRemasterShip_BuildDebrisMeshTable(const XwaFlightObject* f, AeronSceneMes
 }
 
 int XwaRemasterShip_BuildCockpitMeshTable(const AeronSceneMesh* mesh, const XwaCockpit* c,
-										  AeronSceneMeshTable* out) {
-	if (!mesh || !c || !out || c->seat == 0 || !mesh->has_any_rotation) {
+										  const XwaFlightObject* anchor, AeronSceneMeshTable* out) {
+	if (!mesh || !c || !anchor || !out || !anchor->has_craft) {
 		return 0;
 	}
+	if (c->seat == 0) {
+		/* The classic swaps only the model handle, then walks the cockpit
+		 * OPT with the anchor ObjectRecord's live craft state. */
+		return XwaRemasterShip_BuildMeshTable(mesh, anchor, out);
+	}
+
+	const uint32_t slots =
+		AERON_MAX_MESH_SLOTS < XWA_SNAP_MAX_MESH_SLOTS ? AERON_MAX_MESH_SLOTS : XWA_SNAP_MAX_MESH_SLOTS;
+	float bwing_compensation[3][4];
+	const int has_bwing_compensation =
+		ship_bwing_compensation(mesh, anchor, slots, bwing_compensation);
 	for (uint32_t mi = 0; mi < AERON_MAX_MESH_SLOTS; mi++) {
-		ship_mat3x4_identity(out->rows[mi]);
+		if (has_bwing_compensation) {
+			memcpy(out->rows[mi], bwing_compensation, sizeof out->rows[mi]);
+		} else {
+			ship_mat3x4_identity(out->rows[mi]);
+		}
 		out->visibility_packed[mi >> 2][mi & 3] = 1.0f;
 		out->highlight_packed[mi >> 2][mi & 3] = 0.0f;
 		out->markings_packed[mi >> 2][mi & 3] = 0.0f;
 		out->emissive_packed[mi >> 2][mi & 3] = 1.0f;
 	}
 	const float q16 = 2.0f * 3.14159265358979323846f / 65536.0f;
-	int any = 0;
+	int any = has_bwing_compensation;
 	/* The classic node walk carries the beam rotation into subsequent
 	 * gun meshes, and half of it into launcher meshes. */
 	const AeronMeshRot* beam_rot = NULL;
-	for (uint32_t mi = 0; mi < AERON_MAX_MESH_SLOTS; mi++) {
+	for (uint32_t mi = 0; mi < slots; mi++) {
+		if (anchor->component_state[mi] != 0) {
+			out->visibility_packed[mi >> 2][mi & 3] = 0.0f;
+			any = 1;
+			continue;
+		}
 		const AeronMeshRot* r = &mesh->mesh_rot[mi];
 		if (!r->has_rotation) {
 			continue;
@@ -800,8 +820,14 @@ int XwaRemasterShip_BuildCockpitMeshTable(const AeronSceneMesh* mesh, const XwaC
 		if (r->mesh_type == XWA_SNAP_MESH_ROTARY_BEAM) {
 			beam_rot = r;
 			if (c->aim_angle_b != 0) {
-				ship_mat3x4_rotation_about_pivot(out->rows[mi], r->axis, r->pivot,
-												 (float)c->aim_angle_b * q16);
+				float local_rotation[3][4];
+				ship_mat3x4_rotation_about_pivot(local_rotation, r->axis, r->pivot,
+											 (float)c->aim_angle_b * q16);
+				if (has_bwing_compensation) {
+					ship_mat3x4_mul(out->rows[mi], bwing_compensation, local_rotation);
+				} else {
+					memcpy(out->rows[mi], local_rotation, sizeof out->rows[mi]);
+				}
 				any = 1;
 			}
 			continue;
@@ -813,6 +839,7 @@ int XwaRemasterShip_BuildCockpitMeshTable(const AeronSceneMesh* mesh, const XwaC
 			const float inherited_angle =
 				beam_rot ? (float)c->aim_angle_b * q16 * (inherit_half ? 0.5f : 1.0f) : 0.0f;
 			float own[3][4];
+			float local_rotation[3][4];
 			ship_mat3x4_identity(own);
 			if (c->aim_angle_a != 0) {
 				ship_mat3x4_rotation_about_pivot(own, r->axis, r->pivot, (float)-c->aim_angle_a * q16);
@@ -820,16 +847,63 @@ int XwaRemasterShip_BuildCockpitMeshTable(const AeronSceneMesh* mesh, const XwaC
 			if (inherited_angle != 0.0f) {
 				float inherited[3][4];
 				ship_mat3x4_rotation_about_pivot(inherited, beam_rot->axis, beam_rot->pivot, inherited_angle);
-				ship_mat3x4_mul(out->rows[mi], inherited, own);
+				ship_mat3x4_mul(local_rotation, inherited, own);
 			} else if (c->aim_angle_a != 0) {
-				memcpy(out->rows[mi], own, sizeof own);
+				memcpy(local_rotation, own, sizeof local_rotation);
 			}
 			if (c->aim_angle_a != 0 || inherited_angle != 0.0f) {
+				if (has_bwing_compensation) {
+					ship_mat3x4_mul(out->rows[mi], bwing_compensation, local_rotation);
+				} else {
+					memcpy(out->rows[mi], local_rotation, sizeof out->rows[mi]);
+				}
 				any = 1;
 			}
 		}
 	}
 	return any;
+}
+
+int XwaRemasterShip_BuildPreviousCockpitMeshTable(
+	const AeronSceneMesh* mesh, const XwaCockpit* current_cockpit,
+	const XwaFlightObject* current_anchor, const XwaCockpit* previous_cockpit,
+	const XwaFlightObject* previous_anchor, AeronSceneMeshTable* out) {
+	if (!mesh || !current_cockpit || !current_anchor || !previous_cockpit || !previous_anchor || !out ||
+		!current_anchor->has_craft || !previous_anchor->has_craft ||
+		current_anchor->object_type != previous_anchor->object_type ||
+		current_cockpit->seat != previous_cockpit->seat) {
+		return 0;
+	}
+
+	if (current_cockpit->seat == 0) {
+		if (memcmp(current_anchor->component_state, previous_anchor->component_state,
+				   sizeof current_anchor->component_state) != 0) {
+			XwaRemasterShip_BuildMeshTable(mesh, previous_anchor, out);
+			return 1;
+		}
+		return XwaRemasterShip_BuildPreviousMeshTable(mesh, current_anchor, previous_anchor, out);
+	}
+
+	int changed = current_cockpit->aim_angle_a != previous_cockpit->aim_angle_a ||
+				  current_cockpit->aim_angle_b != previous_cockpit->aim_angle_b ||
+				  memcmp(current_anchor->component_state, previous_anchor->component_state,
+						 sizeof current_anchor->component_state) != 0;
+	if (!changed && current_anchor->object_type == XWA_SNAP_TYPE_BWING) {
+		const uint32_t slots = AERON_MAX_MESH_SLOTS < XWA_SNAP_MAX_MESH_SLOTS
+							   ? AERON_MAX_MESH_SLOTS
+							   : XWA_SNAP_MAX_MESH_SLOTS;
+		const int bridge_slot = ship_bwing_bridge_slot(mesh, slots);
+		changed = bridge_slot >= 0 &&
+				  current_anchor->mesh_rotation[bridge_slot] != previous_anchor->mesh_rotation[bridge_slot];
+	}
+	if (!changed) {
+		return 0;
+	}
+
+	/* The previous pose may be identity; the initialized table is still
+	 * required when the current cockpit has just begun moving. */
+	XwaRemasterShip_BuildCockpitMeshTable(mesh, previous_cockpit, previous_anchor, out);
+	return 1;
 }
 
 /* Small xorshift for the classic glow flicker — cosmetic randomness

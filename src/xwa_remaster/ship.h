@@ -78,12 +78,16 @@ int XwaRemasterShip_BuildPreviousMeshTable(const AeronSceneMesh* mesh, const Xwa
  * (never draw the whole source model). */
 int XwaRemasterShip_BuildDebrisMeshTable(const XwaFlightObject* f, AeronSceneMeshTable* out);
 
-/* Mesh table for the TURRET cockpit: classic rotates the model's
- * rotary meshes by the captured seat aim — gun/launcher types by
- * aim_angle_a, the beam type by -aim_angle_b (Q16, about each mesh's
- * own rotation node). Returns 1 when any slot rotates. */
+/* Mesh table for the cockpit model. Pilot cockpits inherit articulation
+ * and component visibility from the anchor craft. Turret cockpits retain
+ * that visibility and B-Wing root compensation, but replace per-root craft
+ * rotation with the captured seat aim used by the classic cockpit walk. */
 int XwaRemasterShip_BuildCockpitMeshTable(const AeronSceneMesh* mesh, const XwaCockpit* c,
-										  AeronSceneMeshTable* out);
+										  const XwaFlightObject* anchor, AeronSceneMeshTable* out);
+int XwaRemasterShip_BuildPreviousCockpitMeshTable(
+	const AeronSceneMesh* mesh, const XwaCockpit* current_cockpit,
+	const XwaFlightObject* current_anchor, const XwaCockpit* previous_cockpit,
+	const XwaFlightObject* previous_anchor, AeronSceneMeshTable* out);
 
 /* Process-wide PBR tuning globals consumed by every lit
  * XwaRemasterShip_SetPbrEnv submit (stored in the combined PbrLightFS

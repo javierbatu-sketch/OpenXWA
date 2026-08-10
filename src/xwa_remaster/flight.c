@@ -3356,7 +3356,7 @@ static void fl_submit_hyperspace_cockpit(AeronCommandBuffer* cmd, XwaRemasterAss
 	inst.zero_velocity = 1;
 	inst.cull_mode = AERON_CULL_BACK;
 	AeronSceneMeshTable* tb = &s.tables[s.table_count];
-	if (XwaRemasterShip_BuildCockpitMeshTable(cockpit_mesh, &snap->cockpit, tb)) {
+	if (XwaRemasterShip_BuildCockpitMeshTable(cockpit_mesh, &snap->cockpit, player_f, tb)) {
 		inst.mesh_table = tb;
 		s.table_count++;
 	}
@@ -4418,18 +4418,18 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 			inst.shadow_flags =
 				AERON_SCENE_INSTANCE_NO_CAST_SHADOW | AERON_SCENE_INSTANCE_USE_RECEIVER_LOCAL_SHADOW;
 			AeronSceneMeshTable* tb = &s.tables[s.table_count];
-			if (XwaRemasterShip_BuildCockpitMeshTable(cockpit_mesh, &snap->cockpit, tb)) {
+			if (XwaRemasterShip_BuildCockpitMeshTable(cockpit_mesh, &snap->cockpit, cockpit_anchor, tb)) {
 				inst.mesh_table = tb;
 				s.table_count++;
 			}
-			if (cockpit_history_valid && prev->cockpit.seat != 0 && cockpit_mesh->has_any_rotation) {
+			if (cockpit_history_valid) {
 				AeronSceneMeshTable* prev_tb = &s.tables[s.table_count];
-				/* The builder initializes an identity table even when all previous
-				 * aim angles are zero; retain it so a newly rotating turret does
-				 * not incorrectly reuse its current articulation as history. */
-				XwaRemasterShip_BuildCockpitMeshTable(cockpit_mesh, &prev->cockpit, prev_tb);
-				inst.prev_mesh_table = prev_tb;
-				s.table_count++;
+				if (XwaRemasterShip_BuildPreviousCockpitMeshTable(
+						cockpit_mesh, &snap->cockpit, cockpit_anchor, &prev->cockpit,
+						previous_cockpit_anchor, prev_tb)) {
+					inst.prev_mesh_table = prev_tb;
+					s.table_count++;
+				}
 			}
 			AeronScene_AddMeshInstance(s.scene, &inst);
 			if (player_f) {
