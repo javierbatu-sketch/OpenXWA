@@ -142,7 +142,7 @@ static int select_game_data(AeronVfs* vfs, char* selected, size_t selected_capac
 				return 0;
 			}
 			if (status == AERON_FOLDER_DIALOG_WAITING) {
-				Aeron_WaitForNextFrame(Aeron_NowUs() + 16667);
+				Aeron_WaitForNextFrame(16667);
 			}
 		} while (status == AERON_FOLDER_DIALOG_WAITING);
 		Aeron_DestroyFolderDialog(dialog);
@@ -464,7 +464,7 @@ int main(int argc, char** argv) {
 				Aeron_RequestFatalRendererError("frame presentation");
 				break;
 			}
-			Aeron_WaitForNextFrame(XwaPort_NextWakeDeadlineUs());
+			Aeron_WaitForNextFrame(XwaPort_NextWakeDelayUs());
 		}
 	}
 

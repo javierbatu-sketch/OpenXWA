@@ -20,7 +20,6 @@
 #include "xwa/util/time.h"
 
 #ifdef XWA_MODERN
-#include "aeron/time.h"
 #include "xwa_runtime/timing/host_clock.h"
 #endif
 
@@ -169,7 +168,7 @@ int g_flightFlickerPhaseWindow;
 static uint8_t g_flightFrontendModalSavedSound3DEnabled;
 static int g_flightFrontendModalActive;
 #ifdef XWA_MODERN
-static uint64_t g_flightFrontendModalNextFrameUs;
+static uint64_t g_flightFrontendModalNextFrameElapsedUs;
 #endif
 
 enum { DISPLAY_MEMORY_SYSTEM = 1, DISPLAY_MEMORY_VIDEO = 2 };
@@ -284,15 +283,15 @@ static void FlightDisplay_DetachFrontendModalSurfaces(void) {
 	}
 	g_flightFrontendModalActive = 0;
 #ifdef XWA_MODERN
-	g_flightFrontendModalNextFrameUs = 0;
+	g_flightFrontendModalNextFrameElapsedUs = 0;
 #endif
 	DInput_DrainKeyboardEvents();
 }
 
 #ifdef XWA_MODERN
 static void FlightDisplay_ArmFrontendModalClock(void) {
-	g_flightFrontendModalNextFrameUs =
-		Aeron_NowUs() + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
+	g_flightFrontendModalNextFrameElapsedUs =
+		XwaTime_GetElapsedUs() + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
 }
 #endif
 
@@ -309,11 +308,11 @@ static FrontendScreenModalStatus FlightDisplay_PumpFrontendModalFrame(void) {
 	modalStatus = FrontendScreen_GetModalStatus();
 	if (modalStatus == FRONTEND_SCREEN_MODAL_RUNNING) {
 #ifdef XWA_MODERN
-		nowUs = Aeron_NowUs();
-		if (nowUs < g_flightFrontendModalNextFrameUs) {
+		nowUs = XwaTime_GetElapsedUs();
+		if (nowUs < g_flightFrontendModalNextFrameElapsedUs) {
 			return modalStatus;
 		}
-		g_flightFrontendModalNextFrameUs =
+		g_flightFrontendModalNextFrameElapsedUs =
 			nowUs + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
 #endif
 		modalStatus = FrontendScreen_TickModal();
@@ -351,11 +350,16 @@ static int FlightDisplay_TickFrontendModal(void) {
 int FlightDisplay_IsFrontendModalActive(void) { return g_flightFrontendModalActive; }
 
 #ifdef XWA_MODERN
-uint64_t FlightDisplay_GetFrontendModalWakeDeadlineUs(void) {
-	if (!g_flightFrontendModalActive || g_flightFrontendModalNextFrameUs == 0) {
-		return Aeron_NowUs();
+uint64_t FlightDisplay_GetFrontendModalWakeDelayUs(void) {
+	uint64_t nowUs;
+
+	if (!g_flightFrontendModalActive || g_flightFrontendModalNextFrameElapsedUs == 0) {
+		return 0;
 	}
-	return g_flightFrontendModalNextFrameUs;
+	nowUs = XwaTime_GetElapsedUs();
+	return g_flightFrontendModalNextFrameElapsedUs > nowUs
+			   ? g_flightFrontendModalNextFrameElapsedUs - nowUs
+			   : 0;
 }
 #endif
 

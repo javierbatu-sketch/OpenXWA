@@ -1444,11 +1444,15 @@ int ImWaveInit(void) {
 
 // FUNCTION: XWA 0x592A19
 int ImWaveOutStart(void) {
+#ifndef XWA_MODERN
 	unsigned int startTime;
+#endif
 	{
 		ImTimeCaps caps;
 		{
+#ifndef XWA_MODERN
 			int retries;
+#endif
 
 			if (!g_imWaveCsInitialized) {
 				ImInitializeCriticalSection(&g_imWaveCritSec);
@@ -1470,8 +1474,12 @@ int ImWaveOutStart(void) {
 			uTimerID = ImTimeSetEvent(uDelay, 0, ImTimerCallback, 15, 1);
 			if (!uTimerID) {
 				ImLog("timeSetEvent failed. (%d)", 93);
+#ifdef XWA_MODERN
+				return 0;
+#endif
 			}
 
+#ifndef XWA_MODERN
 			startTime = ImTimeGetTime();
 			IM_ATOMIC_STORE(g_imTimerTicks, 0);
 			retries = 3;
@@ -1500,6 +1508,7 @@ int ImWaveOutStart(void) {
 			if (!IM_ATOMIC_LOAD(g_imTimerTicks)) {
 				return 0;
 			}
+#endif
 
 			((ImDSBufferCompat*)g_imDSoundBuffer)->vtable->play(g_imDSoundBuffer, 0, 0, 1);
 			return 1;

@@ -96,7 +96,7 @@ static int g_xwaFlightTaskFilmPathWasSet;
 static XwaFlightTaskPhase g_xwaFlightTaskPhase;
 static XwaFlightLoadingStage g_xwaFlightTaskLoadingStage;
 static uint32_t g_xwaFlightTaskLoadingStartTick;
-static uint64_t g_xwaFlightTaskNextWakeUs;
+static uint64_t g_xwaFlightTaskNextWakeElapsedUs;
 static XwaFlightTaskPhase g_xwaFlightTaskLastLoggedPhase = XWA_FLIGHT_TASK_PHASE_INACTIVE;
 static uint32_t g_xwaFlightTaskTickLogCount;
 static int g_xwaFlightTaskLastStepTargetTimestamp;
@@ -168,8 +168,8 @@ static const char* XwaFlightTask_PhaseName(XwaFlightTaskPhase phase) {
 static void XwaFlightTask_Log(const char* event) {
 	Aeron_LogTrace("xwa.flight.task", "%s: phase=%s active=%d complete=%d now=%llu next=%llu input=%d game=%d",
 			  event, XwaFlightTask_PhaseName(g_xwaFlightTaskPhase), g_xwaFlightTaskActive,
-			  g_xwaFlightTaskComplete, (unsigned long long)Aeron_NowUs(),
-			  (unsigned long long)g_xwaFlightTaskNextWakeUs, g_inputTimestamp, g_gameTime);
+			  g_xwaFlightTaskComplete, (unsigned long long)XwaTime_GetElapsedUs(),
+			  (unsigned long long)g_xwaFlightTaskNextWakeElapsedUs, g_inputTimestamp, g_gameTime);
 }
 #else
 static void XwaFlightTask_Log(const char* event) {
@@ -186,7 +186,7 @@ static void XwaFlightTask_LogPhaseEntry(void) {
 
 static void XwaFlightTask_AdvanceLoadingStage(XwaFlightLoadingStage nextStage) {
 	g_xwaFlightTaskLoadingStage = nextStage;
-	g_xwaFlightTaskNextWakeUs = Aeron_NowUs() + XWA_FLIGHT_FRAME_US;
+	g_xwaFlightTaskNextWakeElapsedUs = XwaTime_GetElapsedUs() + XWA_FLIGHT_FRAME_US;
 }
 
 static int XwaFlightTask_FileExists(AeronVfsRoot root, const char* path) {
@@ -1306,13 +1306,15 @@ int XwaFlightTask_Init(char* missionCmdLine, const char* filmFilePath) {
 	(void)configIndex;
 	g_xwaFlightTaskActive = 1;
 	g_xwaFlightTaskPhase = XWA_FLIGHT_TASK_PHASE_MAIN_LOOP_INIT;
-	g_xwaFlightTaskNextWakeUs = Aeron_NowUs();
+	g_xwaFlightTaskNextWakeElapsedUs = XwaTime_GetElapsedUs();
 	g_xwaFlightTaskResult = 1;
 	XwaFlightTask_Log("init-complete");
 	return 1;
 }
 
 void XwaFlightTask_Tick(void) {
+	uint64_t nowUs;
+
 	if (!g_xwaFlightTaskActive || g_xwaFlightTaskComplete) {
 		if (g_xwaFlightTaskTickLogCount < 8u) {
 			++g_xwaFlightTaskTickLogCount;
@@ -1320,13 +1322,14 @@ void XwaFlightTask_Tick(void) {
 		}
 		return;
 	}
+	nowUs = XwaTime_GetElapsedUs();
 	/* Modal continuations discard their elapsed host time; do not simulate on the completion frame. */
 	if (Flight_ContinueOptionsModal() || Hangar_ContinueOptionsModal()) {
-		g_xwaFlightTaskNextWakeUs = Aeron_NowUs() + XWA_FLIGHT_FRAME_US;
+		g_xwaFlightTaskNextWakeElapsedUs = nowUs + XWA_FLIGHT_FRAME_US;
 		return;
 	}
 
-	if (Aeron_NowUs() < g_xwaFlightTaskNextWakeUs) {
+	if (nowUs < g_xwaFlightTaskNextWakeElapsedUs) {
 		if (g_xwaFlightTaskTickLogCount < 8u) {
 			++g_xwaFlightTaskTickLogCount;
 			XwaFlightTask_Log("tick-before-wake");
@@ -1337,7 +1340,7 @@ void XwaFlightTask_Tick(void) {
 		++g_xwaFlightTaskTickLogCount;
 		XwaFlightTask_Log("tick-run");
 	}
-	g_xwaFlightTaskNextWakeUs += XWA_FLIGHT_FRAME_US;
+	g_xwaFlightTaskNextWakeElapsedUs += XWA_FLIGHT_FRAME_US;
 
 	while (!g_xwaFlightTaskComplete) {
 		XwaFlightTask_LogPhaseEntry();
@@ -1495,7 +1498,8 @@ void XwaFlightTask_Tick(void) {
 					default:
 						if (XwaTime_GetElapsedTicks() - g_xwaFlightTaskLoadingStartTick <
 							XWA_FLIGHT_LOADING_MIN_VISIBLE_MS) {
-							g_xwaFlightTaskNextWakeUs = Aeron_NowUs() + XWA_FLIGHT_FRAME_US;
+							g_xwaFlightTaskNextWakeElapsedUs =
+								nowUs + XWA_FLIGHT_FRAME_US;
 							return;
 						}
 						FlightLoading_DetachFrontendSurfaces();
@@ -1883,4 +1887,7 @@ int XwaFlightTask_IsComplete(void) { return g_xwaFlightTaskComplete != 0; }
 
 int XwaFlightTask_GetResult(void) { return g_xwaFlightTaskResult; }
 
-uint64_t XwaFlightTask_NextWakeDeadlineUs(void) { return g_xwaFlightTaskNextWakeUs; }
+uint64_t XwaFlightTask_NextWakeDelayUs(void) {
+	const uint64_t nowUs = XwaTime_GetElapsedUs();
+	return g_xwaFlightTaskNextWakeElapsedUs > nowUs ? g_xwaFlightTaskNextWakeElapsedUs - nowUs : 0;
+}

@@ -337,7 +337,7 @@ void XwaMovieTask_Tick(void) {
 		g_xwaMovieTask.playback_paused = 0;
 	}
 
-	Aeron_VideoUpdate(g_xwaMovieTask.player, Aeron_NowUs());
+	Aeron_VideoUpdate(g_xwaMovieTask.player);
 	g_movieFrameNumber = (int)Aeron_VideoGetPresentedFrameIndex(g_xwaMovieTask.player);
 
 	if (FrontendDialog_HasNetworkDismissPacket() || XwaMovieTask_LocalSkipRequested()) {
@@ -390,14 +390,13 @@ int XwaMovieTask_IsComplete(void) { return g_xwaMovieTask.complete; }
 
 int XwaMovieTask_GetResult(void) { return g_xwaMovieTask.result; }
 
-uint64_t XwaMovieTask_NextWakeDeadlineUs(void) {
-	uint64_t deadline;
+uint64_t XwaMovieTask_NextWakeDelayUs(void) {
+	uint64_t delayUs;
 
 	if (!g_xwaMovieTask.active || g_xwaMovieTask.player == NULL) {
 		return 0;
 	}
-	deadline = Aeron_VideoNextWakeDeadlineUs(g_xwaMovieTask.player);
-	return deadline != 0 ? deadline : Aeron_NowUs() + 10000u;
+	return Aeron_VideoGetNextWakeDelayUs(g_xwaMovieTask.player, &delayUs) ? delayUs : 10000u;
 }
 
 void XwaMovieTask_Shutdown(void) {

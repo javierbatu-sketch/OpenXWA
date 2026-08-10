@@ -37,7 +37,7 @@ int XwaPort_EverHadFocus(void);
 void XwaPort_Shutdown(void);
 int XwaPort_ShouldQuit(void);
 int XwaPort_GetExitCode(void);
-uint64_t XwaPort_NextWakeDeadlineUs(void);
+uint64_t XwaPort_NextWakeDelayUs(void);
 
 #ifdef __cplusplus
 }

@@ -368,20 +368,20 @@ int XwaPort_GetExitCode(void) {
 	return 0;
 }
 
-uint64_t XwaPort_NextWakeDeadlineUs(void) {
+uint64_t XwaPort_NextWakeDelayUs(void) {
 	if (XwaMovieTask_IsActive()) {
-		return XwaMovieTask_NextWakeDeadlineUs();
+		return XwaMovieTask_NextWakeDelayUs();
 	}
 	if (XwaFlightTask_IsActive()) {
 		if (FlightDisplay_IsFrontendModalActive()) {
-			return FlightDisplay_GetFrontendModalWakeDeadlineUs();
+			return FlightDisplay_GetFrontendModalWakeDelayUs();
 		}
-		return XwaFlightTask_NextWakeDeadlineUs();
+		return XwaFlightTask_NextWakeDelayUs();
 	}
 
 	if (FrontendFlight_HasPendingLaunch()) {
-		return Aeron_NowUs();
+		return 0;
 	}
 
-	return XwaFrontendTask_NextWakeDeadlineUs();
+	return XwaFrontendTask_NextWakeDelayUs();
 }

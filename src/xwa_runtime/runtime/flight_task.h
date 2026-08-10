@@ -13,7 +13,7 @@ int      XwaFlightTask_Shutdown(void);
 int      XwaFlightTask_IsActive(void);
 int      XwaFlightTask_IsComplete(void);
 int      XwaFlightTask_GetResult(void);
-uint64_t XwaFlightTask_NextWakeDeadlineUs(void);
+uint64_t XwaFlightTask_NextWakeDelayUs(void);
 
 #ifdef __cplusplus
 }

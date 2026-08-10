@@ -13,7 +13,7 @@ void XwaFrontendTask_Tick(void);
 void XwaFrontendTask_ServiceFrameSystems(void);
 void XwaFrontendTask_Pause(void);
 int XwaFrontendTask_ShouldQuit(void);
-uint64_t XwaFrontendTask_NextWakeDeadlineUs(void);
+uint64_t XwaFrontendTask_NextWakeDelayUs(void);
 
 #ifdef __cplusplus
 }

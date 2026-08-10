@@ -1,6 +1,5 @@
 #include "xwa_runtime/runtime/frontend_task.h"
 
-#include "aeron/aeron.h"
 #include "xwa/audio/music.h"
 #include "xwa/config/game_config.h"
 #include "xwa/frontend/concourse.h"
@@ -25,7 +24,7 @@ enum {
 	XWA_FRONTEND_BPP = 16,
 };
 
-static uint64_t g_xwaFrontendNextFrameUs;
+static uint64_t g_xwaFrontendNextFrameElapsedUs;
 static int g_xwaFrontendShouldQuit;
 
 /* Installs the callback state that original FrontendDisplay_Init @ 0x53ED60 wrote into
@@ -118,7 +117,7 @@ int XwaFrontendTask_Init(void) {
 	}
 
 	g_xwaFrontendShouldQuit = 0;
-	g_xwaFrontendNextFrameUs = Aeron_NowUs();
+	g_xwaFrontendNextFrameElapsedUs = XwaTime_GetElapsedUs();
 	return 1;
 }
 
@@ -128,7 +127,7 @@ int XwaFrontendTask_Init(void) {
 void XwaFrontendTask_Pause(void) {
 	/* Aeron retains the last presented frame when a tick submits nothing, so the
 	   paused (unfocused) frontend stays on screen with no re-present needed. */
-	g_xwaFrontendNextFrameUs = Aeron_NowUs();
+	g_xwaFrontendNextFrameElapsedUs = XwaTime_GetElapsedUs();
 }
 
 void XwaFrontendTask_ServiceFrameSystems(void) {
@@ -150,12 +149,12 @@ void XwaFrontendTask_Tick(void) {
 	}
 
 	FrontendFileStream_ServiceSlots();
-	nowUs = Aeron_NowUs();
-	if (nowUs < g_xwaFrontendNextFrameUs) {
+	nowUs = XwaTime_GetElapsedUs();
+	if (nowUs < g_xwaFrontendNextFrameElapsedUs) {
 		return;
 	}
 
-	g_xwaFrontendNextFrameUs =
+	g_xwaFrontendNextFrameElapsedUs =
 		nowUs + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
 	XwaFrontendTask_ServiceFrameSystems();
 	/* Original RunMainLoop also handled CDAudio resume/track-end work here. CD audio is intentionally
@@ -185,6 +184,9 @@ void XwaFrontendTask_Tick(void) {
 
 int XwaFrontendTask_ShouldQuit(void) { return g_xwaFrontendShouldQuit; }
 
-/* Replaces the original GetTickCount/g_frameIntervalMs throttle in
-   FrontendDisplay_RunMainLoop @ 0x53E760 with an Aeron wake deadline. */
-uint64_t XwaFrontendTask_NextWakeDeadlineUs(void) { return g_xwaFrontendNextFrameUs; }
+/* Returns the delay until the original GetTickCount/g_frameIntervalMs throttle
+   in FrontendDisplay_RunMainLoop @ 0x53E760 is ready for another iteration. */
+uint64_t XwaFrontendTask_NextWakeDelayUs(void) {
+	const uint64_t nowUs = XwaTime_GetElapsedUs();
+	return g_xwaFrontendNextFrameElapsedUs > nowUs ? g_xwaFrontendNextFrameElapsedUs - nowUs : 0;
+}

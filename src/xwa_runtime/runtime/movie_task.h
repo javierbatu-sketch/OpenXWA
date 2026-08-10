@@ -16,7 +16,7 @@ void XwaMovieTask_Stop(int skipped);
 int XwaMovieTask_IsActive(void);
 int XwaMovieTask_IsComplete(void);
 int XwaMovieTask_GetResult(void);
-uint64_t XwaMovieTask_NextWakeDeadlineUs(void);
+uint64_t XwaMovieTask_NextWakeDelayUs(void);
 void XwaMovieTask_Shutdown(void);
 
 #ifdef __cplusplus
