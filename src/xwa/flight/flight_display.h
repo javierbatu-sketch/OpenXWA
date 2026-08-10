@@ -45,6 +45,9 @@ char  FlightDisplay_Init(void);
 void  FlightDisplay_FreeSurfaces(void);
 int   FlightDisplay_IsFrontendModalActive(void);
 int   FlightDisplay_PumpFrontendModal(void);
+#ifdef XWA_MODERN
+uint64_t FlightDisplay_GetFrontendModalWakeDeadlineUs(void);
+#endif
 int   FlightDisplay_RunRestrictedOptionsModal(void);
 char* FlightFilm_RunNamePrompt(void);
 int   FlightFilm_SaveTempRecordingWithPrompt(void);

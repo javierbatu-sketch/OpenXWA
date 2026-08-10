@@ -12,6 +12,7 @@ void XwaTime_AdvanceHostClock(int32_t delta_us);
 uint64_t XwaTime_GetElapsedUs(void);
 /* Returns host elapsed milliseconds, matching the unit of Win32 GetTickCount. */
 uint32_t XwaTime_GetElapsedTicks(void);
+uint64_t XwaTime_GetLegacyTimerIntervalUs(uint32_t intervalMs);
 
 #ifdef __cplusplus
 }

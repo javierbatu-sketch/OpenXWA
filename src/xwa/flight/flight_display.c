@@ -19,6 +19,11 @@
 #include "xwa/util/memory.h"
 #include "xwa/util/time.h"
 
+#ifdef XWA_MODERN
+#include "aeron/time.h"
+#include "xwa_runtime/timing/host_clock.h"
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -163,6 +168,9 @@ int g_flightFlickerRefreshRateScale;
 int g_flightFlickerPhaseWindow;
 static uint8_t g_flightFrontendModalSavedSound3DEnabled;
 static int g_flightFrontendModalActive;
+#ifdef XWA_MODERN
+static uint64_t g_flightFrontendModalNextFrameUs;
+#endif
 
 enum { DISPLAY_MEMORY_SYSTEM = 1, DISPLAY_MEMORY_VIDEO = 2 };
 
@@ -275,11 +283,24 @@ static void FlightDisplay_DetachFrontendModalSurfaces(void) {
 		g_flightOverlayOffscreenSurface = NULL;
 	}
 	g_flightFrontendModalActive = 0;
+#ifdef XWA_MODERN
+	g_flightFrontendModalNextFrameUs = 0;
+#endif
 	DInput_DrainKeyboardEvents();
 }
 
+#ifdef XWA_MODERN
+static void FlightDisplay_ArmFrontendModalClock(void) {
+	g_flightFrontendModalNextFrameUs =
+		Aeron_NowUs() + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
+}
+#endif
+
 static FrontendScreenModalStatus FlightDisplay_PumpFrontendModalFrame(void) {
 	FrontendScreenModalStatus modalStatus;
+#ifdef XWA_MODERN
+	uint64_t nowUs;
+#endif
 
 	/* Draw-then-present: tick the modal (which renders into the frontend back
 	   buffer), then PresentFrame composites and submits it via the shim. The
@@ -287,6 +308,14 @@ static FrontendScreenModalStatus FlightDisplay_PumpFrontendModalFrame(void) {
 	   render-submission clearing is needed. */
 	modalStatus = FrontendScreen_GetModalStatus();
 	if (modalStatus == FRONTEND_SCREEN_MODAL_RUNNING) {
+#ifdef XWA_MODERN
+		nowUs = Aeron_NowUs();
+		if (nowUs < g_flightFrontendModalNextFrameUs) {
+			return modalStatus;
+		}
+		g_flightFrontendModalNextFrameUs =
+			nowUs + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
+#endif
 		modalStatus = FrontendScreen_TickModal();
 	}
 	FrontendDisplay_PresentFrame();
@@ -320,6 +349,15 @@ static int FlightDisplay_TickFrontendModal(void) {
 }
 
 int FlightDisplay_IsFrontendModalActive(void) { return g_flightFrontendModalActive; }
+
+#ifdef XWA_MODERN
+uint64_t FlightDisplay_GetFrontendModalWakeDeadlineUs(void) {
+	if (!g_flightFrontendModalActive || g_flightFrontendModalNextFrameUs == 0) {
+		return Aeron_NowUs();
+	}
+	return g_flightFrontendModalNextFrameUs;
+}
+#endif
 
 /* Port glue (no original counterpart). The original releases the flight
  * surfaces inline in the teardown tail of Flight_Main @0x50A7E0 (0x50B451-
@@ -719,6 +757,9 @@ int FlightDisplay_RunRestrictedOptionsModal(void) {
 			FlightDisplay_DetachFrontendModalSurfaces();
 			return result;
 		}
+#ifdef XWA_MODERN
+		FlightDisplay_ArmFrontendModalClock();
+#endif
 	}
 
 	finished = FlightDisplay_TickFrontendModal();
@@ -746,6 +787,9 @@ char* FlightFilm_RunNamePrompt(void) {
 			FlightDisplay_DetachFrontendModalSurfaces();
 			return filmName;
 		}
+#ifdef XWA_MODERN
+		FlightDisplay_ArmFrontendModalClock();
+#endif
 	}
 
 	finished = FlightDisplay_TickFrontendModal();

@@ -373,6 +373,9 @@ uint64_t XwaPort_NextWakeDeadlineUs(void) {
 		return XwaMovieTask_NextWakeDeadlineUs();
 	}
 	if (XwaFlightTask_IsActive()) {
+		if (FlightDisplay_IsFrontendModalActive()) {
+			return FlightDisplay_GetFrontendModalWakeDeadlineUs();
+		}
 		return XwaFlightTask_NextWakeDeadlineUs();
 	}
 

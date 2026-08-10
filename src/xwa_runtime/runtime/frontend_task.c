@@ -14,6 +14,7 @@
 #include "xwa/frontend/frontend_sound.h"
 #include "xwa/frontend/frontend_text.h"
 #include "xwa/frontend/net_transport.h"
+#include "xwa_runtime/timing/host_clock.h"
 #include "xwa/util/memory.h"
 #include "xwa/xwa_options.h"
 
@@ -22,7 +23,6 @@
 enum {
 	XWA_FRONTEND_FPS = 24,
 	XWA_FRONTEND_BPP = 16,
-	XWA_LEGACY_TIMER_QUANTUM_US = 15625,
 };
 
 static uint64_t g_xwaFrontendNextFrameUs;
@@ -138,16 +138,6 @@ void XwaFrontendTask_ServiceFrameSystems(void) {
 	Music_Update();
 }
 
-static uint64_t XwaFrontendTask_GetFrameIntervalUs(void) {
-	uint64_t requestedUs;
-
-	requestedUs = (uint64_t)g_frameIntervalMs * 1000u;
-	/* Original frontend deadlines were observed through GetTickCount's coarse
-	   system clock. Preserve that quantization while using Aeron's precise clock. */
-	return ((requestedUs + XWA_LEGACY_TIMER_QUANTUM_US - 1u) / XWA_LEGACY_TIMER_QUANTUM_US) *
-		   XWA_LEGACY_TIMER_QUANTUM_US;
-}
-
 /* Tick-model replacement for the active loop body of original
    FrontendDisplay_RunMainLoop @ 0x53E760. */
 void XwaFrontendTask_Tick(void) {
@@ -165,7 +155,8 @@ void XwaFrontendTask_Tick(void) {
 		return;
 	}
 
-	g_xwaFrontendNextFrameUs = nowUs + XwaFrontendTask_GetFrameIntervalUs();
+	g_xwaFrontendNextFrameUs =
+		nowUs + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
 	XwaFrontendTask_ServiceFrameSystems();
 	/* Original RunMainLoop also handled CDAudio resume/track-end work here. CD audio is intentionally
 	   not ported because it is not used by the original game frontend flow. */
