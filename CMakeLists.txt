@@ -332,6 +332,9 @@ target_include_directories(xwa PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/xwa_app)
 
 set(XWA_VERSION "0.0.0-dev" CACHE STRING "OpenXWA application version")
+target_compile_definitions(xwa_core PRIVATE
+    OPENXWA_VERSION="${XWA_VERSION}"
+)
 
 if(APPLE)
     set(XWA_MACOS_BUILD_VERSION "1" CACHE STRING

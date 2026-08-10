@@ -156,7 +156,9 @@ int Config_MainMenuScreen(void) {
 	int buttonPressed;
 	unsigned int titleWidth;
 	FrontendRect rect;
+#ifndef XWA_MODERN
 	char versionText[5];
+#endif
 
 #ifdef XWA_MODERN
 	if (g_configExitConfirmPending) {
@@ -206,9 +208,13 @@ int Config_MainMenuScreen(void) {
 					  g_colorLightBlue);
 
 	y += 25;
+#ifdef XWA_MODERN
+	FrontendText_Draw(10, "OpenXWA " OPENXWA_VERSION, 35, 420, g_colorPaleBlue);
+#else
 	memcpy(versionText, "2.02", sizeof(versionText));
 	sprintf(g_frontendScratchBuffer, "%s %s", FrontendString_Get(STR_CONFIG_VERSION), versionText);
 	FrontendText_Draw(10, g_frontendScratchBuffer, 35, 420, g_colorPaleBlue);
+#endif
 
 	rowIndex = 0;
 	text = FrontendString_Get(STR_CONFIG_GENERAL_OPTIONS);

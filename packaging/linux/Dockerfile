@@ -193,6 +193,7 @@ RUN case "${XWA_BUILD_TYPE}" in \
         -DAERON_SHADERCROSS_EXECUTABLE=/opt/xwa-tools/bin/shadercross \
         -DXWA_BUILD_TOOLS=OFF \
         -DXWA_ENABLE_DEBUG_UI="${xwa_debug_ui}" \
+        -DXWA_VERSION="${XWA_VERSION}" \
     && cmake --build /build/xwa --target xwa --parallel
 
 RUN mkdir -p /build/package/openxwa-linux-x86_64/licenses \
