@@ -2710,6 +2710,12 @@ static char paiman_escortmaneuver(void) {
 							.orders[4 * g_paiContext.curOrderCoord.fields.regionIdx +
 									g_paiContext.curOrderCoord.fields.orderSlot]
 							.variable1;
+#ifdef XWA_MODERN
+			/* Avoid the original's adjacent-global read; position 13 is the center of the 27-entry grid. */
+			if (variable1 >= 27) {
+				variable1 = 13;
+			}
+#endif
 			pai_calcrotatedpoint(&g_objectTable[targetObjIdx], g_aiCourseOrderLocalOffsetXByVar[variable1],
 								 g_aiCourseOrderLocalOffsetYByVar[variable1],
 								 g_aiCourseOrderLocalOffsetZByVar[variable1]);
