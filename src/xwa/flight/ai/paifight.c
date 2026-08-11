@@ -2692,23 +2692,20 @@ char paifight_fightershootorder(void) {
 				}
 			} else {
 				classLinkMode = 0;
-				if (g_paiContext.aiController->hasLiveTarget) {
-					if (isDisablePlan) {
-						if (g_paiContext.aiController->hasLiveTarget != 1) {
-							goto set_laser_link_mode;
-						}
-					} else if (g_missionHeader.body.missionType != XWA_MISSION_TYPE_SKIRMISH) {
-						goto set_laser_link_mode;
+				if (g_paiContext.aiController->hasLiveTarget && isDisablePlan) {
+					if (g_paiContext.aiController->hasLiveTarget == 1) {
+						/* Disable plans keep ion cannons active after the target's shields collapse. */
+						classLinkMode = (uint8_t)laserLinkMode;
 					}
-				}
-				if (targetObjIdx >= (uint16_t)g_activeRegionObjectSlotStart &&
-					(uint32_t)targetObjIdx < g_activeRegionCraftObjectSlotEnd &&
-					g_objectTable[targetObjIdx].mobj->pCraft->shieldFront != 0) {
+				} else if ((!g_paiContext.aiController->hasLiveTarget ||
+							g_missionHeader.body.missionType == XWA_MISSION_TYPE_SKIRMISH) &&
+						   targetObjIdx >= (uint16_t)g_activeRegionObjectSlotStart &&
+						   (uint32_t)targetObjIdx < g_activeRegionCraftObjectSlotEnd &&
+						   g_objectTable[targetObjIdx].mobj->pCraft->shieldFront != 0) {
 					classLinkMode = (uint8_t)laserLinkMode;
 				}
 			}
 
-		set_laser_link_mode:
 			g_curCraft->laserLinkMode[cannonClassIdx] = classLinkMode;
 			g_curCraft->laserLinkMode[cannonClassIdx + 3] = laserLinkModeHi;
 			++cannonClassIdx;
