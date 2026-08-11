@@ -1,5 +1,6 @@
 # OpenXWA
 [![GitHub Release](https://img.shields.io/github/v/release/elyosh/OpenXWA)](https://github.com/elyosh/OpenXWA/releases/latest)
+[![Visit our Discord server](https://img.shields.io/discord/1533001488391995442)](https://discord.gg/vfPVFxBA4)
 
 ![Screenshot of the Azzameen hangar in OpenXWA](assets/openxwa_hangar.jpg)
 
@@ -20,6 +21,10 @@ runs the original game data on Windows, macOS, and Linux.
 | macOS | macOS 13 or later; arm64 or x86-64 | Metal |
 | Linux | x86-64; glibc 2.36 or later | Vulkan |
 
+## Community
+
+We operate a [Discord server](https://discord.gg/vfPVFxBA4) for discussing OpenXWA, its development, and anything related to the Totally Games sims. We look forward to hearing from you!  
+
 ## Current state
 
 Every original function not dedicated to multiplayer has been reimplemented.
@@ -29,6 +34,8 @@ The digital iMUSE audio engine has been fully reimplemented.
 OpenXWA remains under active development. Bugs and differences from the
 original game are still likely despite this level of coverage. Multiplayer is
 not implemented.
+
+[![Visit our Discord server](https://img.shields.io/discord/1533001488391995442)](https://discord.gg/vfPVFxBA4)
 
 ## Rendering
 
