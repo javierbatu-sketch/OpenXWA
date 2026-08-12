@@ -1139,7 +1139,7 @@ Matrix3x3* Math3D_BuildAxisAngleMatrix(Matrix3x3* out, float* axisAngle);
 void Math3D_RotateVec3(Vec3f* vec, Matrix3x3* matrix);
 void RenderScene_ComputeVertexLighting(SceneMesh* mesh, ProjVertex* outVert, Vec3f* normal, Vec3f* pos,
 									   Vec3f* eyePos);
-int sw3d_ProjectMeshVerticesDistant(SceneMesh* mesh);
+int RenderScene_ProjectDistantMeshVertices(SceneMesh* mesh);
 void RenderScene_TransformProjectVertices(SceneMesh* mesh);
 SceneFace* RenderScene_TransformFaceTextureGradients(SceneFace* face,
 													 const FaceTextureGradients* faceTexGradients,
@@ -1162,7 +1162,7 @@ void GlowMark_InitFrameScalesAndPools(void);
 void GlowMark_ShutdownFrameScalesAndPools(void);
 char GlowMark_SpawnLocalPlayerHitEffects(void);
 void GlowMark_ProcessPendingRequests(uint16_t objectIndex);
-int sw3d_ProjectMeshVertices(SceneMesh* mesh);
+int RenderScene_ProjectMeshVertices(SceneMesh* mesh);
 void RenderScene_DrawMesh(SceneMesh* mesh);
 void RenderScene_DrawSceneMesh(SceneMesh* mesh);
 int RenderScene_DrawNodeMeshFaces(SceneMesh* mesh);
@@ -1205,7 +1205,7 @@ int std3D_MapZCmpFunc(int zCmpCapsMask, int bPreferOrEqual);
 void std3D_LockVBuffer(Std3DVBuffer* pVBuffer);
 void std3D_UnlockVBuffer(Std3DVBuffer* pVBuffer);
 void std3D_BlitVBuffer(Std3DVBuffer* pDst, Std3DVBuffer* pSrc, int dstX, int dstY, int srcX, int srcY);
-void sw3d_RasterizeMeshFaces(SceneMesh* mesh);
+void RenderScene_DrawMeshFaces(SceneMesh* mesh);
 char RenderScene_DrawVisibleFaces(void);
 void sw3d_DrawVisibleFacesToSurface(void* surfacePixels, int surfacePitchBytes, unsigned int surfaceHeight);
 void sw3d_DrawTexturedShadeSpan(int startX, int endX, float startViewZ);

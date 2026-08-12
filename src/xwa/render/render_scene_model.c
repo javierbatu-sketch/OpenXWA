@@ -637,11 +637,11 @@ void RenderScene_DrawMesh(SceneMesh* mesh) {
 			}
 
 			if (g_bBackdropMeshMode) {
-				sw3d_ProjectMeshVerticesDistant(queuedMesh);
+				RenderScene_ProjectDistantMeshVertices(queuedMesh);
 			} else {
-				sw3d_ProjectMeshVertices(queuedMesh);
+				RenderScene_ProjectMeshVertices(queuedMesh);
 			}
-			sw3d_RasterizeMeshFaces(queuedMesh);
+			RenderScene_DrawMeshFaces(queuedMesh);
 			g_visFaceCount = savedVisFaceCount;
 		}
 	}
@@ -701,12 +701,14 @@ void RenderScene_DrawSceneMesh(SceneMesh* mesh) {
 			queuedMesh = &g_meshQueue[g_meshQueueIndex];
 			RenderScene_CullMeshFacesFromView(queuedMesh);
 			if (queuedMesh->visFaceCount != 0) {
+				/* TODO: Recover XWA's software functions at 0x47E2C0, 0x47EDF0 and
+				 * 0x47F4D0. Keep the existing hardware implementation fallback until then. */
 				if (g_bBackdropMeshMode) {
-					sw3d_ProjectMeshVerticesDistant(queuedMesh);
+					RenderScene_ProjectDistantMeshVertices(queuedMesh);
 				} else {
-					sw3d_ProjectMeshVertices(queuedMesh);
+					RenderScene_ProjectMeshVertices(queuedMesh);
 				}
-				sw3d_RasterizeMeshFaces(queuedMesh);
+				RenderScene_DrawMeshFaces(queuedMesh);
 				++g_meshQueueIndex;
 			}
 		}
@@ -1880,7 +1882,7 @@ void RenderScene_ComputeVertexLighting(SceneMesh* mesh, ProjVertex* outVert, Vec
 }
 
 // FUNCTION: XWA 0x4421E0
-int sw3d_ProjectMeshVerticesDistant(SceneMesh* mesh) {
+int RenderScene_ProjectDistantMeshVertices(SceneMesh* mesh) {
 	float projectScale;
 	int vertexIdx;
 	int faceIter;
@@ -2170,7 +2172,7 @@ SceneFace* RenderScene_TransformFaceTextureGradients(SceneFace* face,
 }
 
 // FUNCTION: XWA 0x442820
-int sw3d_ProjectMeshVertices(SceneMesh* mesh) {
+int RenderScene_ProjectMeshVertices(SceneMesh* mesh) {
 	SceneFace* face;
 	ProjVertex* outVert;
 	int vertexIdx;

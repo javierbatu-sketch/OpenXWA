@@ -534,7 +534,7 @@ RenderBatch* RenderScene_FlushDeferredMeshBatches(void) {
 }
 
 // FUNCTION: XWA 0x442F70
-void sw3d_RasterizeMeshFaces(SceneMesh* mesh) {
+void RenderScene_DrawMeshFaces(SceneMesh* mesh) {
 	ProjVertex* vertBuf;
 	SceneFace* face;
 	int* emitCache;
