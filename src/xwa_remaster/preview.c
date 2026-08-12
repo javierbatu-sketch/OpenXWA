@@ -181,7 +181,7 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 	 * m0*x + m3*y + m6*z) — so the classic transform is the TRANSPOSE
 	 * of the stored rows: eye = basis^T * v + eye_delta. The engine
 	 * normalized the classic model's vertices at load (record's
-	 * model_scale); the cooked mesh is raw OPT geometry. A missing
+	 * model_scale); Aeron flight meshes use meters. A missing
 	 * mirrored mesh just renders an empty transparent PiP. */
 	AeronSceneMesh* mesh = preview_mesh(p->opt_name);
 	if (mesh) {
@@ -189,7 +189,8 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 		memset(&inst, 0, sizeof inst);
 		inst.mesh = mesh;
 		inst.variant = (uint8_t)p->node_switch_index;
-		const float k = p->model_scale > 0.0f ? p->model_scale : 1.0f;
+		const float preview_scale = p->model_scale > 0.0f ? p->model_scale : 1.0f;
+		const float k = preview_scale * XWA_AERON_METERS_TO_MODEL_UNITS;
 		float* m = inst.transform;
 		m[0] = k * p->obj_basis[0];
 		m[1] = k * p->obj_basis[3];

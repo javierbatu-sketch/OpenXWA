@@ -1827,17 +1827,18 @@ static void fl_object_world(const float cur[3][3], float out[9]) {
  * transpose consumption the model preview validated (Math3D_RotateVec3
  * is column-major over the stored rows). */
 static void fl_model_matrix(const float basis[9], const float delta[3], float m[16]) {
-	m[0] = basis[0];
-	m[1] = basis[3];
-	m[2] = basis[6];
+	const float scale = XWA_AERON_METERS_TO_MODEL_UNITS;
+	m[0] = scale * basis[0];
+	m[1] = scale * basis[3];
+	m[2] = scale * basis[6];
 	m[3] = delta[0];
-	m[4] = basis[1];
-	m[5] = basis[4];
-	m[6] = basis[7];
+	m[4] = scale * basis[1];
+	m[5] = scale * basis[4];
+	m[6] = scale * basis[7];
 	m[7] = delta[1];
-	m[8] = basis[2];
-	m[9] = basis[5];
-	m[10] = basis[8];
+	m[8] = scale * basis[2];
+	m[9] = scale * basis[5];
+	m[10] = scale * basis[8];
 	m[11] = delta[2];
 	m[12] = 0.0f;
 	m[13] = 0.0f;
@@ -3192,7 +3193,8 @@ static int fl_map_submit_object(const XwaFlightMapObject* map_object, const XwaF
 		if (map_object->render_kind == XWA_FLIGHT_MAP_RENDER_CRAFT)
 			fl_derive_wreck_flames(f, snapshot_index, context->assets, NULL, NULL);
 		if (s.glow_ok) {
-			XwaRemasterShip_SubmitEngineGlows(s.scene, prepared.mesh, model_matrix, 1.0f, prepared.table,
+			XwaRemasterShip_SubmitEngineGlows(s.scene, prepared.mesh, model_matrix,
+											  XWA_AERON_METERS_TO_MODEL_UNITS, prepared.table,
 											  f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(f),
 											  s.crows, s.camera_local, &s.glow_ref);
 		}
@@ -3367,8 +3369,9 @@ static void fl_submit_hyperspace_cockpit(AeronCommandBuffer* cmd, XwaRemasterAss
 	}
 	if (s.glow_ok && player_f) {
 		XwaRemasterShip_SubmitEngineGlows(
-			s.scene, cockpit_mesh, m, 1.0f, inst.mesh_table, player_f->eg_knockout_mask,
-			XwaRemasterShip_EngineGlowScale(player_f), s.crows, s.camera_local, &s.glow_ref);
+			s.scene, cockpit_mesh, m, XWA_AERON_METERS_TO_MODEL_UNITS, inst.mesh_table,
+			player_f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(player_f), s.crows,
+			s.camera_local, &s.glow_ref);
 	}
 }
 
@@ -4341,7 +4344,8 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 			/* State-derived engine glows for this craft (classic scale
 			 * gates — no craft / dead subsystems — return 0 and skip). */
 			if (s.glow_ok) {
-				XwaRemasterShip_SubmitEngineGlows(s.scene, prepared.mesh, model_matrix, 1.0f, inst.mesh_table,
+				XwaRemasterShip_SubmitEngineGlows(s.scene, prepared.mesh, model_matrix,
+												  XWA_AERON_METERS_TO_MODEL_UNITS, inst.mesh_table,
 												  f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(f),
 												  s.crows, s.camera_local, &s.glow_ref);
 			}
@@ -4441,8 +4445,9 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 			 * the PLAYER craft's state. */
 			if (s.glow_ok && player_f) {
 				XwaRemasterShip_SubmitEngineGlows(
-					s.scene, cockpit_mesh, m, 1.0f, inst.mesh_table, player_f->eg_knockout_mask,
-					XwaRemasterShip_EngineGlowScale(player_f), s.crows, s.camera_local, &s.glow_ref);
+					s.scene, cockpit_mesh, m, XWA_AERON_METERS_TO_MODEL_UNITS, inst.mesh_table,
+					player_f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(player_f), s.crows,
+					s.camera_local, &s.glow_ref);
 			}
 		}
 	}

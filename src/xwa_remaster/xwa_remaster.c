@@ -639,14 +639,18 @@ void XwaRemaster_Frame(int32_t delta_us) {
 		}
 		Aeron_GpuDebugPush(upload_cmd, "OpenXWA HD asset synchronization");
 		if (!XwaRemasterAssets_SyncFrontendAssets(g.assets, upload_cmd, snap)) {
+			Aeron_CommandBufferSetFailure(upload_cmd, "Frontend asset preparation failed");
 			ship_sync = XWA_REMASTER_SHIP_SYNC_FAILED;
 		}
 		if (ship_sync == XWA_REMASTER_SHIP_SYNC_COMPLETE && ship_assets_need_sync) {
 			ship_sync = XwaRemasterShip_SyncAssets(upload_cmd, snap, RM_ASSET_UPLOAD_BYTE_BUDGET,
 												   RM_ASSET_UPLOAD_COPY_BUDGET);
+			if (ship_sync == XWA_REMASTER_SHIP_SYNC_FAILED)
+				Aeron_CommandBufferSetFailure(upload_cmd, "Ship model asset preparation failed");
 		}
 		if (ship_sync == XWA_REMASTER_SHIP_SYNC_COMPLETE) {
 			if (!XwaRemasterAssets_SyncFlightTextures(g.assets, upload_cmd, snap)) {
+				Aeron_CommandBufferSetFailure(upload_cmd, "Flight texture asset preparation failed");
 				ship_sync = XWA_REMASTER_SHIP_SYNC_FAILED;
 			} else {
 				texture_assets_prepared = texture_assets_need_sync;
@@ -654,6 +658,7 @@ void XwaRemaster_Frame(int32_t delta_us) {
 			if (ship_sync == XWA_REMASTER_SHIP_SYNC_COMPLETE && process_assets_need_prepare) {
 				process_assets_prepared = XwaRemasterFlight_PrepareProcessAssets(upload_cmd, g.assets);
 				if (!process_assets_prepared) {
+					Aeron_CommandBufferSetFailure(upload_cmd, "Flight process asset preparation failed");
 					ship_sync = XWA_REMASTER_SHIP_SYNC_FAILED;
 				}
 			}

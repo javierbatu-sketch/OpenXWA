@@ -191,7 +191,7 @@ static int opt_read_model(AeronVfs* vfs, const char* basename, char* resolved,
 
 bool XwaRemasterOptMesh_Build(AeronVfs* vfs, const char* basename,
 		float smooth_angle_degrees, float emissive_strength,
-		AeronGltfModel* out, char* error, size_t error_size) {
+		AeronFlightModel* out, char* error, size_t error_size) {
 	if (out) memset(out, 0, sizeof *out);
 	if (error && error_size) error[0] = '\0';
 	if (!vfs || !basename || !basename[0] || !out) {
@@ -216,7 +216,6 @@ bool XwaRemasterOptMesh_Build(AeronVfs* vfs, const char* basename,
 	const bool built = Aeron_OptModelBuildMemory(
 			bytes, size, path,
 			&(AeronOptModelBuildOptions) {
-				.vertex_scale = 1.0f,
 				.smooth_angle_degrees = smooth_angle_degrees,
 				.emissive_strength = emissive_strength,
 				.emissive = true,

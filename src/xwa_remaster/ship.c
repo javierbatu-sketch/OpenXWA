@@ -3,13 +3,14 @@
 #include "xwa_remaster/ship.h"
 
 #include "aeron/aeron.h"
+#include "aeron/asset/flight_model.h"
 #include "aeron/scene/billboard.h"
-#include "aeron/scene/gltf_mesh.h"
 #include "xwa_remaster/color.h"
 #include "xwa_remaster/glow_marks.h"
 #include "xwa_remaster/opt_mesh.h"
 
 #include <math.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,6 +45,15 @@ static int s_force_opt_models;
 static XwaShipPbrTuning g_pbr_tuning_default;
 static XwaShipPbrTuning g_pbr_tuning;
 
+static void ship_set_failure(AeronCommandBuffer* cmd, const char* format, ...) {
+	char message[512];
+	va_list args;
+	va_start(args, format);
+	vsnprintf(message, sizeof message, format, args);
+	va_end(args);
+	Aeron_CommandBufferSetFailure(cmd, message);
+}
+
 void XwaRemasterShip_Configure(float opt_smooth_angle_degrees, float opt_emissive_strength,
 							   float opt_projectile_emissive_strength, float engine_emissive_strength,
 							   int force_opt_models) {
@@ -70,22 +80,23 @@ static void ship_mesh_key(const char* name, char key[XWA_SNAP_OPT_NAME_MAX]) {
 
 static AeronSceneMesh* ship_mesh_load(AeronCommandBuffer* cmd, const char* key, int* out_runtime_opt) {
 	char path[512];
-	AeronGltfModel model;
+	AeronFlightModel model;
 	if (out_runtime_opt) {
 		*out_runtime_opt = 0;
 	}
 	if (!s_force_opt_models) {
 		snprintf(path, sizeof path, "%s/remaster/models/%s.glb", Aeron_AssetRoot(), key);
-		if (Aeron_GltfMeshBuild(path, &model)) {
+		if (Aeron_FlightModelBuild(path, &model)) {
 			AeronSceneMeshCreateStatus create_status;
 			AeronSceneMesh* mesh = AeronScene_MeshCreate(cmd, &model, key, &create_status);
-			Aeron_GltfMeshFree(&model);
+			Aeron_FlightModelFree(&model);
 			if (mesh) {
 				Aeron_LogVerbose("xwa.remaster", "mesh: '%s' source=GLB", key);
 				return mesh;
 			}
 			if (create_status != AERON_SCENE_MESH_CREATE_INVALID_SOURCE) {
 				Aeron_LogWarn("xwa.remaster", "mesh: GLB resource creation failed '%s'", path);
+				ship_set_failure(cmd, "Ship model '%s': GLB resource creation failed for '%s'", key, path);
 				return NULL;
 			}
 			Aeron_LogWarn("xwa.remaster", "mesh: GLB content invalid '%s'; trying OPT", path);
@@ -96,14 +107,17 @@ static AeronSceneMesh* ship_mesh_load(AeronCommandBuffer* cmd, const char* key, 
 	if (!XwaRemasterOptMesh_Build(Aeron_GetVfs(), key, s_opt_smooth_angle_degrees, s_opt_emissive_strength,
 								  &model, opt_error, sizeof opt_error)) {
 		Aeron_LogWarn("xwa.remaster", "mesh: OPT load failed '%s': %s", key, opt_error);
+		ship_set_failure(cmd, "Ship model '%s': OPT load failed: %s", key, opt_error);
 		return NULL;
 	}
 	AeronSceneMeshCreateStatus create_status;
 	AeronSceneMesh* mesh = AeronScene_MeshCreate(cmd, &model, key, &create_status);
-	Aeron_GltfMeshFree(&model);
+	Aeron_FlightModelFree(&model);
 	if (!mesh) {
 		Aeron_LogError("xwa.remaster", "mesh: OPT resource creation failed '%s' status=%d", key,
 					   (int)create_status);
+		ship_set_failure(cmd, "Ship model '%s': OPT resource creation failed (status %d)", key,
+						 (int)create_status);
 	} else {
 		if (out_runtime_opt) {
 			*out_runtime_opt = 1;
@@ -146,6 +160,7 @@ XwaRemasterShipSyncResult XwaRemasterShip_SyncAssets(AeronCommandBuffer* cmd, co
 	}
 	if (s_batch_active) {
 		Aeron_LogError("xwa.remaster", "mesh asset synchronization started with an unfinished batch");
+		ship_set_failure(cmd, "Ship model synchronization started with an unfinished batch");
 		return XWA_REMASTER_SHIP_SYNC_FAILED;
 	}
 
@@ -193,6 +208,7 @@ XwaRemasterShipSyncResult XwaRemasterShip_SyncAssets(AeronCommandBuffer* cmd, co
 		}
 		if (s_pending_mesh_count >= XWA_SNAP_MAX_OPT_ASSETS) {
 			Aeron_LogError("xwa.remaster", "mesh asset registry capacity exceeded");
+			ship_set_failure(cmd, "Ship model asset registry capacity exceeded");
 			return XWA_REMASTER_SHIP_SYNC_FAILED;
 		}
 		ShipMeshAsset* asset = &s_pending_meshes[s_pending_mesh_count];
@@ -218,6 +234,7 @@ XwaRemasterShipSyncResult XwaRemasterShip_SyncAssets(AeronCommandBuffer* cmd, co
 
 		AeronCommandBufferUploadUsage usage;
 		if (!Aeron_CommandBufferGetUploadUsage(cmd, &usage)) {
+			ship_set_failure(cmd, "Could not query ship model upload usage");
 			return XWA_REMASTER_SHIP_SYNC_FAILED;
 		}
 		if ((byte_budget && usage.staged_bytes >= byte_budget) ||
@@ -969,21 +986,20 @@ void XwaRemasterShip_SubmitEngineGlows(AeronScene3D* scene, const AeronSceneMesh
 	const float dv = tex->v1 - tex->v0;
 
 	for (uint32_t gi = 0; gi < mesh->engine_glow_count; gi++) {
-		const AeronGltfEngineGlow* g = &mesh->engine_glows[gi];
-		if (g->disabled || (gi < 32 && (knockout_mask & (1u << gi)))) {
+		const AeronFlightEngineGlow* g = &mesh->engine_glows[gi];
+		if (!g->enabled || (gi < 32 && (knockout_mask & (1u << gi)))) {
 			continue;
 		}
 
 		/* Emitter anchor + axes in model space, articulated by the
 		 * instance's mesh table (the same affine the mesh's vertices
 		 * get in the VS — glows follow their rotary mesh exactly). */
-		float p[3] = { g->position[0], g->position[1], g->position[2] };
-		float ax_look[3], ax_right[3], ax_up[3];
-		memcpy(ax_look, g->look, sizeof ax_look);
-		memcpy(ax_right, g->right, sizeof ax_right);
-		memcpy(ax_up, g->up, sizeof ax_up);
-		if (table && g->mesh_slot < AERON_MAX_MESH_SLOTS) {
-			const float (*rw)[4] = table->rows[g->mesh_slot];
+		float p[3] = { g->position.x, g->position.y, g->position.z };
+		float ax_look[3] = { g->look.x, g->look.y, g->look.z };
+		float ax_right[3] = { g->right.x, g->right.y, g->right.z };
+		float ax_up[3] = { g->up.x, g->up.y, g->up.z };
+		if (table && g->component_index < AERON_MAX_MESH_SLOTS) {
+			const float (*rw)[4] = table->rows[g->component_index];
 			float tp[3], tv[3];
 			for (int r = 0; r < 3; r++) {
 				tp[r] = rw[r][0] * p[0] + rw[r][1] * p[1] + rw[r][2] * p[2] + rw[r][3];
@@ -1041,9 +1057,9 @@ void XwaRemasterShip_SubmitEngineGlows(AeronScene3D* scene, const AeronSceneMesh
 		/* Classic culls (EngineGlow_BuildProjectedQuad): behind/at the
 		 * eye plane, or projected size under a pixel (max dim x 256 /
 		 * viewZ, the classic focal). Dims scale with the model. */
-		const float dim_x = k * g->dimensions[0];
-		const float dim_y = k * g->dimensions[1];
-		const float dim_z = k * g->dimensions[2];
+		const float dim_x = k * g->dimensions.x;
+		const float dim_y = k * g->dimensions.y;
+		const float dim_z = k * g->dimensions.z;
 		if (c[2] < 1.0f) {
 			continue;
 		}
@@ -1060,7 +1076,7 @@ void XwaRemasterShip_SubmitEngineGlows(AeronScene3D* scene, const AeronSceneMesh
 		 * geometric scale at 0.8. */
 		const float clamped = scale >= 0.80000001f ? 0.80000001f : scale;
 		float corners[4][3];
-		const float ratio = g->dimensions[1] != 0.0f ? g->dimensions[0] / g->dimensions[1] : 1.0f;
+		const float ratio = g->dimensions.y != 0.0f ? g->dimensions.x / g->dimensions.y : 1.0f;
 		if (ratio <= 0.85000002f || ratio >= 1.2f) {
 			/* Classic axis pairing (EngineGlow_BuildRectQuadCorners via
 			 * BuildProjectedQuad's call: firstAxisView = the rotated
@@ -1180,14 +1196,17 @@ uint32_t XwaRemasterShip_CollectEngineGlowPointLights(const AeronSceneMesh* mesh
 
 	uint32_t n = 0;
 	for (uint32_t gi = 0; gi < mesh->engine_glow_count; gi++) {
-		const AeronGltfEngineGlow* g = &mesh->engine_glows[gi];
+		const AeronFlightEngineGlow* g = &mesh->engine_glows[gi];
 		/* Classic gates: disabled emitters and small glows skip (raw
 		 * OPT dims; only LARGE engines — capitals — light their hull).
 		 * The classic light law does NOT consult damage knockouts. */
-		if (g->disabled || (g->dimensions[0] <= 2000.0f && g->dimensions[1] <= 2000.0f)) {
+		const float dim_x = g->dimensions.x * XWA_AERON_METERS_TO_MODEL_UNITS;
+		const float dim_y = g->dimensions.y * XWA_AERON_METERS_TO_MODEL_UNITS;
+		const float dim_z = g->dimensions.z * XWA_AERON_METERS_TO_MODEL_UNITS;
+		if (!g->enabled || (dim_x <= 2000.0f && dim_y <= 2000.0f)) {
 			continue;
 		}
-		const float intensity = g->dimensions[2] * engine_scale * 300.0f;
+		const float intensity = dim_z * engine_scale * 300.0f;
 		if (intensity <= 0.0f) {
 			continue;
 		}
@@ -1200,9 +1219,9 @@ uint32_t XwaRemasterShip_CollectEngineGlowPointLights(const AeronSceneMesh* mesh
 
 		/* Anchor: mesh-table articulation + instance transform (the
 		 * same chain the glow quads use). */
-		float p[3] = { g->position[0], g->position[1], g->position[2] };
-		if (table && g->mesh_slot < AERON_MAX_MESH_SLOTS) {
-			const float (*rw)[4] = table->rows[g->mesh_slot];
+		float p[3] = { g->position.x, g->position.y, g->position.z };
+		if (table && g->component_index < AERON_MAX_MESH_SLOTS) {
+			const float (*rw)[4] = table->rows[g->component_index];
 			float tp[3];
 			for (int r = 0; r < 3; r++) {
 				tp[r] = rw[r][0] * p[0] + rw[r][1] * p[1] + rw[r][2] * p[2] + rw[r][3];

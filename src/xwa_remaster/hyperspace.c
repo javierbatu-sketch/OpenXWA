@@ -306,7 +306,10 @@ static void hyper_emit_streak(HyperStreakVertex* out, const XwaHyperspaceStreak*
 	synthetic.roll = streak->roll;
 	float model[16];
 	XwaRemasterFlight_ObjectModelMatrixForCameraDelta(&synthetic, NULL, 0, model);
-	const float half = (float)streak->half_width;
+	/* The shared model matrix expects meter-space geometry; streak seeds retain XWA model units. */
+	const float model_units_to_meters = 1600.0f / 65536.0f;
+	const float half = (float)streak->half_width * model_units_to_meters;
+	extent *= model_units_to_meters;
 	const float corners[4][3] = {
 		{ half, 0.0f, 0.0f },
 		{ half, extent, 0.0f },
