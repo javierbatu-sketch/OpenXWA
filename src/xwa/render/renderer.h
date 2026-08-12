@@ -3,12 +3,12 @@
 
 #include "xwa/assets/opt_model.h"
 #include "xwa/assets/sprite_texture.h"
-#include "xwa_runtime/compat/directx/d3d.h"
+#include "xwa/flight/object/object.h"
 #include "xwa/math/vec3f.h"
 #include "xwa/math/vec3i.h"
-#include "xwa/flight/object/object.h"
 #include "xwa/util/color.h"
 #include "xwa/util/memory.h"
+#include "xwa_runtime/compat/directx/d3d.h"
 
 #include <stddef.h>
 #include <stdint.h>

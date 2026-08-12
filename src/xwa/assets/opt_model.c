@@ -8,8 +8,8 @@
 #include "xwa/assets/file_io.h"
 #include "xwa/assets/model_texture.h"
 #include "xwa/config/game_config.h"
-#include "xwa/frontend/frontend_display.h"
 #include "xwa/flight/net_session.h"
+#include "xwa/frontend/frontend_display.h"
 #include "xwa/render/renderer.h"
 #include "xwa/render/std3d_device.h"
 #include "xwa/util/byte_order.h"
@@ -134,8 +134,7 @@ void* OptModel_ResolveTexturePalette(const OptNode* textureNode) {
 		return NULL;
 	}
 
-	return (uint8_t*)textureNode->param2 +
-		   (int32_t)(textureData->paletteAddress - nativeNode->param2Address);
+	return (uint8_t*)textureNode->param2 + (int32_t)(textureData->paletteAddress - nativeNode->param2Address);
 }
 
 static uint32_t OptModel_PtrToAddress(const NativeOptimizedPolyObject* native, const void* ptr) {
@@ -943,7 +942,8 @@ uint16_t OptModel_LoadFileToHandle(const char* fileName, int* outVersion) {
 
 	if (version < 2 || payloadSize <= 0) {
 		File_Close(stream);
-		Aeron_LogError("xwa.assets", "Unsupported OPT '%s' version %d size %d", fileName, version, payloadSize);
+		Aeron_LogError("xwa.assets", "Unsupported OPT '%s' version %d size %d", fileName, version,
+					   payloadSize);
 		return 0;
 	}
 
@@ -976,7 +976,8 @@ uint16_t OptModel_LoadFileToHandle(const char* fileName, int* outVersion) {
 
 	native = (NativeOptimizedPolyObject*)Memory_LockHandle(handle);
 	if (native == NULL) {
-		Aeron_LogError("xwa.assets", "Failed to lock native OPT handle %u for '%s'", (unsigned)handle, fileName);
+		Aeron_LogError("xwa.assets", "Failed to lock native OPT handle %u for '%s'", (unsigned)handle,
+					   fileName);
 		Memory_FreeHandle(0, handle);
 		free(payload);
 		return 0;
@@ -1755,7 +1756,7 @@ int OptModel_UploadTextureNodesRecursive(OptNode* node, intptr_t* textureIds, in
 		palette = (uint16_t*)OptModel_AddressToPtr(g_optTextureUploadNative, textureData->paletteAddress, 2);
 		if (palette == NULL) {
 			Aeron_LogError("xwa.assets", "Invalid OPT texture palette address 0x%08x",
-					  textureData->paletteAddress);
+						   textureData->paletteAddress);
 			textureIds[textureCount] = 0;
 			return textureCount + 1;
 		}
@@ -2068,9 +2069,9 @@ uint16_t OptModel_LoadHandle(const char* fileName) {
 		--meshCount;
 	}
 	Aeron_LogInfo("xwa.assets",
-			  "Loaded OPT '%s' handle=%u public=0x%04x version=%d roots=%d meshes=%d hardware=%d", fileName,
-			  (unsigned)modelHandle, (unsigned)(modelHandle | 0x8000), version,
-			  modelNative->model.rootNodeCount, meshCount, g_useHardware3D);
+				  "Loaded OPT '%s' handle=%u public=0x%04x version=%d roots=%d meshes=%d hardware=%d",
+				  fileName, (unsigned)modelHandle, (unsigned)(modelHandle | 0x8000), version,
+				  modelNative->model.rootNodeCount, meshCount, g_useHardware3D);
 
 #ifdef XWA_MODERN
 	/* Snapshot the processed model's lifetime. The remaster mirrors this

@@ -959,7 +959,7 @@ static int D3DCompat_EnsureWhiteTexture(void) {
 			.pixel_format = AERON_PIXEL_FORMAT_RGBA8888,
 			.color_space = AERON_COLOR_SPACE_SRGB,
 			.cycle = 1,
-			})) {
+		})) {
 		Aeron_DestroyTexture(g_d3dWhiteTexture);
 		g_d3dWhiteTexture = NULL;
 		Aeron_RequestFatalRendererError("classic white fallback texture upload");

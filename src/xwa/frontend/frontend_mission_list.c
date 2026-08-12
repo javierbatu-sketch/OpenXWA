@@ -1,7 +1,7 @@
 #include "xwa/frontend/frontend_mission_list.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/briefing_script.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_scrollbar.h"
 #include "xwa/frontend/mission_setup.h"
 #include "xwa/util/memory.h"

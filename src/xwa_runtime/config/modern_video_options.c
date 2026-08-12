@@ -35,9 +35,8 @@ static int XwaModernVideoOptions_IsValid(const XwaModernVideoOptions* options) {
 static int XwaModernVideoOptions_AreEqual(const XwaModernVideoOptions* lhs,
 										  const XwaModernVideoOptions* rhs) {
 	return lhs->window_mode == rhs->window_mode && lhs->ssao_quality == rhs->ssao_quality &&
-		   lhs->shadow_quality == rhs->shadow_quality &&
-		   lhs->fsr_upscaling == rhs->fsr_upscaling && lhs->msaa == rhs->msaa &&
-		   lhs->motion_blur_quality == rhs->motion_blur_quality &&
+		   lhs->shadow_quality == rhs->shadow_quality && lhs->fsr_upscaling == rhs->fsr_upscaling &&
+		   lhs->msaa == rhs->msaa && lhs->motion_blur_quality == rhs->motion_blur_quality &&
 		   lhs->motion_blur_amount == rhs->motion_blur_amount && lhs->hdr_output == rhs->hdr_output &&
 		   lhs->sdr_gamma == rhs->sdr_gamma && lhs->paper_white == rhs->paper_white;
 }
@@ -90,13 +89,14 @@ int XwaModernVideoOptions_Flush(void) {
 		return 1;
 	}
 	if (!g_modernVideoOptions.persist) {
-		Aeron_LogWarn("xwa.config", "modern video options are dirty but no persistence callback is registered");
+		Aeron_LogWarn("xwa.config",
+					  "modern video options are dirty but no persistence callback is registered");
 		return 0;
 	}
 	error[0] = '\0';
 	if (!g_modernVideoOptions.persist(&g_modernVideoOptions.options, error, sizeof error)) {
 		Aeron_LogError("xwa.config", "%s",
-				  error[0] ? error : "could not persist modern video options to user configuration");
+					   error[0] ? error : "could not persist modern video options to user configuration");
 		return 0;
 	}
 

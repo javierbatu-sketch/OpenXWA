@@ -1,10 +1,10 @@
 #include "xwa/frontend/frontend_button.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/config/game_config.h"
 #include "xwa/frontend/frontend_cursor.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_sound.h"
 #include "xwa/frontend/frontend_text.h"

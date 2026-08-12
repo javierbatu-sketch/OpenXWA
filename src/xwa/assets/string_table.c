@@ -576,7 +576,7 @@ int FrontendString_LoadTable(char* fileName) {
 		if (g_uiStringData == NULL) {
 #ifdef XWA_MODERN
 			Aeron_LogError("xwa.assets", "Failed to allocate frontend string table '%s' (%d bytes)", fileName,
-					  4 * fileSize);
+						   4 * fileSize);
 #endif
 			FrontendString_UnloadTable();
 			return File_Close(stream);
@@ -640,8 +640,8 @@ int FrontendString_LoadTable(char* fileName) {
 				g_uiStringData = (char*)resizedData;
 			} else {
 #ifdef XWA_MODERN
-				Aeron_LogError("xwa.assets", "Failed to trim frontend string table '%s' to %zu bytes", fileName,
-						  stringDataSize);
+				Aeron_LogError("xwa.assets", "Failed to trim frontend string table '%s' to %zu bytes",
+							   fileName, stringDataSize);
 #endif
 				Mem_Free(g_uiStringData);
 				Mem_Free(g_uiStringOffsets);

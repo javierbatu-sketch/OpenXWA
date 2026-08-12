@@ -307,14 +307,14 @@ typedef struct XwaDirLight {
 #define XWA_SNAP_TYPE_BACKDROP_SUN_LAST 530
 
 typedef struct XwaFlightObject {
-	uint16_t signature;   /* ObjectRecord.objectSignature (stable id) */
-	uint16_t slot;        /* object-table index */
-	uint16_t object_type; /* ObjectTypeId (model index) */
-	uint8_t genus;        /* ModelGenusId */
-	uint8_t fg_idx;       /* flight-group index */
+	uint16_t signature;    /* ObjectRecord.objectSignature (stable id) */
+	uint16_t slot;         /* object-table index */
+	uint16_t object_type;  /* ObjectTypeId (model index) */
+	uint8_t genus;         /* ModelGenusId */
+	uint8_t fg_idx;        /* flight-group index */
 	uint8_t region;        /* raw ObjectRecord.regionIdx; not a render-visibility gate */
 	uint8_t render_region; /* slot-derived region used by renderer visibility */
-	int8_t iff; /* from MobileObject (0 when no mobj) */
+	int8_t iff;            /* from MobileObject (0 when no mobj) */
 	uint8_t team;
 	uint8_t state; /* MobileObject.state */
 	uint8_t motion_flags;
@@ -719,7 +719,7 @@ typedef struct XwaParticleEffect {
 	uint16_t owner_slot;      /* 0xffff for world-list effects */
 	uint16_t owner_signature; /* 0 for world-list effects */
 	uint8_t source_kind;      /* XwaParticleSourceKind */
-	uint8_t render_region; /* slot-derived for object effects; local for world effects */
+	uint8_t render_region;    /* slot-derived for object effects; local for world effects */
 	uint8_t effect_type;
 	uint8_t billboard_mode; /* XwaParticleBillboardMode */
 	/* The classic dispatcher suppresses only the top-level object-local

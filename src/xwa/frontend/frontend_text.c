@@ -4,10 +4,10 @@
 #endif
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_cursor.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_scratch.h"
 #include "xwa/util/byte_order.h"
@@ -312,7 +312,7 @@ int FrontendText_LoadFontAtlasFile(const char* fileName, int slotIndex) {
 	if (glyphBits == NULL) {
 #ifdef XWA_MODERN
 		Aeron_LogError("xwa.assets", "Failed to allocate frontend font '%s' glyph data (%zu bytes)", fileName,
-				  glyphBlobSize);
+					   glyphBlobSize);
 #endif
 		font->inUse = 0;
 		File_Close(stream);

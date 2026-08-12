@@ -1,6 +1,5 @@
 #include "xwa/frontend/combat_sim_menu.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/config/game_config.h"
 #include "xwa/frontend/concourse.h"
@@ -10,6 +9,7 @@
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_escape.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_mission_session.h"
 #include "xwa/frontend/frontend_net.h"

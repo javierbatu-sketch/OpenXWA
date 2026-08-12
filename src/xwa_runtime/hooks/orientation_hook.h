@@ -14,6 +14,6 @@ typedef struct XwaOrientationAngles {
  * portable counterpart of the community XWA gimbal-lock hook.
  */
 XwaOrientationAngles XwaOrientation_ApplyPitchYaw(XwaOrientationAngles current, int pitchDeltaQ16,
-												   int negYawDeltaQ16);
+												  int negYawDeltaQ16);
 
 #endif

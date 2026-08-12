@@ -1,7 +1,6 @@
 #include "xwa/frontend/film_room.h"
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/assets/ui_string.h"
 #include "xwa/config/game_config.h"
@@ -16,6 +15,7 @@
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_escape.h"
 #include "xwa/frontend/frontend_flight.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_mission_session.h"
 #include "xwa/frontend/frontend_net.h"

@@ -2,8 +2,8 @@
 #define XWA_FLIGHT_OBJECT_COLLISION_H
 
 #include "xwa/assets/model_mesh.h"
-#include "xwa/math/vec3f.h"
 #include "xwa/flight/object/object.h"
+#include "xwa/math/vec3f.h"
 
 #include <stdint.h>
 

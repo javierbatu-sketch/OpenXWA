@@ -1,33 +1,33 @@
 #include "xwa/flight/object/collision.h"
 #include "xwa/flight/hangar.h"
 
+#include "xwa/assets/model_bounds.h"
+#include "xwa/assets/model_def.h"
+#include "xwa/assets/model_type.h"
+#include "xwa/audio/fsfx.h"
+#include "xwa/audio/music.h"
+#include "xwa/config/game_config.h"
 #include "xwa/flight/ai/pai.h"
 #include "xwa/flight/ai/pai_plan.h"
 #include "xwa/flight/ai/paifight.h"
 #include "xwa/flight/ai/paiman.h"
 #include "xwa/flight/ai/paiorder.h"
-#include "xwa/assets/model_bounds.h"
-#include "xwa/assets/model_def.h"
-#include "xwa/assets/model_type.h"
-#include "xwa/audio/music.h"
-#include "xwa/config/game_config.h"
-#include "xwa/flight/object/damage.h"
 #include "xwa/flight/death_star.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/flight_light.h"
-#include "xwa/audio/fsfx.h"
-#include "xwa/frontend/mission_setup.h"
 #include "xwa/flight/hud/hud.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/object/damage.h"
+#include "xwa/flight/object/laser.h"
+#include "xwa/flight/object/object.h"
+#include "xwa/flight/player/player.h"
+#include "xwa/flight/yard.h"
+#include "xwa/frontend/mission_setup.h"
 #include "xwa/input/dinput.h"
 #include "xwa/input/forcefeedback.h"
 #include "xwa/math/fixed.h"
 #include "xwa/math/scalar.h"
 #include "xwa/math/trig2.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/flight/yard.h"
-#include "xwa/flight/object/laser.h"
-#include "xwa/flight/object/object.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/render/effects.h"
 #include "xwa/render/renderer.h"
 #include "xwa/render/renderer_internal.h"
@@ -5184,8 +5184,8 @@ void collide_laserhitcraft(unsigned int projectileObjIdx, unsigned int targetObj
 						if (warnCount < 5) {
 							warnCount +=
 #ifdef XWA_MODERN
-								(laser_GetProjectileWarheadClass(
-									 g_objectTable[projectileObjIdx].objectType) > 0)
+								(laser_GetProjectileWarheadClass(g_objectTable[projectileObjIdx].objectType) >
+								 0)
 #else
 								(g_projectileWarheadClassByType[(uint16_t)g_objectTable[projectileObjIdx]
 																	.objectType -

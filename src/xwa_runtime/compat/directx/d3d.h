@@ -14,7 +14,7 @@ extern "C" {
  * Byte-exact against $MSVC_ROOT/INCLUDE/{D3D,D3DTYPES,D3DCAPS}.H.
  * Stdint style matches ddraw.h. */
 
-typedef float    D3DVALUE;
+typedef float D3DVALUE;
 typedef uint32_t D3DCOLOR;
 typedef uint32_t D3DTEXTUREHANDLE;
 typedef uint32_t D3DMATERIALHANDLE;
@@ -60,13 +60,13 @@ typedef struct D3DRECT {
 typedef struct D3DSTATUS {
 	uint32_t dwFlags;
 	uint32_t dwStatus;
-	D3DRECT  drExtent;
+	D3DRECT drExtent;
 } D3DSTATUS;
 
 /* Execute-buffer instruction header: bOpcode, bSize, then wCount data units. */
 typedef struct D3DINSTRUCTION {
-	uint8_t  bOpcode;
-	uint8_t  bSize;
+	uint8_t bOpcode;
+	uint8_t bSize;
 	uint16_t wCount;
 } D3DINSTRUCTION;
 XWA_DX_ASSERT(d3dinstruction_chk, sizeof(D3DINSTRUCTION) == 4);
@@ -96,12 +96,12 @@ typedef struct D3DPROCESSVERTICES {
 XWA_DX_ASSERT(d3dprocessvertices_chk, sizeof(D3DPROCESSVERTICES) == 16);
 
 typedef struct D3DEXECUTEDATA {
-	uint32_t  dwSize;
-	uint32_t  dwVertexOffset;
-	uint32_t  dwVertexCount;
-	uint32_t  dwInstructionOffset;
-	uint32_t  dwInstructionLength;
-	uint32_t  dwHVertexOffset;
+	uint32_t dwSize;
+	uint32_t dwVertexOffset;
+	uint32_t dwVertexCount;
+	uint32_t dwInstructionOffset;
+	uint32_t dwInstructionLength;
+	uint32_t dwHVertexOffset;
 	D3DSTATUS dsStatus;
 } D3DEXECUTEDATA;
 XWA_DX_ASSERT(d3dexecdata_chk, sizeof(D3DEXECUTEDATA) == 48);
@@ -111,34 +111,34 @@ typedef struct D3DEXECUTEBUFFERDESC {
 	uint32_t dwFlags;
 	uint32_t dwCaps;
 	uint32_t dwBufferSize;
-	void*    lpData;
+	void* lpData;
 } D3DEXECUTEBUFFERDESC;
 XWA_DX_ASSERT32(d3dexecbufdesc_chk, sizeof(D3DEXECUTEBUFFERDESC) == 20);
 
 /* --- enums / flags ------------------------------------------------------- */
 
 enum {
-	D3DOP_POINT           = 1,
-	D3DOP_LINE            = 2,
-	D3DOP_TRIANGLE        = 3,
-	D3DOP_MATRIXLOAD      = 4,
-	D3DOP_MATRIXMULTIPLY  = 5,
-	D3DOP_STATETRANSFORM  = 6,
-	D3DOP_STATELIGHT      = 7,
-	D3DOP_STATERENDER     = 8,
+	D3DOP_POINT = 1,
+	D3DOP_LINE = 2,
+	D3DOP_TRIANGLE = 3,
+	D3DOP_MATRIXLOAD = 4,
+	D3DOP_MATRIXMULTIPLY = 5,
+	D3DOP_STATETRANSFORM = 6,
+	D3DOP_STATELIGHT = 7,
+	D3DOP_STATERENDER = 8,
 	D3DOP_PROCESSVERTICES = 9,
-	D3DOP_TEXTURELOAD     = 10,
-	D3DOP_EXIT            = 11,
-	D3DOP_BRANCHFORWARD   = 12,
-	D3DOP_SPAN            = 13,
-	D3DOP_SETSTATUS       = 14
+	D3DOP_TEXTURELOAD = 10,
+	D3DOP_EXIT = 11,
+	D3DOP_BRANCHFORWARD = 12,
+	D3DOP_SPAN = 13,
+	D3DOP_SETSTATUS = 14
 };
 
 enum {
 	D3DPROCESSVERTICES_TRANSFORMLIGHT = 0x00000000,
-	D3DPROCESSVERTICES_TRANSFORM      = 0x00000001,
-	D3DPROCESSVERTICES_COPY           = 0x00000002,
-	D3DPROCESSVERTICES_OPMASK         = 0x00000007
+	D3DPROCESSVERTICES_TRANSFORM = 0x00000001,
+	D3DPROCESSVERTICES_COPY = 0x00000002,
+	D3DPROCESSVERTICES_OPMASK = 0x00000007
 };
 
 enum { D3DEXECUTE_CLIPPED = 0x00000001, D3DEXECUTE_UNCLIPPED = 0x00000002 };
@@ -151,37 +151,37 @@ enum {
 
 /* D3DRENDERSTATETYPE tokens XWA emits. */
 typedef enum D3DRENDERSTATETYPE {
-	D3DRENDERSTATE_TEXTUREHANDLE   = 1,
-	D3DRENDERSTATE_ANTIALIAS       = 2,
-	D3DRENDERSTATE_TEXTUREADDRESS  = 3,
+	D3DRENDERSTATE_TEXTUREHANDLE = 1,
+	D3DRENDERSTATE_ANTIALIAS = 2,
+	D3DRENDERSTATE_TEXTUREADDRESS = 3,
 	D3DRENDERSTATE_TEXTUREPERSPECTIVE = 4,
-	D3DRENDERSTATE_WRAPU           = 5,
-	D3DRENDERSTATE_WRAPV           = 6,
-	D3DRENDERSTATE_ZENABLE         = 7,
-	D3DRENDERSTATE_FILLMODE        = 8,
-	D3DRENDERSTATE_SHADEMODE       = 9,
-	D3DRENDERSTATE_MONOENABLE      = 11,
-	D3DRENDERSTATE_ZWRITEENABLE    = 14,
+	D3DRENDERSTATE_WRAPU = 5,
+	D3DRENDERSTATE_WRAPV = 6,
+	D3DRENDERSTATE_ZENABLE = 7,
+	D3DRENDERSTATE_FILLMODE = 8,
+	D3DRENDERSTATE_SHADEMODE = 9,
+	D3DRENDERSTATE_MONOENABLE = 11,
+	D3DRENDERSTATE_ZWRITEENABLE = 14,
 	D3DRENDERSTATE_ALPHATESTENABLE = 15,
-	D3DRENDERSTATE_TEXTUREMAG      = 17,
-	D3DRENDERSTATE_TEXTUREMIN      = 18,
-	D3DRENDERSTATE_SRCBLEND        = 19,
-	D3DRENDERSTATE_DESTBLEND       = 20,
+	D3DRENDERSTATE_TEXTUREMAG = 17,
+	D3DRENDERSTATE_TEXTUREMIN = 18,
+	D3DRENDERSTATE_SRCBLEND = 19,
+	D3DRENDERSTATE_DESTBLEND = 20,
 	D3DRENDERSTATE_TEXTUREMAPBLEND = 21,
-	D3DRENDERSTATE_CULLMODE        = 22,
-	D3DRENDERSTATE_ZFUNC           = 23,
-	D3DRENDERSTATE_ALPHAFUNC       = 25,
-	D3DRENDERSTATE_DITHERENABLE    = 26,
-	D3DRENDERSTATE_BLENDENABLE     = 27,
-	D3DRENDERSTATE_FOGENABLE       = 28,
-	D3DRENDERSTATE_SPECULARENABLE  = 29,
-	D3DRENDERSTATE_SUBPIXEL        = 31,
-	D3DRENDERSTATE_SUBPIXELX       = 32,
-	D3DRENDERSTATE_STIPPLEDALPHA   = 33,
-	D3DRENDERSTATE_FOGCOLOR        = 34,
-	D3DRENDERSTATE_FOGTABLEMODE    = 35,
-	D3DRENDERSTATE_FOGTABLESTART   = 36,
-	D3DRENDERSTATE_FOGTABLEEND     = 37
+	D3DRENDERSTATE_CULLMODE = 22,
+	D3DRENDERSTATE_ZFUNC = 23,
+	D3DRENDERSTATE_ALPHAFUNC = 25,
+	D3DRENDERSTATE_DITHERENABLE = 26,
+	D3DRENDERSTATE_BLENDENABLE = 27,
+	D3DRENDERSTATE_FOGENABLE = 28,
+	D3DRENDERSTATE_SPECULARENABLE = 29,
+	D3DRENDERSTATE_SUBPIXEL = 31,
+	D3DRENDERSTATE_SUBPIXELX = 32,
+	D3DRENDERSTATE_STIPPLEDALPHA = 33,
+	D3DRENDERSTATE_FOGCOLOR = 34,
+	D3DRENDERSTATE_FOGTABLEMODE = 35,
+	D3DRENDERSTATE_FOGTABLESTART = 36,
+	D3DRENDERSTATE_FOGTABLEEND = 37
 } D3DRENDERSTATETYPE;
 
 /* Device capability descriptor enumerated via IDirect3D::EnumDevices and read by
@@ -207,50 +207,50 @@ typedef struct D3DPRIMCAPS {
 XWA_DX_ASSERT(d3dprimcaps_chk, sizeof(D3DPRIMCAPS) == 56);
 
 typedef struct D3DDEVICEDESC {
-	uint32_t    dwSize;
-	uint32_t    dwFlags;
-	uint32_t    dcmColorModel;
-	uint32_t    dwDevCaps;
-	uint8_t     dtcTransformCaps[8];
-	int32_t     bClipping;
-	uint8_t     dlcLightingCaps[16];
+	uint32_t dwSize;
+	uint32_t dwFlags;
+	uint32_t dcmColorModel;
+	uint32_t dwDevCaps;
+	uint8_t dtcTransformCaps[8];
+	int32_t bClipping;
+	uint8_t dlcLightingCaps[16];
 	D3DPRIMCAPS dpcLineCaps;
 	D3DPRIMCAPS dpcTriCaps;
-	uint32_t    dwDeviceRenderBitDepth;
-	uint32_t    dwDeviceZBufferBitDepth;
-	uint32_t    dwMaxBufferSize;
-	uint32_t    dwMaxVertexCount;
-	uint32_t    dwMinTextureWidth;
-	uint32_t    dwMinTextureHeight;
-	uint32_t    dwMaxTextureWidth;
-	uint32_t    dwMaxTextureHeight;
-	uint32_t    dwMinStippleWidth;
-	uint32_t    dwMaxStippleWidth;
-	uint32_t    dwMinStippleHeight;
-	uint32_t    dwMaxStippleHeight;
-	uint32_t    dwMaxTextureRepeat;
-	uint32_t    dwMaxTextureAspectRatio;
-	uint32_t    dwMaxAnisotropy;
-	float       dvGuardBandLeft;
-	float       dvGuardBandTop;
-	float       dvGuardBandRight;
-	float       dvGuardBandBottom;
-	float       dvExtentsAdjust;
-	uint32_t    dwStencilCaps;
-	uint32_t    dwFVFCaps;
-	uint32_t    dwTextureOpCaps;
-	uint16_t    wMaxTextureBlendStages;
-	uint16_t    wMaxSimultaneousTextures;
+	uint32_t dwDeviceRenderBitDepth;
+	uint32_t dwDeviceZBufferBitDepth;
+	uint32_t dwMaxBufferSize;
+	uint32_t dwMaxVertexCount;
+	uint32_t dwMinTextureWidth;
+	uint32_t dwMinTextureHeight;
+	uint32_t dwMaxTextureWidth;
+	uint32_t dwMaxTextureHeight;
+	uint32_t dwMinStippleWidth;
+	uint32_t dwMaxStippleWidth;
+	uint32_t dwMinStippleHeight;
+	uint32_t dwMaxStippleHeight;
+	uint32_t dwMaxTextureRepeat;
+	uint32_t dwMaxTextureAspectRatio;
+	uint32_t dwMaxAnisotropy;
+	float dvGuardBandLeft;
+	float dvGuardBandTop;
+	float dvGuardBandRight;
+	float dvGuardBandBottom;
+	float dvExtentsAdjust;
+	uint32_t dwStencilCaps;
+	uint32_t dwFVFCaps;
+	uint32_t dwTextureOpCaps;
+	uint16_t wMaxTextureBlendStages;
+	uint16_t wMaxSimultaneousTextures;
 } D3DDEVICEDESC;
 XWA_DX_ASSERT(d3ddevicedesc_chk, sizeof(D3DDEVICEDESC) == 252);
 
 /* --- interfaces ---------------------------------------------------------- */
 
-typedef struct IDirect3D              IDirect3D;
-typedef struct IDirect3DDevice        IDirect3DDevice;
-typedef struct IDirect3DViewport      IDirect3DViewport;
+typedef struct IDirect3D IDirect3D;
+typedef struct IDirect3DDevice IDirect3DDevice;
+typedef struct IDirect3DViewport IDirect3DViewport;
 typedef struct IDirect3DExecuteBuffer IDirect3DExecuteBuffer;
-typedef struct IDirect3DTexture       IDirect3DTexture;
+typedef struct IDirect3DTexture IDirect3DTexture;
 
 /* IDirect3D::EnumDevices callback: __stdcall, receives the device guid, its
  * description/name strings, and the hardware + software (HEL) capability
@@ -258,15 +258,15 @@ typedef struct IDirect3DTexture       IDirect3DTexture;
 typedef HRESULT(XWA_DXAPI* D3DEnumDevicesCb)(DxGuid*, char*, char*, D3DDEVICEDESC*, D3DDEVICEDESC*, void*);
 
 typedef struct IDirect3DVtbl {
-	HRESULT(XWA_DXAPI* QueryInterface)(IDirect3D*, DxRefIid, void**);              /* 0 */
-	uint32_t(XWA_DXAPI* AddRef)(IDirect3D*);                                       /* 1 */
-	uint32_t(XWA_DXAPI* Release)(IDirect3D*);                                      /* 2 */
-	void* Initialize;                                                             /* 3 */
-	HRESULT(XWA_DXAPI* EnumDevices)(IDirect3D*, D3DEnumDevicesCb, void*);          /* 4 */
-	void* CreateLight;                                                            /* 5 */
-	void* CreateMaterial;                                                         /* 6 */
-	HRESULT(XWA_DXAPI* CreateViewport)(IDirect3D*, IDirect3DViewport**, void*);   /* 7 */
-	void* FindDevice;                                                             /* 8 */
+	HRESULT(XWA_DXAPI* QueryInterface)(IDirect3D*, DxRefIid, void**);           /* 0 */
+	uint32_t(XWA_DXAPI* AddRef)(IDirect3D*);                                    /* 1 */
+	uint32_t(XWA_DXAPI* Release)(IDirect3D*);                                   /* 2 */
+	void* Initialize;                                                           /* 3 */
+	HRESULT(XWA_DXAPI* EnumDevices)(IDirect3D*, D3DEnumDevicesCb, void*);       /* 4 */
+	void* CreateLight;                                                          /* 5 */
+	void* CreateMaterial;                                                       /* 6 */
+	HRESULT(XWA_DXAPI* CreateViewport)(IDirect3D*, IDirect3DViewport**, void*); /* 7 */
+	void* FindDevice;                                                           /* 8 */
 } IDirect3DVtbl;
 struct IDirect3D {
 	const IDirect3DVtbl* lpVtbl;

@@ -1405,8 +1405,8 @@ void FeDiskIo_InitGlobalBuffers(void) {
 		}
 	}
 
-	g_mapRoomIconsHandle = Memory_AllocHandle(
-		"MAPROOMICONS", MAP_ROOM_ICON_TABLE_ENTRIES * sizeof(uint8_t*) + MAP_ROOM_ICON_DATA_BYTES);
+	g_mapRoomIconsHandle = Memory_AllocHandle("MAPROOMICONS", MAP_ROOM_ICON_TABLE_ENTRIES * sizeof(uint8_t*) +
+																  MAP_ROOM_ICON_DATA_BYTES);
 	if (g_mapRoomIconsHandle == 0) {
 		allocFailed = 1;
 	} else {
@@ -1498,8 +1498,8 @@ void FeDiskIo_InitGlobalBuffers(void) {
 	if (g_messageLogHandle == 0) {
 		allocFailed = 1;
 	}
-	g_visibleObjectsHandle = Memory_AllocHandle(
-		"VISIBLEOBJECTS", (size_t)RENDER_OBJECT_LIST_CAPACITY * sizeof(RenderObjectListEntry));
+	g_visibleObjectsHandle = Memory_AllocHandle("VISIBLEOBJECTS", (size_t)RENDER_OBJECT_LIST_CAPACITY *
+																	  sizeof(RenderObjectListEntry));
 	if (g_visibleObjectsHandle == 0) {
 		allocFailed = 1;
 	} else {
@@ -3393,7 +3393,7 @@ void FeDiskIo_LoadResources(void) {
 				if (hasLoadedModel) {
 					modelHandle = OptModel_LoadHandle(line);
 					FlightNet_BroadcastStillLoadingPulse();
-				#ifdef XWA_MODERN
+#ifdef XWA_MODERN
 					if (modelHandle == 0) {
 						DebugPrintf("Failed to load required flight model '%s'", line);
 						File_Close(stream);
@@ -3401,9 +3401,9 @@ void FeDiskIo_LoadResources(void) {
 						FeDiskIo_FatalError(1);
 						return;
 					}
-				#endif
+#endif
 					texLevel = (TexLevel*)Memory_LockHandle(modelHandle);
-				#ifdef XWA_MODERN
+#ifdef XWA_MODERN
 					if (texLevel == NULL) {
 						DebugPrintf("Failed to lock required flight model '%s' handle %u", line,
 									(unsigned int)modelHandle);
@@ -3413,7 +3413,7 @@ void FeDiskIo_LoadResources(void) {
 						FeDiskIo_FatalError(1);
 						return;
 					}
-				#endif
+#endif
 				}
 
 				loadedModelSlot = 0;

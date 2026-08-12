@@ -13,8 +13,7 @@ enum {
 
 static XwaPresentationRect g_frame = { 0, 0, XWA_PRESENTATION_WIDTH, XWA_PRESENTATION_HEIGHT };
 
-XwaPresentationRect XwaPresentation_AspectFit(int aspect_w, int aspect_h,
-											  XwaPresentationRect bounds) {
+XwaPresentationRect XwaPresentation_AspectFit(int aspect_w, int aspect_h, XwaPresentationRect bounds) {
 	XwaPresentationRect out = bounds;
 	if (aspect_w <= 0 || aspect_h <= 0 || bounds.width <= 0 || bounds.height <= 0) {
 		return (XwaPresentationRect) { 0, 0, 0, 0 };
@@ -35,8 +34,7 @@ void XwaPresentation_SyncToWindow(int window_width, int window_height) {
 	if (window_width <= 0 || window_height <= 0) {
 		return;
 	}
-	width = (int)(((long long)XWA_PRESENTATION_HEIGHT * window_width + window_height / 2) /
-				  window_height);
+	width = (int)(((long long)XWA_PRESENTATION_HEIGHT * window_width + window_height / 2) / window_height);
 	width &= ~1;
 	if (width < XWA_PRESENTATION_MIN_WIDTH) {
 		width = XWA_PRESENTATION_MIN_WIDTH;
@@ -57,8 +55,7 @@ XwaPresentationRect XwaPresentation_ClassicSafeFrame(void) {
 	return XwaPresentation_AspectFit(4, 3, g_frame);
 }
 
-void XwaPresentation_FromClassic(int classic_x, int classic_y, int* presentation_x,
-								 int* presentation_y) {
+void XwaPresentation_FromClassic(int classic_x, int classic_y, int* presentation_x, int* presentation_y) {
 	const XwaPresentationRect safe = XwaPresentation_ClassicSafeFrame();
 	if (classic_x < 0)
 		classic_x = 0;

@@ -124,8 +124,7 @@ void sw3d_AllocSceneModelLists(void) {
 			Memory_UnlockHandle(g_vertexRemapHandle);
 			Memory_FreeHandle("SCENEVERTFLAGS", g_vertexRemapHandle);
 		}
-		g_vertexRemapHandle =
-			Memory_AllocHandle("SCENEVERTFLAGS", (size_t)g_modelVertCapacity * sizeof(int));
+		g_vertexRemapHandle = Memory_AllocHandle("SCENEVERTFLAGS", (size_t)g_modelVertCapacity * sizeof(int));
 		if (g_vertexRemapHandle == 0) {
 			FeDiskIo_FatalError(0);
 		}

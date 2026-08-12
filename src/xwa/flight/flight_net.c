@@ -1759,7 +1759,6 @@ int FlightNet_SendWorldStateResyncToPlayer(int directPlayId, uint8_t* worldState
 	return result;
 }
 
-
 // FUNCTION: XWA 0x4EE330
 int FlightNet_WaitForWorldStateChunkAcks(int directPlayId, int chunkCount) {
 	int alertToggle;

@@ -100,7 +100,7 @@ typedef struct DDSURFACEDESC {
 	uint32_t dwHeight;
 	uint32_t dwWidth;
 	union {
-		int32_t  lPitch;
+		int32_t lPitch;
 		uint32_t dwLinearSize;
 	};
 	uint32_t dwBackBufferCount;
@@ -109,15 +109,15 @@ typedef struct DDSURFACEDESC {
 		uint32_t dwZBufferBitDepth;
 		uint32_t dwRefreshRate;
 	};
-	uint32_t      dwAlphaBitDepth;
-	uint32_t      dwReserved;
-	void*         lpSurface;
-	DDCOLORKEY    ddckCKDestOverlay;
-	DDCOLORKEY    ddckCKDestBlt;
-	DDCOLORKEY    ddckCKSrcOverlay;
-	DDCOLORKEY    ddckCKSrcBlt;
+	uint32_t dwAlphaBitDepth;
+	uint32_t dwReserved;
+	void* lpSurface;
+	DDCOLORKEY ddckCKDestOverlay;
+	DDCOLORKEY ddckCKDestBlt;
+	DDCOLORKEY ddckCKSrcOverlay;
+	DDCOLORKEY ddckCKSrcBlt;
 	DDPIXELFORMAT ddpfPixelFormat;
-	DDSCAPS       ddsCaps;
+	DDSCAPS ddsCaps;
 } DDSURFACEDESC;
 typedef DDSURFACEDESC* LPDDSURFACEDESC;
 
@@ -166,60 +166,60 @@ XWA_DX_ASSERT32(ddsd_chk, sizeof(DDSURFACEDESC) == 108);
 /* --- flags (subset XWA uses) --------------------------------------------- */
 
 enum {
-	DDSD_CAPS            = 0x00000001,
-	DDSD_HEIGHT          = 0x00000002,
-	DDSD_WIDTH           = 0x00000004,
-	DDSD_PITCH           = 0x00000008,
+	DDSD_CAPS = 0x00000001,
+	DDSD_HEIGHT = 0x00000002,
+	DDSD_WIDTH = 0x00000004,
+	DDSD_PITCH = 0x00000008,
 	DDSD_BACKBUFFERCOUNT = 0x00000020,
-	DDSD_MIPMAPCOUNT     = 0x00020000,
-	DDSD_PIXELFORMAT     = 0x00001000,
+	DDSD_MIPMAPCOUNT = 0x00020000,
+	DDSD_PIXELFORMAT = 0x00001000,
 
-	DDSCAPS_BACKBUFFER     = 0x00000004,
-	DDSCAPS_MIPMAP         = 0x00400000,
-	DDSCAPS_COMPLEX        = 0x00000008,
-	DDSCAPS_FLIP           = 0x00000010,
+	DDSCAPS_BACKBUFFER = 0x00000004,
+	DDSCAPS_MIPMAP = 0x00400000,
+	DDSCAPS_COMPLEX = 0x00000008,
+	DDSCAPS_FLIP = 0x00000010,
 	DDSCAPS_OFFSCREENPLAIN = 0x00000040,
 	DDSCAPS_PRIMARYSURFACE = 0x00000200,
-	DDSCAPS_SYSTEMMEMORY   = 0x00000800,
-	DDSCAPS_TEXTURE        = 0x00001000,
-	DDSCAPS_3DDEVICE       = 0x00002000,
-	DDSCAPS_VIDEOMEMORY    = 0x00004000,
-	DDSCAPS_ZBUFFER        = 0x00020000,
-	DDSCAPS_MODEX          = 0x00200000,
-	DDSCAPS_ALLOCONLOAD    = 0x04000000,
+	DDSCAPS_SYSTEMMEMORY = 0x00000800,
+	DDSCAPS_TEXTURE = 0x00001000,
+	DDSCAPS_3DDEVICE = 0x00002000,
+	DDSCAPS_VIDEOMEMORY = 0x00004000,
+	DDSCAPS_ZBUFFER = 0x00020000,
+	DDSCAPS_MODEX = 0x00200000,
+	DDSCAPS_ALLOCONLOAD = 0x04000000,
 
-	DDPF_ALPHAPIXELS     = 0x00000001,
+	DDPF_ALPHAPIXELS = 0x00000001,
 	DDPF_PALETTEINDEXED8 = 0x00000020,
-	DDPF_RGB             = 0x00000040,
+	DDPF_RGB = 0x00000040,
 
 	DDBLT_COLORFILL = 0x00000400,
-	DDBLT_KEYSRC    = 0x00008000,
-	DDBLT_WAIT      = 0x01000000,
+	DDBLT_KEYSRC = 0x00008000,
+	DDBLT_WAIT = 0x01000000,
 	DDBLT_DEPTHFILL = 0x02000000,
 
-	DDBLTFAST_NOCOLORKEY  = 0x00000000,
+	DDBLTFAST_NOCOLORKEY = 0x00000000,
 	DDBLTFAST_SRCCOLORKEY = 0x00000001,
-	DDBLTFAST_WAIT        = 0x00000010,
+	DDBLTFAST_WAIT = 0x00000010,
 
-	DDSCL_FULLSCREEN  = 0x00000001,
+	DDSCL_FULLSCREEN = 0x00000001,
 	DDSCL_ALLOWREBOOT = 0x00000002,
-	DDSCL_NORMAL      = 0x00000008,
-	DDSCL_EXCLUSIVE   = 0x00000010,
-	DDSCL_ALLOWMODEX  = 0x00000040,
+	DDSCL_NORMAL = 0x00000008,
+	DDSCL_EXCLUSIVE = 0x00000010,
+	DDSCL_ALLOWMODEX = 0x00000040,
 
 	DDCKEY_SRCBLT = 0x00000008,
 
 	DDLOCK_SURFACEMEMORYPTR = 0x00000000,
-	DDLOCK_WAIT             = 0x00000001,
-	DDLOCK_NOSYSLOCK        = 0x00000800,
+	DDLOCK_WAIT = 0x00000001,
+	DDLOCK_NOSYSLOCK = 0x00000800,
 
-	DDPCAPS_8BIT     = 0x00000004,
+	DDPCAPS_8BIT = 0x00000004,
 	DDPCAPS_ALLOW256 = 0x00000040
 };
 
 /* --- interfaces ---------------------------------------------------------- */
 
-typedef struct IDirectDraw        IDirectDraw;
+typedef struct IDirectDraw IDirectDraw;
 typedef struct IDirectDrawSurface IDirectDrawSurface;
 typedef struct IDirectDrawPalette IDirectDrawPalette;
 
@@ -235,14 +235,14 @@ typedef struct IDirectDrawVtbl {
 	HRESULT(XWA_DXAPI* DuplicateSurface)(IDirectDraw*, IDirectDrawSurface*, IDirectDrawSurface**); /* 7 */
 	void* EnumDisplayModes;                                                                        /* 8 */
 	void* EnumSurfaces;                                                                            /* 9 */
-	HRESULT(XWA_DXAPI* FlipToGDISurface)(IDirectDraw*);                                           /* 10 */
+	HRESULT(XWA_DXAPI* FlipToGDISurface)(IDirectDraw*);                                            /* 10 */
 	HRESULT(XWA_DXAPI* GetCaps)(IDirectDraw*, void* /*DDCAPS*/, void* /*DDCAPS*/);                 /* 11 */
 	void* GetDisplayMode;                                                                          /* 12 */
 	void* GetFourCCCodes;                                                                          /* 13 */
-	void* GetGDISurface;                                                            /* 14 */
-	HRESULT(XWA_DXAPI* GetMonitorFrequency)(IDirectDraw*, uint32_t*);               /* 15 */
-	HRESULT(XWA_DXAPI* GetScanLine)(IDirectDraw*, uint32_t*);                       /* 16 */
-	HRESULT(XWA_DXAPI* GetVerticalBlankStatus)(IDirectDraw*, int32_t*);             /* 17 */
+	void* GetGDISurface;                                                                           /* 14 */
+	HRESULT(XWA_DXAPI* GetMonitorFrequency)(IDirectDraw*, uint32_t*);                              /* 15 */
+	HRESULT(XWA_DXAPI* GetScanLine)(IDirectDraw*, uint32_t*);                                      /* 16 */
+	HRESULT(XWA_DXAPI* GetVerticalBlankStatus)(IDirectDraw*, int32_t*);                            /* 17 */
 	void* Initialize;                                                                              /* 18 */
 	void* RestoreDisplayMode;                                                                      /* 19 */
 	HRESULT(XWA_DXAPI* SetCooperativeLevel)(IDirectDraw*, void* /*HWND*/, uint32_t);               /* 20 */
@@ -255,11 +255,11 @@ struct IDirectDraw {
 };
 
 typedef struct IDirectDrawSurfaceVtbl {
-	HRESULT(XWA_DXAPI* QueryInterface)(IDirectDrawSurface*, DxRefIid, void**); /* 0 */
-	uint32_t(XWA_DXAPI* AddRef)(IDirectDrawSurface*);                          /* 1 */
-	uint32_t(XWA_DXAPI* Release)(IDirectDrawSurface*);                         /* 2 */
+	HRESULT(XWA_DXAPI* QueryInterface)(IDirectDrawSurface*, DxRefIid, void**);        /* 0 */
+	uint32_t(XWA_DXAPI* AddRef)(IDirectDrawSurface*);                                 /* 1 */
+	uint32_t(XWA_DXAPI* Release)(IDirectDrawSurface*);                                /* 2 */
 	HRESULT(XWA_DXAPI* AddAttachedSurface)(IDirectDrawSurface*, IDirectDrawSurface*); /* 3 */
-	void* AddOverlayDirtyRect;                                                 /* 4 */
+	void* AddOverlayDirtyRect;                                                        /* 4 */
 	HRESULT(XWA_DXAPI* Blt)(IDirectDrawSurface*, void* /*RECT*/, IDirectDrawSurface*, void* /*RECT*/,
 							uint32_t, DDBLTFX*); /* 5 */
 	void* BltBatch;                              /* 6 */
@@ -325,7 +325,7 @@ void DDrawCompat_ResubmitIfIdle(void);
 /* Modern flight presentation policy. Suppression applies only to render-target
  * surfaces: CPU DirectDraw surfaces used by the frontend continue normally. */
 void DDrawCompat_SetClassicFlightRenderingSuppressed(int suppressed);
-int  DDrawCompat_IsClassicFlightRenderingSuppressed(void);
+int DDrawCompat_IsClassicFlightRenderingSuppressed(void);
 /* Submit the last complete classic frame even while suppression is active.
  * This is a presentation-only fallback: no PRESENT event or page flip. */
 void DDrawCompat_SubmitLastPresented(void);

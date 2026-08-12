@@ -991,7 +991,7 @@ int16_t SpriteResource_LoadGroup(int16_t groupId) {
 	if (group->hGlobal == NULL) {
 		SpriteResource_ResetGroup(group);
 		Aeron_LogError("xwa.assets", "Failed to allocate sprite group %d (%d bytes)", groupId,
-				  indexSize + dataSize);
+					   indexSize + dataSize);
 		return -1;
 	}
 
@@ -1044,7 +1044,7 @@ int16_t SpriteResource_LoadGroup(int16_t groupId) {
 				File_Close(datStream);
 				SpriteResource_ResetGroup(group);
 				Aeron_LogError("xwa.assets", "Failed to read sprite DAT directory '%s' for group %d", path,
-						  groupId);
+							   groupId);
 				return -1;
 			}
 

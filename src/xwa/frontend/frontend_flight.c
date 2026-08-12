@@ -1,12 +1,12 @@
 #include "xwa/frontend/frontend_flight.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/assets/ui_string.h"
 #include "xwa/audio/music.h"
 #include "xwa/config/game_config.h"
 #include "xwa/config/pilot.h"
 #include "xwa/flight/flight.h"
+#include "xwa/flight/net_session.h"
 #include "xwa/frontend/concourse.h"
 #include "xwa/frontend/film_room.h"
 #include "xwa/frontend/flight_loading.h"
@@ -14,6 +14,7 @@
 #include "xwa/frontend/frontend_cursor.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_file_stream.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_mission_session.h"
 #include "xwa/frontend/frontend_net.h"
 #include "xwa/frontend/frontend_resources.h"
@@ -24,12 +25,11 @@
 #include "xwa/frontend/mission_briefing.h"
 #include "xwa/frontend/mission_debrief.h"
 #include "xwa/frontend/mission_setup.h"
-#include "xwa/flight/net_session.h"
 #include "xwa/frontend/net_transport.h"
 #include "xwa/util/debug.h"
 #include "xwa/util/memory.h"
-#include "xwa_runtime/runtime/flight_task.h"
 #include "xwa/xwa_options.h"
+#include "xwa_runtime/runtime/flight_task.h"
 
 #include <stdio.h>
 #include <string.h>

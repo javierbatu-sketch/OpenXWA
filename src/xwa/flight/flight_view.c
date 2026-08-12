@@ -3,14 +3,14 @@
 #include "xwa/render/renderer_internal.h"
 
 #include "xwa/assets/flight_model.h"
-#include "xwa/flight/object/damage.h"
 #include "xwa/flight/fediskio.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/flight_display.h"
 #include "xwa/flight/flight_map.h"
-#include "xwa/flight/starfield.h"
 #include "xwa/flight/hud/hud.h"
 #include "xwa/flight/mission/mission.h"
+#include "xwa/flight/object/damage.h"
+#include "xwa/flight/starfield.h"
 #include "xwa/flight/yard.h"
 #include "xwa/util/time.h"
 #ifdef XWA_MODERN

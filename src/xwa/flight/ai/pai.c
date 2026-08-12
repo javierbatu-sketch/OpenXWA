@@ -81,26 +81,24 @@ void pai_TraceManeuverTick(char maneuverResult) {
 		}
 
 		Aeron_LogTrace("xwa.ai.trace",
-				  "TICK fg=%u(%s) obj=%u plan='%s' mode=%u phase=%d distAim=%d tgtDist=%d aimOff=%d "
-				  "yaw=0x%04x tgtYaw=0x%04x yawErr=0x%04x throttle=%u speed=%u mScale=0x%04x "
-				  "turnRate=%d turnStep=0x%04x turnAccel=0x%04x turnState=%d ret=%d",
-				  (unsigned)g_paiContext.curOrderCoord.fields.flightGroupIdx,
-				  g_missionFlightGroups[g_paiContext.curOrderCoord.fields.flightGroupIdx].fg.name,
-				  (unsigned)g_paiContext.aiObjIdx, g_planTable[controller->pendingPlanId].name,
-				  (unsigned)controller->maneuverMode, (int)controller->maneuverPhase,
-				  (int)trig2_polardistance, tgtDist, aimOff, (unsigned)self->yaw,
-				  (unsigned)controller->targetXYAngle, (unsigned)yawErr, (unsigned)g_curCraft->throttleSpeed,
-				  (unsigned)(self->mobj ? self->mobj->speed : 0),
-				  (unsigned)(uint16_t)g_curCraft->aiFlight.motionScale, (int)g_curCraft->aiFlight.turnRate,
-				  (unsigned)(uint16_t)g_curCraft->aiFlight.turnStep,
-				  (unsigned)(uint16_t)g_curCraft->aiFlight.turnAccel, (int)g_curCraft->aiFlight.turnState,
-				  (int)maneuverResult);
+					   "TICK fg=%u(%s) obj=%u plan='%s' mode=%u phase=%d distAim=%d tgtDist=%d aimOff=%d "
+					   "yaw=0x%04x tgtYaw=0x%04x yawErr=0x%04x throttle=%u speed=%u mScale=0x%04x "
+					   "turnRate=%d turnStep=0x%04x turnAccel=0x%04x turnState=%d ret=%d",
+					   (unsigned)g_paiContext.curOrderCoord.fields.flightGroupIdx,
+					   g_missionFlightGroups[g_paiContext.curOrderCoord.fields.flightGroupIdx].fg.name,
+					   (unsigned)g_paiContext.aiObjIdx, g_planTable[controller->pendingPlanId].name,
+					   (unsigned)controller->maneuverMode, (int)controller->maneuverPhase,
+					   (int)trig2_polardistance, tgtDist, aimOff, (unsigned)self->yaw,
+					   (unsigned)controller->targetXYAngle, (unsigned)yawErr,
+					   (unsigned)g_curCraft->throttleSpeed, (unsigned)(self->mobj ? self->mobj->speed : 0),
+					   (unsigned)(uint16_t)g_curCraft->aiFlight.motionScale,
+					   (int)g_curCraft->aiFlight.turnRate, (unsigned)(uint16_t)g_curCraft->aiFlight.turnStep,
+					   (unsigned)(uint16_t)g_curCraft->aiFlight.turnAccel,
+					   (int)g_curCraft->aiFlight.turnState, (int)maneuverResult);
 	}
 }
 #else
-void pai_TraceManeuverTick(char maneuverResult) {
-	(void)maneuverResult;
-}
+void pai_TraceManeuverTick(char maneuverResult) { (void)maneuverResult; }
 #endif
 
 // GLOBAL: XWA 0x7B4BF8
@@ -235,11 +233,12 @@ void pai_ProcessPlan(void) {
 			if (strcmp(g_planTable[*nextPlanPtr].name, "nullpln") != 0) {
 #if defined(XWA_MODERN) && !defined(NDEBUG)
 				if (pai_TraceThisCraft()) {
-					Aeron_LogTrace("xwa.ai.trace", "TRANSITION fg=%u(%s) obj=%u order=%u '%s' -> '%s'",
-							  (unsigned)g_paiContext.curOrderCoord.fields.flightGroupIdx,
-							  g_missionFlightGroups[g_paiContext.curOrderCoord.fields.flightGroupIdx].fg.name,
-							  (unsigned)g_paiContext.aiObjIdx, (unsigned)orderId,
-							  g_planTable[aiController->pendingPlanId].name, g_planTable[*nextPlanPtr].name);
+					Aeron_LogTrace(
+						"xwa.ai.trace", "TRANSITION fg=%u(%s) obj=%u order=%u '%s' -> '%s'",
+						(unsigned)g_paiContext.curOrderCoord.fields.flightGroupIdx,
+						g_missionFlightGroups[g_paiContext.curOrderCoord.fields.flightGroupIdx].fg.name,
+						(unsigned)g_paiContext.aiObjIdx, (unsigned)orderId,
+						g_planTable[aiController->pendingPlanId].name, g_planTable[*nextPlanPtr].name);
 				}
 #endif
 				if (strcmp(g_planTable[*nextPlanPtr].name, "variablepln") == 0) {

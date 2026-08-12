@@ -6,7 +6,6 @@
 #include "aeron/log.h"
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/sprite_resource.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/audio/music.h"
@@ -23,6 +22,7 @@
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_email.h"
 #include "xwa/frontend/frontend_escape.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_mission.h"
 #include "xwa/frontend/frontend_mission_list.h"
@@ -35,13 +35,13 @@
 #include "xwa/frontend/frontend_text.h"
 #include "xwa/frontend/frontend_wave_stream.h"
 #include "xwa/frontend/mission_setup.h"
+#include "xwa/frontend/net_transport.h"
 #include "xwa/frontend/skirmish.h"
 #include "xwa/frontend/tech_library.h"
-#include "xwa/frontend/net_transport.h"
 #include "xwa/util/debug.h"
 #include "xwa/util/memory.h"
-#include "xwa/xwa_options.h"
 #include "xwa/util/time.h"
+#include "xwa/xwa_options.h"
 
 #include <stdint.h>
 #include <stdio.h>

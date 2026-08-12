@@ -15,8 +15,8 @@
 #include "xwa/frontend/frontend_resources.h"
 #include "xwa/frontend/mission_briefing.h"
 #include "xwa/frontend/mission_setup.h"
-#include "xwa/frontend/skirmish.h"
 #include "xwa/frontend/net_transport.h"
+#include "xwa/frontend/skirmish.h"
 #include "xwa/util/memory.h"
 
 #include <stdint.h>
@@ -852,7 +852,7 @@ int FrontendMission_LoadFile(char* fileName) {
 	File_ReadWord(stream, &g_frontendMission->formatVersion);
 	if (!FrontendMission_IsSupportedFormat(g_frontendMission->formatVersion)) {
 		Aeron_LogError("xwa.frontend", "Unsupported frontend mission format %u in '%s'",
-				  (unsigned int)g_frontendMission->formatVersion, fileName);
+					   (unsigned int)g_frontendMission->formatVersion, fileName);
 		File_Close(stream);
 		return 0;
 	}
@@ -925,8 +925,8 @@ int FrontendMission_LoadCurrent(void) {
 	} else {
 #ifdef XWA_MODERN
 		Aeron_LogError("xwa.frontend",
-				  "Cannot load current frontend mission: mission list for directory %d is missing",
-				  missionDirectoryId);
+					   "Cannot load current frontend mission: mission list for directory %d is missing",
+					   missionDirectoryId);
 		return 0;
 #else
 		missionListIndex = (unsigned int)g_selectedMissionListIndex;
@@ -960,8 +960,8 @@ int FrontendMission_LoadCurrent(void) {
 #ifdef XWA_MODERN
 	if (missionListIndex >= (unsigned int)g_missionCount) {
 		Aeron_LogError("xwa.frontend",
-				  "Cannot load current frontend mission: mission id %d not found in directory %d",
-				  g_pilotData.missionDescriptionIds[missionDirectoryId], missionDirectoryId);
+					   "Cannot load current frontend mission: mission id %d not found in directory %d",
+					   g_pilotData.missionDescriptionIds[missionDirectoryId], missionDirectoryId);
 		return 0;
 	}
 #endif

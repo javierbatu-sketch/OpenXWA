@@ -266,8 +266,8 @@ ModelTextureDefaultTexture* ModelTexture_GetDefaultWhiteTexture(void) {
 	g_defaultWhiteTexture.width = 8;
 	g_defaultWhiteTexture.height = 8;
 
-	ModelTexture_BuildPalettedShadeTable(g_defaultWhiteTexture.data.baseTexels, g_defaultWhiteTextureRgb24,
-										 8, 8);
+	ModelTexture_BuildPalettedShadeTable(g_defaultWhiteTexture.data.baseTexels, g_defaultWhiteTextureRgb24, 8,
+										 8);
 	memcpy(g_defaultWhiteTexture.data.shadeTable, g_defaultWhiteTexture.data.mipTexels,
 		   sizeof(g_defaultWhiteTexture.data.shadeTable));
 #endif

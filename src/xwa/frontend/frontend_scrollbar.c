@@ -1,8 +1,8 @@
 #include "xwa/frontend/frontend_scrollbar.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_cursor.h"
 #include "xwa/frontend/frontend_draw.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 
 #include <string.h>

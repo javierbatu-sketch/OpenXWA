@@ -1,28 +1,28 @@
 #include "xwa/flight/death_star.h"
 
+#include "xwa/assets/model_bounds.h"
+#include "xwa/assets/model_def.h"
+#include "xwa/assets/model_mesh.h"
+#include "xwa/assets/model_type.h"
+#include "xwa/audio/fsfx.h"
+#include "xwa/audio/sound.h"
 #include "xwa/flight/ai/pai.h"
 #include "xwa/flight/ai/pai_plan.h"
 #include "xwa/flight/ai/paifight.h"
 #include "xwa/flight/ai/paiman.h"
 #include "xwa/flight/ai/paiorder.h"
-#include "xwa/assets/model_bounds.h"
-#include "xwa/assets/model_def.h"
-#include "xwa/assets/model_mesh.h"
-#include "xwa/assets/model_type.h"
-#include "xwa/audio/sound.h"
-#include "xwa/flight/object/collision.h"
-#include "xwa/flight/object/damage.h"
+#include "xwa/flight/film.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/flight_light.h"
-#include "xwa/audio/fsfx.h"
 #include "xwa/flight/hud/hud.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/damage.h"
+#include "xwa/flight/object/laser.h"
+#include "xwa/flight/player/player.h"
 #include "xwa/input/dinput.h"
 #include "xwa/input/forcefeedback.h"
 #include "xwa/math/trig2.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/flight/film.h"
-#include "xwa/flight/object/laser.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/render/renderer.h"
 #include "xwa/util/debug.h"
 #include "xwa/util/memory.h"
@@ -1031,7 +1031,7 @@ int DeathStar_HandlePowerNodeHit(unsigned int sourceObjIdx, unsigned int powerNo
 			if (warheadClass == 0) {
 #else
 			if (g_projectileWarheadClassByType[(uint16_t)g_objectTable[sourceObjIdx].objectType -
-											 OBJ_LaserRebel] == 0) {
+											   OBJ_LaserRebel] == 0) {
 #endif
 				--g_objectTable[powerNodeObjIdx].typeSpecificWord;
 			} else if (g_objectTable[powerNodeObjIdx].typeSpecificWord > 50u) {
@@ -1074,7 +1074,7 @@ int DeathStar_HandlePowerNodeHit(unsigned int sourceObjIdx, unsigned int powerNo
 		if (warheadClass == 0) {
 #else
 		if (g_projectileWarheadClassByType[(uint16_t)g_objectTable[sourceObjIdx].objectType -
-										 OBJ_LaserRebel] == 0) {
+										   OBJ_LaserRebel] == 0) {
 #endif
 			--g_objectTable[powerNodeObjIdx].typeSpecificWord;
 		} else {
@@ -2499,39 +2499,40 @@ void DeathStar_LoadActiveSegments(void) {
 	segmentSlotIdx = 0;
 	if (g_deathStarActiveSegmentCount > segmentSlotIdx) {
 		do {
-		DeathStarSegmentDef* segment;
-		DeathStarChildObjectRef* childObjects;
-		int objectIdx;
-		uint16_t childIdx;
+			DeathStarSegmentDef* segment;
+			DeathStarChildObjectRef* childObjects;
+			int objectIdx;
+			uint16_t childIdx;
 
-		segment = &g_deathStarSegmentSets[g_deathStarSegmentSetIdx].segments[segmentSlotIdx];
-		objectIdx = g_deathStarActiveSegmentObjIdx[segmentSlotIdx];
-		g_objectTable[objectIdx].objectType = (ObjectTypeId)segment->objectType;
-		g_objectTable[objectIdx].world_x = segment->worldX;
-		g_objectTable[objectIdx].world_y = segment->worldY;
-		g_objectTable[objectIdx].world_z = segment->worldZ;
-		g_objectTable[objectIdx].yaw = segment->yaw;
-		g_objectTable[objectIdx].pitch = segment->pitch;
+			segment = &g_deathStarSegmentSets[g_deathStarSegmentSetIdx].segments[segmentSlotIdx];
+			objectIdx = g_deathStarActiveSegmentObjIdx[segmentSlotIdx];
+			g_objectTable[objectIdx].objectType = (ObjectTypeId)segment->objectType;
+			g_objectTable[objectIdx].world_x = segment->worldX;
+			g_objectTable[objectIdx].world_y = segment->worldY;
+			g_objectTable[objectIdx].world_z = segment->worldZ;
+			g_objectTable[objectIdx].yaw = segment->yaw;
+			g_objectTable[objectIdx].pitch = segment->pitch;
 
-		childObjects = segment->childObjects;
-		if ((segment->flags & DEATH_STAR_SEGMENT_FLAG_REDIRECT_CHILDREN) != 0) {
-			uint16_t redirectedSegmentSetIdx;
-			uint16_t redirectedSegmentIdx;
+			childObjects = segment->childObjects;
+			if ((segment->flags & DEATH_STAR_SEGMENT_FLAG_REDIRECT_CHILDREN) != 0) {
+				uint16_t redirectedSegmentSetIdx;
+				uint16_t redirectedSegmentIdx;
 
-			redirectedSegmentSetIdx = childObjects->objectType;
-			redirectedSegmentIdx = childObjects->angleByteOffsets;
-			childObjects =
-				g_deathStarSegmentSets[redirectedSegmentSetIdx].segments[redirectedSegmentIdx].childObjects;
-		}
-
-		for (childIdx = 0; childIdx < 10u; ++childIdx) {
-			if (childObjects->objectType != OBJ_None) {
-				DeathStar_SpawnSegmentChildObject(childObjects, childIdx, segment);
+				redirectedSegmentSetIdx = childObjects->objectType;
+				redirectedSegmentIdx = childObjects->angleByteOffsets;
+				childObjects = g_deathStarSegmentSets[redirectedSegmentSetIdx]
+								   .segments[redirectedSegmentIdx]
+								   .childObjects;
 			}
-		}
 
-		g_deathStarActiveSegmentIdx[segmentSlotIdx] = segmentSlotIdx;
-		++segmentSlotIdx;
+			for (childIdx = 0; childIdx < 10u; ++childIdx) {
+				if (childObjects->objectType != OBJ_None) {
+					DeathStar_SpawnSegmentChildObject(childObjects, childIdx, segment);
+				}
+			}
+
+			g_deathStarActiveSegmentIdx[segmentSlotIdx] = segmentSlotIdx;
+			++segmentSlotIdx;
 		} while (segmentSlotIdx < g_deathStarActiveSegmentCount);
 	}
 
@@ -4469,10 +4470,10 @@ void DeathStar_UpdateLaserEffectSegments(int extendBeam) {
 		object = &g_objectTable[g_deathStarLaserEffectSlots[slotIdx].objectIdx];
 		if (object->objectType == OBJ_None ||
 			object->objectSignature != g_deathStarLaserEffectSlots[slotIdx].objectSignature) {
-			DEATH_STAR_SLOT_MOVE(
-				&g_deathStarLaserEffectSlots[slotIdx], &g_deathStarLaserEffectSlots[slotIdx + 1],
-				(size_t)(g_deathStarLaserEffectSlotCount - slotIdx - 1) *
-					sizeof(g_deathStarLaserEffectSlots[0]));
+			DEATH_STAR_SLOT_MOVE(&g_deathStarLaserEffectSlots[slotIdx],
+								 &g_deathStarLaserEffectSlots[slotIdx + 1],
+								 (size_t)(g_deathStarLaserEffectSlotCount - slotIdx - 1) *
+									 sizeof(g_deathStarLaserEffectSlots[0]));
 			--g_deathStarLaserEffectSlotCount;
 			--slotIdx;
 		}
@@ -5187,7 +5188,7 @@ void DeathStar_FireLaserAtTarget(void) {
 			if (laser_GetProjectileWarheadClass(g_objectTable[laserObjIdx].objectType) == 0 &&
 #else
 			if (g_projectileWarheadClassByType[(uint16_t)g_objectTable[laserObjIdx].objectType -
-											 OBJ_LaserRebel] == 0 &&
+											   OBJ_LaserRebel] == 0 &&
 #endif
 				g_objectTable[laserObjIdx].mobj->team == 1) {
 				break;

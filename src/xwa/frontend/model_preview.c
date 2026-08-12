@@ -13,10 +13,10 @@
 #include "xwa/assets/opt_model.h"
 #include "xwa/flight/fediskio.h"
 #include "xwa/flight/flight_light.h"
-#include "xwa/frontend/frontend_display.h"
-#include "xwa/frontend/frontend_draw.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/player/player.h"
+#include "xwa/frontend/frontend_display.h"
+#include "xwa/frontend/frontend_draw.h"
 #include "xwa/render/renderer.h"
 #include "xwa/util/memory.h"
 

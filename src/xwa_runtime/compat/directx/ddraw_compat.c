@@ -131,13 +131,13 @@ static void DDShim_Present(DDrawSurfaceShim* frame) {
 		 * layers and the std3D 3D output, matching the original DirectDraw surface.
 		 * Present as SRGB so the values are decoded once and re-encoded by the
 		 * swapchain -- a single round trip, matching the flight render path. */
-			tex.color_space = AERON_COLOR_SPACE_SRGB;
-			if (tex.texture) {
-				if (!Aeron_SubmitTextureLayer(&tex)) {
-					Aeron_RequestFatalRendererError("classic render-target presentation");
-					return;
-				}
-				++g_ddClassicFlightFrameSerial;
+		tex.color_space = AERON_COLOR_SPACE_SRGB;
+		if (tex.texture) {
+			if (!Aeron_SubmitTextureLayer(&tex)) {
+				Aeron_RequestFatalRendererError("classic render-target presentation");
+				return;
+			}
+			++g_ddClassicFlightFrameSerial;
 			/* Remaster: frame-boundary marker (post-present restores
 			 * belong to the next frame). No pixel capture — the HD
 			 * render is record-driven, not a framebuffer scrape. */
@@ -298,8 +298,7 @@ static int DDShim_ComposeOntoRenderTarget(DDrawSurfaceShim* dst, DDrawSurfaceShi
 	return 1;
 }
 
-static int DDShim_ClearGpuTargetColor(const DDrawSurfaceShim* s, AeronRenderTarget* target,
-									  uint32_t fill) {
+static int DDShim_ClearGpuTargetColor(const DDrawSurfaceShim* s, AeronRenderTarget* target, uint32_t fill) {
 	AeronCommandBuffer* command_buffer;
 	AeronRenderPass* pass;
 	float rgba[4];

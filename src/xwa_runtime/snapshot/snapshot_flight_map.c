@@ -74,10 +74,10 @@ static int map_format_label(uint16_t object_slot, char* out, uint32_t capacity) 
 	char separator;
 	if ((int8_t)craft->iffVisibility[(uint16_t)g_players[g_localPlayer].playerIff] >= 0) {
 		map_label_string(out, capacity, &length, fg->name);
-		craft_number = fg->disableWaveNumbering == 1 ||
-							(!fg->globalUnit && fg->numberOfCraft == 1 && !fg->numberOfWaves)
-						 ? 0
-						 : (uint16_t)craft->craftIndexInGroup;
+		craft_number =
+			fg->disableWaveNumbering == 1 || (!fg->globalUnit && fg->numberOfCraft == 1 && !fg->numberOfWaves)
+				? 0
+				: (uint16_t)craft->craftIndexInGroup;
 		separator = ' ';
 	} else {
 		map_label_string(out, capacity, &length, g_strPanelStrings[PANEL_STRING_NAME]);
@@ -149,9 +149,7 @@ static uint32_t map_abs_i32(int32_t value) {
 	return value < 0 ? 0u - bits : bits;
 }
 
-static int32_t map_world_delta(int32_t to, int32_t from) {
-	return (int32_t)((uint32_t)to - (uint32_t)from);
-}
+static int32_t map_world_delta(int32_t to, int32_t from) { return (int32_t)((uint32_t)to - (uint32_t)from); }
 
 static uint16_t map_range(uint16_t from_slot, uint16_t to_slot) {
 	if (!g_objectTable || from_slot >= g_objectTableSlotCount || to_slot >= g_objectTableSlotCount) {
@@ -184,9 +182,9 @@ static int map_resolve_ref(uint16_t ref, uint8_t fg_index, uint8_t order_index, 
 		ref = g_missionFgStats[fg_index].currentMissionPointRef;
 	}
 	const unsigned point = (unsigned)ref - 0x8000u;
-	const XwaWaypoint* waypoint = point < 4u
-		? &g_missionFlightGroups[fg_index].fg.missionPoints[point]
-		: &g_missionFlightGroups[fg_index].fg.orders[4u * order_index].waypoints[point - 4u];
+	const XwaWaypoint* waypoint =
+		point < 4u ? &g_missionFlightGroups[fg_index].fg.missionPoints[point]
+				   : &g_missionFlightGroups[fg_index].fg.orders[4u * order_index].waypoints[point - 4u];
 	out[0] = waypoint->x * 256;
 	out[1] = -(waypoint->y * 256);
 	out[2] = waypoint->z * 256;
@@ -194,7 +192,7 @@ static int map_resolve_ref(uint16_t ref, uint8_t fg_index, uint8_t order_index, 
 }
 
 static const AiController* map_effective_ai_controller(const CraftData* craft,
-												const CraftData* const* resolving, unsigned depth) {
+													   const CraftData* const* resolving, unsigned depth) {
 	if (!craft) {
 		return NULL;
 	}
@@ -281,8 +279,7 @@ void XwaSnapshotFlightMap_Begin(XwaSnapshot* snapshot) {
 	snapshot->flight_map.active = (uint8_t)(g_players[g_localPlayer].mapCameraState != 0);
 }
 
-void XwaSnapshotFlightMap_CaptureObject(XwaSnapshot* snapshot, uint32_t slot,
-										uint16_t flight_object_index) {
+void XwaSnapshotFlightMap_CaptureObject(XwaSnapshot* snapshot, uint32_t slot, uint16_t flight_object_index) {
 	if (!snapshot || !snapshot->flight_map.active || slot >= g_objectTableSlotCount || slot > UINT16_MAX ||
 		flight_object_index == UINT16_MAX || flight_object_index >= snapshot->flight_object_count) {
 		return;
@@ -316,9 +313,8 @@ void XwaSnapshotFlightMap_CaptureObject(XwaSnapshot* snapshot, uint32_t slot,
 	map->box_extent = Targeting_GetObjectBoxExtent((int)slot);
 	map->render_kind = render_kind;
 	map->cull_kind = cull_kind;
-	map->icon_id = object->objectType <= OBJ_NoAsset_222
-					   ? g_flightMapIconByObjectType[(uint16_t)object->objectType]
-					   : 0;
+	map->icon_id =
+		object->objectType <= OBJ_NoAsset_222 ? g_flightMapIconByObjectType[(uint16_t)object->objectType] : 0;
 	map->effective_iff =
 		object->mobj ? (uint8_t)object->mobj->iff : g_missionFlightGroups[object->flightGroupIdx].fg.iff;
 	if (object->mobj) {
@@ -332,11 +328,11 @@ void XwaSnapshotFlightMap_CaptureObject(XwaSnapshot* snapshot, uint32_t slot,
 		char label[256];
 		const int length = map_format_label((uint16_t)slot, label, sizeof label);
 		if (length > 0 && (uint32_t)snapshot->flight_map.label_bytes + (uint32_t)length + 1u <=
-						 XWA_SNAP_FLIGHT_MAP_LABEL_BYTES) {
+							  XWA_SNAP_FLIGHT_MAP_LABEL_BYTES) {
 			map->label_offset = snapshot->flight_map.label_bytes;
-			memcpy(&snapshot->flight_map.labels[snapshot->flight_map.label_bytes], label, (size_t)length + 1u);
-			snapshot->flight_map.label_bytes =
-				(uint16_t)(snapshot->flight_map.label_bytes + length + 1);
+			memcpy(&snapshot->flight_map.labels[snapshot->flight_map.label_bytes], label,
+				   (size_t)length + 1u);
+			snapshot->flight_map.label_bytes = (uint16_t)(snapshot->flight_map.label_bytes + length + 1);
 		}
 	}
 
@@ -352,8 +348,7 @@ void XwaSnapshotFlightMap_CaptureObject(XwaSnapshot* snapshot, uint32_t slot,
 		} else if (render_kind == XWA_FLIGHT_MAP_RENDER_CRAFT && object->playerOwnerIdx != -1 &&
 				   object->mobj && object->mobj->pCraft && !Object_HasActiveDecoyBeam((uint16_t)slot)) {
 			const int player_iff = (uint16_t)g_players[g_localPlayer].playerIff;
-			if (g_flightLocatePlayersEnabled ||
-				(int8_t)object->mobj->pCraft->iffVisibility[player_iff] > 0 ||
+			if (g_flightLocatePlayersEnabled || (int8_t)object->mobj->pCraft->iffVisibility[player_iff] > 0 ||
 				!Object_IsHostileToTeam((uint16_t)slot, player_iff)) {
 				map->box_visible = 1;
 				switch ((uint8_t)object->mobj->iff) {

@@ -1,7 +1,7 @@
 #include "xwa/render/renderer_internal.h"
 
-#include "xwa/flight/object/damage.h"
 #include "xwa/flight/flight_display.h"
+#include "xwa/flight/object/damage.h"
 #include "xwa/flight/yard.h"
 
 #ifdef XWA_MODERN

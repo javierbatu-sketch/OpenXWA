@@ -1,26 +1,26 @@
 #include "xwa/flight/object/laser.h"
 
+#include "xwa/assets/model_bounds.h"
+#include "xwa/assets/model_def.h"
+#include "xwa/assets/model_mesh.h"
+#include "xwa/assets/model_type.h"
+#include "xwa/audio/fsfx.h"
 #include "xwa/flight/ai/pai.h"
 #include "xwa/flight/ai/pai_plan.h"
 #include "xwa/flight/ai/paifight.h"
 #include "xwa/flight/ai/paiman.h"
 #include "xwa/flight/ai/paiorder.h"
-#include "xwa/assets/model_bounds.h"
-#include "xwa/assets/model_def.h"
-#include "xwa/assets/model_mesh.h"
-#include "xwa/assets/model_type.h"
-#include "xwa/flight/object/collision.h"
 #include "xwa/flight/fediskio.h"
 #include "xwa/flight/flight.h"
-#include "xwa/audio/fsfx.h"
 #include "xwa/flight/hud/hud.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/object.h"
+#include "xwa/flight/player/player.h"
 #include "xwa/input/dinput.h"
 #include "xwa/input/forcefeedback.h"
 #include "xwa/math/fixed.h"
 #include "xwa/math/trig2.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/flight/object/object.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/render/effects.h"
 #include "xwa/render/renderer.h"
 #include "xwa/render/renderer_internal.h"
@@ -132,15 +132,15 @@ const uint8_t g_projectileHomingProfileBaseByObjectType[OBJ_LaserImperialDS + 1]
 
 // GLOBAL: XWA 0x5B6790 (7-entry rows: row base 0/7/14/21/28/35 + homing tier)
 const uint16_t g_projectileHomingTurnRateByProfile[42] = {
-	0,    1024, 2048, 3072,  5120,  7168,  9216, 0,    512,   1024,  2048,  3072,  4608, 6144, 0,
-	2048, 4096, 5120, 10240, 14336, 18432, 0,    32,   64,    80,    96,    112,   128,  0,    512,
-	1024, 1280, 1536, 1792,  2048,  0,     4096, 8192, 12288, 16384, 20480, 24576,
+	0, 1024, 2048, 3072, 5120,  7168,  9216,  0, 512,  1024, 2048,  3072,  4608,  6144,
+	0, 2048, 4096, 5120, 10240, 14336, 18432, 0, 32,   64,   80,    96,    112,   128,
+	0, 512,  1024, 1280, 1536,  1792,  2048,  0, 4096, 8192, 12288, 16384, 20480, 24576,
 };
 
 // GLOBAL: XWA 0x5B67E8 (7-entry rows: row base 0/7/14/21/28/35 + homing tier)
 const uint16_t g_projectileHomingSpeedAdjustRateByProfile[42] = {
 	0, 50, 100, 200, 300, 400, 500, 0, 25, 50, 100, 150, 200, 250, 0, 100, 200, 400, 600, 800, 1000,
-	0, 0,  0,   0,   0,   0,   0,   0, 10, 20,  30,  40,  50,  60, 0, 100, 200, 400, 600, 800, 1000,
+	0, 0,  0,   0,   0,   0,   0,   0, 10, 20, 30,  40,  50,  60,  0, 100, 200, 400, 600, 800, 1000,
 };
 
 // GLOBAL: XWA 0x5B65D0

@@ -3,8 +3,8 @@
 
 #include "xwa/assets/model_mesh.h"
 #include "xwa/assets/opt_model.h"
-#include "xwa/math/vec3i.h"
 #include "xwa/flight/object/object.h"
+#include "xwa/math/vec3i.h"
 #include "xwa/util/memory.h"
 
 #include <stdint.h>

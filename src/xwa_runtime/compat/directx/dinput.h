@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-typedef struct IDirectInputA       IDirectInputA;
+typedef struct IDirectInputA IDirectInputA;
 typedef struct IDirectInputDeviceA IDirectInputDeviceA;
 
 /* Buffered device event (keyboard): dwOfs is the DIK scancode, dwData bit 0x80 is
@@ -48,7 +48,7 @@ typedef struct DIPROPHEADER {
 
 typedef struct DIPROPDWORD {
 	DIPROPHEADER diph;
-	uint32_t     dwData;
+	uint32_t dwData;
 } DIPROPDWORD;
 
 /* Device data format. The shim keys device behavior off the CreateDevice GUID, so it
@@ -59,14 +59,14 @@ typedef struct DIDATAFORMAT {
 	uint32_t dwFlags;
 	uint32_t dwDataSize;
 	uint32_t dwNumObjs;
-	void*    rgodf;
+	void* rgodf;
 } DIDATAFORMAT;
 
 /* Cooperative-level flags (SetCooperativeLevel); the original uses FOREGROUND|NONEXCLUSIVE. */
-#define DISCL_EXCLUSIVE    0x00000001u
+#define DISCL_EXCLUSIVE 0x00000001u
 #define DISCL_NONEXCLUSIVE 0x00000002u
-#define DISCL_FOREGROUND   0x00000004u
-#define DISCL_BACKGROUND   0x00000008u
+#define DISCL_FOREGROUND 0x00000004u
+#define DISCL_BACKGROUND 0x00000008u
 
 /* GetDeviceData flag: peek without dequeuing. */
 #define DIGDD_PEEK 0x00000001u
@@ -75,8 +75,8 @@ typedef struct DIDATAFORMAT {
 #define DINPUT_DIPROP_BUFFERSIZE ((const DxGuid*)1)
 
 /* Result codes the recovered retry loops test. */
-#define DI_OK          ((HRESULT)0)
-#define DI_NOEFFECT    ((HRESULT)1) /* S_FALSE: Acquire when already acquired */
+#define DI_OK ((HRESULT)0)
+#define DI_NOEFFECT ((HRESULT)1) /* S_FALSE: Acquire when already acquired */
 #define DIERR_INPUTLOST ((HRESULT)0x8007001E)
 
 typedef struct IDirectInputDeviceAVtbl {
@@ -153,11 +153,11 @@ void DInputShim_PumpSuppressed(void);
  * have no gamepad analog and are accepted as no-ops. */
 
 typedef struct IDirectInputDevice2A IDirectInputDevice2A;
-typedef struct IDirectInputEffect   IDirectInputEffect;
+typedef struct IDirectInputEffect IDirectInputEffect;
 
 /* DIEFFECT.dwFlags */
 #define DIEFF_OBJECTOFFSETS 0x00000002u
-#define DIEFF_POLAR         0x00000020u
+#define DIEFF_POLAR 0x00000020u
 
 /* DIEFFECT.dwTriggerButton "no trigger". */
 #define DIEB_NOTRIGGER 0xFFFFFFFFu
@@ -166,34 +166,34 @@ typedef struct IDirectInputEffect   IDirectInputEffect;
 #define DI_INFINITE 0xFFFFFFFFu
 
 /* SetParameters flags (DIEP_*). */
-#define DIEP_DURATION           0x00000001u
-#define DIEP_SAMPLEPERIOD       0x00000002u
-#define DIEP_GAIN               0x00000004u
-#define DIEP_TRIGGERBUTTON      0x00000008u
+#define DIEP_DURATION 0x00000001u
+#define DIEP_SAMPLEPERIOD 0x00000002u
+#define DIEP_GAIN 0x00000004u
+#define DIEP_TRIGGERBUTTON 0x00000008u
 #define DIEP_TRIGGERREPEATINTERVAL 0x00000010u
-#define DIEP_AXES               0x00000020u
-#define DIEP_DIRECTION          0x00000040u
-#define DIEP_ENVELOPE           0x00000080u
+#define DIEP_AXES 0x00000020u
+#define DIEP_DIRECTION 0x00000040u
+#define DIEP_ENVELOPE 0x00000080u
 #define DIEP_TYPESPECIFICPARAMS 0x00000100u
-#define DIEP_START              0x20000000u
-#define DIEP_NORESTART          0x40000000u
-#define DIEP_NODOWNLOAD         0x80000000u
+#define DIEP_START 0x20000000u
+#define DIEP_NORESTART 0x40000000u
+#define DIEP_NODOWNLOAD 0x80000000u
 
 /* Start flags. */
-#define DIES_SOLO         0x00000001u
-#define DIES_NODOWNLOAD   0x80000000u
+#define DIES_SOLO 0x00000001u
+#define DIES_NODOWNLOAD 0x80000000u
 
 /* EnumDevices device type and flags. */
-#define DIDEVTYPE_JOYSTICK    4u
-#define DIEDFL_ATTACHEDONLY   0x00000001u
-#define DIEDFL_FORCEFEEDBACK  0x00000100u
+#define DIDEVTYPE_JOYSTICK 4u
+#define DIEDFL_ATTACHEDONLY 0x00000001u
+#define DIEDFL_FORCEFEEDBACK 0x00000100u
 
 /* Enumeration callback return values. */
-#define DIENUM_STOP     0
+#define DIENUM_STOP 0
 #define DIENUM_CONTINUE 1
 
 /* MAKEDIPROP force-feedback device properties (pseudo-GUID pointers). */
-#define DINPUT_DIPROP_FFGAIN     ((const DxGuid*)7)
+#define DINPUT_DIPROP_FFGAIN ((const DxGuid*)7)
 #define DINPUT_DIPROP_AUTOCENTER ((const DxGuid*)9)
 
 /* Standard DirectInput force-feedback effect GUIDs used by the recovered code. */
@@ -219,56 +219,56 @@ typedef struct DICONSTANTFORCE {
 
 typedef struct DIPERIODIC {
 	uint32_t dwMagnitude;
-	int32_t  lOffset;
+	int32_t lOffset;
 	uint32_t dwPhase;
 	uint32_t dwPeriod;
 } DIPERIODIC;
 
 typedef struct DICONDITION {
-	int32_t  lOffset;
-	int32_t  lPositiveCoefficient;
-	int32_t  lNegativeCoefficient;
+	int32_t lOffset;
+	int32_t lPositiveCoefficient;
+	int32_t lNegativeCoefficient;
 	uint32_t dwPositiveSaturation;
 	uint32_t dwNegativeSaturation;
-	int32_t  lDeadBand;
+	int32_t lDeadBand;
 } DICONDITION;
 
 /* DirectInput 5 effect descriptor (original dwSize == 52 on 32-bit). */
 typedef struct DIEFFECT {
-	uint32_t    dwSize;
-	uint32_t    dwFlags;
-	uint32_t    dwDuration;
-	uint32_t    dwSamplePeriod;
-	uint32_t    dwGain;
-	uint32_t    dwTriggerButton;
-	uint32_t    dwTriggerRepeatInterval;
-	uint32_t    cAxes;
-	uint32_t*   rgdwAxes;
-	int32_t*    rglDirection;
+	uint32_t dwSize;
+	uint32_t dwFlags;
+	uint32_t dwDuration;
+	uint32_t dwSamplePeriod;
+	uint32_t dwGain;
+	uint32_t dwTriggerButton;
+	uint32_t dwTriggerRepeatInterval;
+	uint32_t cAxes;
+	uint32_t* rgdwAxes;
+	int32_t* rglDirection;
 	DIENVELOPE* lpEnvelope;
-	uint32_t    cbTypeSpecificParams;
-	void*       lpvTypeSpecificParams;
+	uint32_t cbTypeSpecificParams;
+	void* lpvTypeSpecificParams;
 } DIEFFECT;
 
 /* Effect capability record returned by GetEffectInfo. */
 typedef struct DIEFFECTINFOA {
 	uint32_t dwSize;
-	DxGuid   guid;
+	DxGuid guid;
 	uint32_t dwEffType;
 	uint32_t dwStaticParams;
 	uint32_t dwDynamicParams;
-	char     tszName[260];
+	char tszName[260];
 } DIEFFECTINFOA;
 
 /* Device instance record passed to the EnumDevices callback. */
 typedef struct DIDEVICEINSTANCEA {
 	uint32_t dwSize;
-	DxGuid   guidInstance;
-	DxGuid   guidProduct;
+	DxGuid guidInstance;
+	DxGuid guidProduct;
 	uint32_t dwDevType;
-	char     tszInstanceName[260];
-	char     tszProductName[260];
-	DxGuid   guidFFDriver;
+	char tszInstanceName[260];
+	char tszProductName[260];
+	DxGuid guidFFDriver;
 	uint16_t wUsagePage;
 	uint16_t wUsage;
 } DIDEVICEINSTANCEA;
@@ -310,7 +310,8 @@ typedef struct IDirectInputDevice2AVtbl {
 	HRESULT(XWA_DXAPI* Acquire)(IDirectInputDevice2A*);
 	HRESULT(XWA_DXAPI* Unacquire)(IDirectInputDevice2A*);
 	HRESULT(XWA_DXAPI* GetDeviceState)(IDirectInputDevice2A*, uint32_t, void*);
-	HRESULT(XWA_DXAPI* GetDeviceData)(IDirectInputDevice2A*, uint32_t, DIDEVICEOBJECTDATA*, uint32_t*, uint32_t);
+	HRESULT(XWA_DXAPI* GetDeviceData)(IDirectInputDevice2A*, uint32_t, DIDEVICEOBJECTDATA*, uint32_t*,
+									  uint32_t);
 	HRESULT(XWA_DXAPI* SetDataFormat)(IDirectInputDevice2A*, const DIDATAFORMAT*);
 	HRESULT(XWA_DXAPI* SetEventNotification)(IDirectInputDevice2A*, void*);
 	HRESULT(XWA_DXAPI* SetCooperativeLevel)(IDirectInputDevice2A*, void*, uint32_t);

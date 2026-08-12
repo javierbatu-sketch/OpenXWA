@@ -16,11 +16,11 @@ void XwaSnapshotHud_NoteReticleReady(int slot, int ready);
 void XwaSnapshotHud_NoteReticleInRange(int in_range);
 void XwaSnapshotHud_NoteThreat(int slot, int state);
 void XwaSnapshotHud_BeginRadar(int classic_radius);
-void XwaSnapshotHud_NoteRadarBlip(uint16_t slot, uint16_t signature, int radar, int targeted,
-								  int local_x, int local_y, uint16_t color_index);
+void XwaSnapshotHud_NoteRadarBlip(uint16_t slot, uint16_t signature, int radar, int targeted, int local_x,
+								  int local_y, uint16_t color_index);
 void XwaSnapshotHud_NoteRadarTargetMarker(int radar, int local_x, int local_y);
-void XwaSnapshotHud_NoteTargetBox(uint16_t slot, uint16_t signature, uint16_t component,
-									  uint16_t color_index, int selected, int extent);
+void XwaSnapshotHud_NoteTargetBox(uint16_t slot, uint16_t signature, uint16_t component, uint16_t color_index,
+								  int selected, int extent);
 XwaHudTargetBoxLayer XwaSnapshotHud_SetTargetBoxLayer(XwaHudTargetBoxLayer layer);
 void XwaSnapshotHud_NoteCrt(const XwaHudCrt* crt);
 void XwaSnapshotHud_PushPane(XwaHudPaneId pane, int origin_x, int origin_y, int width, int height);

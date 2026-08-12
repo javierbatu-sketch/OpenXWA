@@ -1280,8 +1280,7 @@ void Particle_SpawnTransientObjectFromRecord(ParticleRecord* particle) {
 		g_modelTypeTable[(uint16_t)g_objectTable[objectIdx].objectType].maxBoundsExtent >> 2;
 
 	maxVelocity = (velX > velY ? velX : velY) > velZ ? (velX > velY ? velX : velY) : velZ;
-	g_objectTable[objectIdx].mobj->speed =
-		(uint16_t)((uint8_t)(236 * maxVelocity / g_elapsedTicks) << 8);
+	g_objectTable[objectIdx].mobj->speed = (uint16_t)((uint8_t)(236 * maxVelocity / g_elapsedTicks) << 8);
 
 	trig2_ctop(velX, velY, velZ);
 	g_objectTable[objectIdx].pitch = targetPitch;

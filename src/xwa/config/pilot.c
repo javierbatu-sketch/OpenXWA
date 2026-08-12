@@ -5,17 +5,17 @@
 #include "xwa/assets/string_table.h"
 #include "xwa/config/game_config.h"
 #include "xwa/flight/flight.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/player/player.h"
+#include "xwa/flight/yard.h"
 #include "xwa/frontend/frontend_file_list.h"
 #include "xwa/frontend/frontend_mission_session.h"
 #include "xwa/frontend/frontend_scratch.h"
 #include "xwa/frontend/mission_setup.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/flight/yard.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/util/memory.h"
 #include "xwa/util/string.h"
-#include "xwa/xwa_options.h"
 #include "xwa/util/time.h"
+#include "xwa/xwa_options.h"
 
 #include <stdio.h>
 #include <stdlib.h>

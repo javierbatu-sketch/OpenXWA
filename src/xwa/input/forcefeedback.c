@@ -1,14 +1,14 @@
 #include "xwa/input/forcefeedback.h"
 
-#include "xwa_runtime/compat/directx/dinput.h"
 #include "xwa/config/game_config.h"
-#include "xwa/flight/object/collision.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/mission/mission.h"
+#include "xwa/flight/object/collision.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/player/player.h"
 #include "xwa/render/renderer.h"
 #include "xwa/util/debug.h"
+#include "xwa_runtime/compat/directx/dinput.h"
 #ifdef XWA_MODERN
 #include "xwa_runtime/timing/modern_flight_timing.h"
 #endif

@@ -1,10 +1,10 @@
 #include "xwa/render/std3d_device.h"
 
-#include "xwa_runtime/compat/middleware_crt.h"
 #include "xwa/flight/flight.h"
 #include "xwa/render/renderer_internal.h"
 #include "xwa/util/debug.h"
 #include "xwa/util/memory.h"
+#include "xwa_runtime/compat/middleware_crt.h"
 
 #include <string.h>
 

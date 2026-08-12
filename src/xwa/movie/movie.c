@@ -21,10 +21,10 @@
 typedef int(__cdecl* MovieSmushFrameCallback)(void);
 typedef int(__cdecl* MovieSmushSetVolumeProc)(int volume);
 typedef int(__cdecl* MovieSmushStartupProc)(int flags, void* directSound);
-typedef int(__cdecl* MovieSmushPlayProc)(const char* path, int frameRate, int x, int y, int flags,
-										int width, int height, int frameLimit, int userData,
-										MovieSmushFrameCallback callback, int enableSound,
-										int audioBufferSize, int videoBufferSize);
+typedef int(__cdecl* MovieSmushPlayProc)(const char* path, int frameRate, int x, int y, int flags, int width,
+										 int height, int frameLimit, int userData,
+										 MovieSmushFrameCallback callback, int enableSound,
+										 int audioBufferSize, int videoBufferSize);
 typedef void(__cdecl* MovieSmushShutdownProc)(void);
 
 // GLOBAL: XWA 0x5A92F0
@@ -126,8 +126,8 @@ int Movie_Play(const char* name, int noFade) {
 	SmushSetVolume(127 * g_gameConfig.sfxDatapadVolume / 10);
 	result = SmushStartup(0, FrontendSound_GetDirectSound());
 	if (result != 0) {
-		result = SmushPlay(moviePath, 15, 0, 0, 0, 640, 480, -1, 0,
-						   Movie_SmushFrameCallback, 1, 1000000, 1000000);
+		result =
+			SmushPlay(moviePath, 15, 0, 0, 0, 640, 480, -1, 0, Movie_SmushFrameCallback, 1, 1000000, 1000000);
 		g_moviePlaybackFinished = 1;
 		SmushShutdown();
 	}
@@ -220,8 +220,8 @@ int Movie_LoadSubtitles(const char* moviePath) {
 	strcat(g_frontendScratchBuffer, ".sub");
 
 	if (g_frontendScratchBuffer[MOVIE_SUBTITLE_DRIVE_SEPARATOR] == ':') {
-		stream = File_Open(AERON_VFS_ROOT_ASSET,
-						   &g_frontendScratchBuffer[MOVIE_SUBTITLE_DRIVE_PATH_START], "r");
+		stream =
+			File_Open(AERON_VFS_ROOT_ASSET, &g_frontendScratchBuffer[MOVIE_SUBTITLE_DRIVE_PATH_START], "r");
 	} else {
 		stream = File_Open(AERON_VFS_ROOT_ASSET, g_frontendScratchBuffer, "r");
 	}

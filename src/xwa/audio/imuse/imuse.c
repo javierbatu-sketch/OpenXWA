@@ -1,8 +1,8 @@
 #include "xwa/audio/imuse/imuse.h"
 
 #include "aeron/log.h"
-#include "xwa_runtime/compat/middleware_crt.h"
 #include "xwa/util/memory.h"
+#include "xwa_runtime/compat/middleware_crt.h"
 
 #include <stdarg.h>
 #include <stdio.h>

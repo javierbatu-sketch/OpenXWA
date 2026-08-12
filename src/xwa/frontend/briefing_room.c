@@ -1,7 +1,6 @@
 #include "xwa/frontend/briefing_room.h"
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/ship_list.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/audio/music.h"
@@ -17,6 +16,7 @@
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_escape.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_mission_session.h"
 #include "xwa/frontend/frontend_net.h"

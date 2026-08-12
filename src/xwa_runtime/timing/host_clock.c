@@ -27,8 +27,7 @@ uint64_t XwaTime_GetLegacyTimerIntervalUs(uint32_t intervalMs) {
 	requestedUs = (uint64_t)intervalMs * 1000u;
 	/* Preserve the coarse GetTickCount deadline observed by the original while
 	   allowing the host scheduler to use Aeron's precise clock. */
-	return ((requestedUs + XWA_LEGACY_TIMER_QUANTUM_US - 1u) /
-			XWA_LEGACY_TIMER_QUANTUM_US) *
+	return ((requestedUs + XWA_LEGACY_TIMER_QUANTUM_US - 1u) / XWA_LEGACY_TIMER_QUANTUM_US) *
 		   XWA_LEGACY_TIMER_QUANTUM_US;
 }
 

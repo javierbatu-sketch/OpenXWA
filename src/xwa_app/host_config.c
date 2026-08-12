@@ -956,9 +956,9 @@ static int host_config_set_video_options(AeronConfigFile* document, const XwaMod
 		options->window_mode > XWA_MODERN_WINDOW_MODE_FULLSCREEN ||
 		options->ssao_quality < XWA_MODERN_SSAO_OFF || options->ssao_quality > XWA_MODERN_SSAO_HIGH ||
 		options->shadow_quality < XWA_MODERN_SHADOW_STANDARD ||
-		options->shadow_quality > XWA_MODERN_SHADOW_HIGH ||
-		options->fsr_upscaling < XWA_MODERN_FSR_OFF || options->fsr_upscaling > XWA_MODERN_FSR_NATIVE_AA ||
-		options->msaa < XWA_MODERN_MSAA_OFF || options->msaa > XWA_MODERN_MSAA_8X ||
+		options->shadow_quality > XWA_MODERN_SHADOW_HIGH || options->fsr_upscaling < XWA_MODERN_FSR_OFF ||
+		options->fsr_upscaling > XWA_MODERN_FSR_NATIVE_AA || options->msaa < XWA_MODERN_MSAA_OFF ||
+		options->msaa > XWA_MODERN_MSAA_8X ||
 		(options->fsr_upscaling != XWA_MODERN_FSR_OFF && options->msaa != XWA_MODERN_MSAA_OFF) ||
 		options->motion_blur_quality < XWA_MODERN_MOTION_BLUR_OFF ||
 		options->motion_blur_quality > XWA_MODERN_MOTION_BLUR_HIGH ||

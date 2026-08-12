@@ -2,52 +2,52 @@
 #include "xwa/flight/hangar.h"
 
 #include "aeron/aeron.h"
-#include "xwa/flight/ai/pai.h"
-#include "xwa/flight/ai/pai_plan.h"
-#include "xwa/flight/ai/paifight.h"
-#include "xwa/flight/ai/paiman.h"
-#include "xwa/flight/ai/paiorder.h"
 #include "xwa/assets/file_io.h"
 #include "xwa/assets/flight_model.h"
 #include "xwa/assets/string_table.h"
+#include "xwa/audio/fsfx.h"
 #include "xwa/audio/music.h"
 #include "xwa/audio/sound.h"
 #include "xwa/config/game_config.h"
 #include "xwa/config/pilot.h"
 #include "xwa/console/console.h"
-#include "xwa/flight/object/collision.h"
+#include "xwa/flight/ai/pai.h"
+#include "xwa/flight/ai/pai_plan.h"
+#include "xwa/flight/ai/paifight.h"
+#include "xwa/flight/ai/paiman.h"
+#include "xwa/flight/ai/paiorder.h"
 #include "xwa/flight/death_star.h"
-#include "xwa/flight/object/debris.h"
 #include "xwa/flight/fediskio.h"
+#include "xwa/flight/film.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/flight_display.h"
 #include "xwa/flight/flight_light.h"
+#include "xwa/flight/flight_net.h"
+#include "xwa/flight/flight_sync.h"
 #include "xwa/flight/flight_text.h"
-#include "xwa/audio/fsfx.h"
+#include "xwa/flight/hud/hud.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/net_session.h"
+#include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/debris.h"
+#include "xwa/flight/object/object.h"
+#include "xwa/flight/player/player.h"
 #include "xwa/flight/starfield.h"
+#include "xwa/flight/yard.h"
 #include "xwa/frontend/flight_loading.h"
 #include "xwa/frontend/mission_setup.h"
-#include "xwa/flight/hud/hud.h"
 #include "xwa/input/dinput.h"
 #include "xwa/input/forcefeedback.h"
 #include "xwa/math/scalar.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/flight/yard.h"
-#include "xwa/flight/film.h"
-#include "xwa/flight/flight_net.h"
-#include "xwa/flight/flight_sync.h"
-#include "xwa/flight/net_session.h"
-#include "xwa/flight/object/object.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/render/effects.h"
 #include "xwa/render/renderer.h"
 #include "xwa/render/renderer_internal.h"
 #include "xwa/util/debug.h"
 #include "xwa/util/memory.h"
 #include "xwa/util/random.h"
-#include "xwa_runtime/timing/modern_flight_timing.h"
 #include "xwa/util/time.h"
 #include "xwa_runtime/timing/host_clock.h"
+#include "xwa_runtime/timing/modern_flight_timing.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -166,15 +166,14 @@ static const char* XwaFlightTask_PhaseName(XwaFlightTaskPhase phase) {
 }
 
 static void XwaFlightTask_Log(const char* event) {
-	Aeron_LogTrace("xwa.flight.task", "%s: phase=%s active=%d complete=%d now=%llu next=%llu input=%d game=%d",
-			  event, XwaFlightTask_PhaseName(g_xwaFlightTaskPhase), g_xwaFlightTaskActive,
-			  g_xwaFlightTaskComplete, (unsigned long long)XwaTime_GetElapsedUs(),
-			  (unsigned long long)g_xwaFlightTaskNextWakeElapsedUs, g_inputTimestamp, g_gameTime);
+	Aeron_LogTrace("xwa.flight.task",
+				   "%s: phase=%s active=%d complete=%d now=%llu next=%llu input=%d game=%d", event,
+				   XwaFlightTask_PhaseName(g_xwaFlightTaskPhase), g_xwaFlightTaskActive,
+				   g_xwaFlightTaskComplete, (unsigned long long)XwaTime_GetElapsedUs(),
+				   (unsigned long long)g_xwaFlightTaskNextWakeElapsedUs, g_inputTimestamp, g_gameTime);
 }
 #else
-static void XwaFlightTask_Log(const char* event) {
-	(void)event;
-}
+static void XwaFlightTask_Log(const char* event) { (void)event; }
 #endif
 
 static void XwaFlightTask_LogPhaseEntry(void) {
@@ -1498,8 +1497,7 @@ void XwaFlightTask_Tick(void) {
 					default:
 						if (XwaTime_GetElapsedTicks() - g_xwaFlightTaskLoadingStartTick <
 							XWA_FLIGHT_LOADING_MIN_VISIBLE_MS) {
-							g_xwaFlightTaskNextWakeElapsedUs =
-								nowUs + XWA_FLIGHT_FRAME_US;
+							g_xwaFlightTaskNextWakeElapsedUs = nowUs + XWA_FLIGHT_FRAME_US;
 							return;
 						}
 						FlightLoading_DetachFrontendSurfaces();

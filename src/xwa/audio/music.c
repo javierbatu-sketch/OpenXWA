@@ -169,8 +169,8 @@ int Music_SetState(int state) {
 
 void Music_SetDatapadState(int state) {
 	musicState = state;
-	Aeron_LogDebug("xwa.music", "SetDatapadState(%d) enabled=%d vol=%d", state, g_gameConfig.datapadMusicEnabled,
-			  g_gameConfig.datapadMusicVolume);
+	Aeron_LogDebug("xwa.music", "SetDatapadState(%d) enabled=%d vol=%d", state,
+				   g_gameConfig.datapadMusicEnabled, g_gameConfig.datapadMusicVolume);
 	if (g_gameConfig.datapadMusicEnabled) {
 		Music_SetState(state);
 		Music_SetVolume(127 * g_gameConfig.datapadMusicVolume / 10);

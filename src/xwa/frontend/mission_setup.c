@@ -1,13 +1,14 @@
 #include "xwa/frontend/mission_setup.h"
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/linez.h"
 #include "xwa/assets/ship_list.h"
 #include "xwa/assets/sprite_resource.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/audio/music.h"
 #include "xwa/config/game_config.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/net_session.h"
 #include "xwa/frontend/briefing_script.h"
 #include "xwa/frontend/concourse.h"
 #include "xwa/frontend/family_transport_room.h"
@@ -20,6 +21,7 @@
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_escape.h"
 #include "xwa/frontend/frontend_file_list.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_mission.h"
 #include "xwa/frontend/frontend_mission_list.h"
@@ -32,15 +34,13 @@
 #include "xwa/frontend/frontend_sound.h"
 #include "xwa/frontend/frontend_text.h"
 #include "xwa/frontend/mission_briefing.h"
-#include "xwa/frontend/skirmish.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/movie/movie.h"
-#include "xwa/flight/net_session.h"
 #include "xwa/frontend/net_transport.h"
+#include "xwa/frontend/skirmish.h"
+#include "xwa/movie/movie.h"
 #include "xwa/util/byte_order.h"
 #include "xwa/util/memory.h"
-#include "xwa/xwa_options.h"
 #include "xwa/util/time.h"
+#include "xwa/xwa_options.h"
 
 #include <ctype.h>
 #ifndef XWA_MODERN
@@ -171,8 +171,7 @@ CraftTechStats* g_cachedCraftTechStats;
 // GLOBAL: XWA 0x9EAA14
 int g_cachedCraftTechStatsCount;
 // GLOBAL: XWA 0x603168
-const char* g_campaignDirNames[6] = { "missions", "melee",    "combat",
-									  "skirmish", "missions", "missions" };
+const char* g_campaignDirNames[6] = { "missions", "melee", "combat", "skirmish", "missions", "missions" };
 
 static void MissionSetup_TrimTrailingLineBreak(char* text) {
 	size_t length;

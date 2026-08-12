@@ -66,7 +66,7 @@ int XwaModernVideoOptionsScreen_Update(int menu_center_x, int* cursor_row) {
 		XwaModernOptionsMenu_DrawCycleU8(&menu, &window_mode, "Window Mode", window_mode_texts, 2, 60, 0);
 	changed |= XwaModernOptionsMenu_DrawCycleU8(&menu, &ssao, "SSAO", quality_texts, 3, 61, 0);
 	changed |= XwaModernOptionsMenu_DrawCycleU8(&menu, &shadow_quality, "Shadow Quality",
-											 shadow_quality_texts, 2, 62, 0);
+												shadow_quality_texts, 2, 62, 0);
 	changed |= XwaModernOptionsMenu_DrawCycleU8(&menu, &fsr, "FSR Upscaling", fsr_texts, 5, 63, 0);
 	changed |= XwaModernOptionsMenu_DrawCycleU8(&menu, &msaa, "MSAA", msaa_texts, 4, 64, 0);
 	changed |= XwaModernOptionsMenu_DrawCycleU8(&menu, &motion_blur_quality, "Motion Blur", motion_blur_texts,

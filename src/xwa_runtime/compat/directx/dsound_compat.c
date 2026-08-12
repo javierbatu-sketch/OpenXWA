@@ -446,7 +446,7 @@ static int DSoundBuffer_GetCurrentPosition(void* self, uint32_t* play, uint32_t*
 			static int n;
 			if (++n % 200 == 0) {
 				Aeron_LogVerbose("xwa.audio", "shim ring playCursor=%u playing=%d", cursor,
-						  Aeron_AudioRingIsPlaying(b->ring));
+								 Aeron_AudioRingIsPlaying(b->ring));
 			}
 		}
 	}
@@ -648,7 +648,8 @@ static int DSoundBuffer_Play(void* self, uint32_t reserved1, uint32_t priority, 
 	if (b->is_streaming) {
 		b->looping = (flags & DS_DSBPLAY_LOOPING) != 0;
 		Aeron_AudioRingPlay(b->ring, b->looping);
-		Aeron_LogVerbose("xwa.audio", "shim ring play looping=%d cap=%u rate=%d", b->looping, b->capacity, b->rate);
+		Aeron_LogVerbose("xwa.audio", "shim ring play looping=%d cap=%u rate=%d", b->looping, b->capacity,
+						 b->rate);
 		return DS_OK;
 	}
 	if (b->is_primary || !b->clip) {

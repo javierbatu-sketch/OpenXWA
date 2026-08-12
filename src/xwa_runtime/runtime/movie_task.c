@@ -115,8 +115,7 @@ static int XwaMovieTask_ResolveAsset(const char* name, char* path, size_t path_s
 	int original_found;
 
 	subtitle_path[0] = '\0';
-	if (snprintf(original_path, original_path_size, "MOVIES/%s.SNM", name) >=
-		(int)original_path_size) {
+	if (snprintf(original_path, original_path_size, "MOVIES/%s.SNM", name) >= (int)original_path_size) {
 		original_path[0] = '\0';
 		return 0;
 	}
@@ -160,7 +159,7 @@ static int XwaMovieTask_LoadSubtitleTrack(void) {
 			return 1;
 		}
 		Aeron_LogWarn("xwa.movie", "Could not load configured subtitles '%s'; trying automatic lookup",
-				  g_xwaMovieTask.subtitle_path);
+					  g_xwaMovieTask.subtitle_path);
 	}
 	if (Movie_LoadSubtitles(g_xwaMovieTask.path)) {
 		return 1;

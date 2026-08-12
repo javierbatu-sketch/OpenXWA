@@ -2,10 +2,10 @@
 
 #include "aeron/aeron.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/sprite_resource.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_resources.h"
 #include "xwa/frontend/frontend_text.h"
 #include <string.h>

@@ -2,7 +2,6 @@
 
 #include "aeron/log.h"
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/linez.h"
 #include "xwa/assets/model_def.h"
 #include "xwa/assets/model_type.h"
@@ -20,6 +19,7 @@
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_escape.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_resources.h"
 #include "xwa/frontend/frontend_scratch.h"
@@ -363,8 +363,8 @@ int TechLibrary_LoadSpecTextTable(void) {
 			size_t length;
 
 			if (!File_ReadLine(stream, line, sizeof(line))) {
-				Aeron_LogError("xwa.assets", "Short tech library spec text table '%s' at entry %d field %d", path,
-						  entryIndex, fieldIndex);
+				Aeron_LogError("xwa.assets", "Short tech library spec text table '%s' at entry %d field %d",
+							   path, entryIndex, fieldIndex);
 				File_Close(stream);
 				return 1;
 			}

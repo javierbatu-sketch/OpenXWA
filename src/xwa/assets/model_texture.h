@@ -56,10 +56,8 @@ typedef struct ModelTextureDefaultTexture {
 	ModelTextureDefaultTextureData data;
 } ModelTextureDefaultTexture;
 
-typedef char model_texture_white_texels_offset[(offsetof(ModelTextureDefaultTexture, data) ==
-												sizeof(OptTextureData))
-												   ? 1
-												   : -1];
+typedef char model_texture_white_texels_offset
+	[(offsetof(ModelTextureDefaultTexture, data) == sizeof(OptTextureData)) ? 1 : -1];
 
 struct Std3DTextureSurface;
 

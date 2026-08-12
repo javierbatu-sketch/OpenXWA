@@ -1,7 +1,6 @@
 #include "xwa/frontend/mission_debrief.h"
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/linez.h"
 #include "xwa/assets/ship_list.h"
 #include "xwa/assets/string_table.h"
@@ -22,6 +21,7 @@
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_draw.h"
 #include "xwa/frontend/frontend_escape.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_medals.h"
 #include "xwa/frontend/frontend_mission.h"
@@ -35,8 +35,8 @@
 #include "xwa/frontend/frontend_text.h"
 #include "xwa/frontend/frontend_wave_stream.h"
 #include "xwa/frontend/mission_setup.h"
-#include "xwa/movie/movie.h"
 #include "xwa/frontend/net_transport.h"
+#include "xwa/movie/movie.h"
 #include "xwa/util/debug.h"
 #include "xwa/util/memory.h"
 

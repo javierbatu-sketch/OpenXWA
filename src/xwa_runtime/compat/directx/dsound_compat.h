@@ -36,10 +36,10 @@ typedef struct DSWaveFormat {
 /* DSBUFFERDESC-compatible. Mirrors imsound.c's ImDSBufferDescCompat field for
  * field, so both consumers can share the shim's CreateSoundBuffer. */
 typedef struct DSBufferDesc {
-	uint32_t      dwSize;
-	uint32_t      dwFlags;
-	uint32_t      dwBufferBytes;
-	uint32_t      dwReserved;
+	uint32_t dwSize;
+	uint32_t dwFlags;
+	uint32_t dwBufferBytes;
+	uint32_t dwReserved;
 	DSWaveFormat* lpwfxFormat;
 } DSBufferDesc;
 
@@ -84,17 +84,17 @@ typedef struct DSoundDeviceCaps {
 /* DirectSound buffer capability/playback flags actually used by recovered code. */
 enum {
 	DSBCAPS_PRIMARYBUFFER_XWA = 0x00000001,
-	DSBCAPS_STATIC_XWA        = 0x00000002,
-	DSBCAPS_LOCHARDWARE_XWA   = 0x00000004,
-	DSBCAPS_CTRL3D_XWA        = 0x00000010,
+	DSBCAPS_STATIC_XWA = 0x00000002,
+	DSBCAPS_LOCHARDWARE_XWA = 0x00000004,
+	DSBCAPS_CTRL3D_XWA = 0x00000010,
 	DSBCAPS_CTRLFREQUENCY_XWA = 0x00000020,
-	DSBCAPS_CTRLPAN_XWA       = 0x00000040,
-	DSBCAPS_CTRLVOLUME_XWA    = 0x00000080,
+	DSBCAPS_CTRLPAN_XWA = 0x00000040,
+	DSBCAPS_CTRLVOLUME_XWA = 0x00000080,
 	DSBCAPS_MUTE3DATMAXDISTANCE_XWA = 0x00020000,
-	DSBLOCK_ENTIREBUFFER_XWA  = 0x00000002,
-	DSBPLAY_LOOPING_XWA       = 0x00000001,
-	DSBSTATUS_PLAYING_XWA     = 0x00000001,
-	DSBSTATUS_LOOPING_XWA     = 0x00000004,
+	DSBLOCK_ENTIREBUFFER_XWA = 0x00000002,
+	DSBPLAY_LOOPING_XWA = 0x00000001,
+	DSBSTATUS_PLAYING_XWA = 0x00000001,
+	DSBSTATUS_LOOPING_XWA = 0x00000004,
 	/* DirectSound DSBCAPS_GETCURRENTPOSITION2: the buffer's owner polls the play
 	 * cursor, i.e. it is used as a streaming buffer. iMUSE already sets this on
 	 * its music buffer; the shim uses it to back a buffer with an Aeron ring
@@ -108,7 +108,7 @@ typedef struct DSCompatGuid {
 	uint32_t data1;
 	uint16_t data2;
 	uint16_t data3;
-	uint8_t  data4[8];
+	uint8_t data4[8];
 } DSCompatGuid;
 
 extern const DSCompatGuid IID_IDirectSound3DBuffer;

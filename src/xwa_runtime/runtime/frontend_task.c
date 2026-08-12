@@ -13,9 +13,9 @@
 #include "xwa/frontend/frontend_sound.h"
 #include "xwa/frontend/frontend_text.h"
 #include "xwa/frontend/net_transport.h"
-#include "xwa_runtime/timing/host_clock.h"
 #include "xwa/util/memory.h"
 #include "xwa/xwa_options.h"
+#include "xwa_runtime/timing/host_clock.h"
 
 #include <string.h>
 
@@ -154,8 +154,7 @@ void XwaFrontendTask_Tick(void) {
 		return;
 	}
 
-	g_xwaFrontendNextFrameElapsedUs =
-		nowUs + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
+	g_xwaFrontendNextFrameElapsedUs = nowUs + XwaTime_GetLegacyTimerIntervalUs((uint32_t)g_frameIntervalMs);
 	XwaFrontendTask_ServiceFrameSystems();
 	/* Original RunMainLoop also handled CDAudio resume/track-end work here. CD audio is intentionally
 	   not ported because it is not used by the original game frontend flow. */

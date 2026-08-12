@@ -1,15 +1,15 @@
 #include "xwa/frontend/frontend_sound.h"
 #include "aeron/log.h"
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
-#include "xwa_runtime/compat/directx/dsound_compat.h"
 #include "xwa/audio/music.h"
-#include "xwa_runtime/compat/directx/dx_win_types.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_file_stream.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_wave_stream.h"
 #include "xwa/util/memory.h"
 #include "xwa/util/time.h"
+#include "xwa_runtime/compat/directx/dsound_compat.h"
+#include "xwa_runtime/compat/directx/dx_win_types.h"
 
 #include <stdint.h>
 #include <stdio.h>

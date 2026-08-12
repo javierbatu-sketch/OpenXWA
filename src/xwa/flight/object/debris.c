@@ -6,10 +6,10 @@
 #include "xwa/assets/object_type.h"
 #include "xwa/assets/opt_model.h"
 #include "xwa/config/game_config.h"
-#include "xwa/flight/object/collision.h"
 #include "xwa/flight/flight.h"
-#include "xwa/math/trig2.h"
+#include "xwa/flight/object/collision.h"
 #include "xwa/flight/object/object.h"
+#include "xwa/math/trig2.h"
 #include "xwa/render/renderer.h"
 #include "xwa/util/random.h"
 

@@ -1,7 +1,6 @@
 #include "xwa/frontend/frontend_resources.h"
 
 #include "xwa/assets/file_io.h"
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/ship_list.h"
 #include "xwa/assets/string_table.h"
 #include "xwa/audio/music.h"
@@ -12,6 +11,7 @@
 #include "xwa/frontend/frontend_cursor.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_file_stream.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_medals.h"
 #include "xwa/frontend/frontend_rect.h"
 #include "xwa/frontend/frontend_scratch.h"

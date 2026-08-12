@@ -1,8 +1,8 @@
 #ifndef XWA_FLIGHT_FLIGHT_LIGHT_H
 #define XWA_FLIGHT_FLIGHT_LIGHT_H
 
-#include "xwa/math/vec3i.h"
 #include "xwa/flight/object/object.h"
+#include "xwa/math/vec3i.h"
 
 #include <stdint.h>
 

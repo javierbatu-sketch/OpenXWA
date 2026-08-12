@@ -3,8 +3,8 @@
 
 #include "aeron/render.h"
 #include "aeron/surface.h"
-#include "xwa_runtime/compat/directx/ddraw.h"
 #include "xwa/frontend/frontend_rect.h"
+#include "xwa_runtime/compat/directx/ddraw.h"
 
 #ifdef __cplusplus
 extern "C" {

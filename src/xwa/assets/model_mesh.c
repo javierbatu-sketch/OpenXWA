@@ -3,10 +3,10 @@
 #include "xwa/assets/model_def.h"
 #include "xwa/assets/model_type.h"
 #include "xwa/flight/fediskio.h"
+#include "xwa/flight/player/player.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/math/fixed.h"
 #include "xwa/math/trig2.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/util/memory.h"
 #include "xwa/util/random.h"
 

@@ -8,11 +8,11 @@
 #include "xwa/flight/film.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/hud/hud.h"
+#include "xwa/flight/net_session.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_screen.h"
 #include "xwa/input/dinput.h"
-#include "xwa/flight/net_session.h"
 #include "xwa/render/renderer.h"
 #include "xwa/render/renderer_internal.h"
 #include "xwa/util/debug.h"
@@ -357,9 +357,8 @@ uint64_t FlightDisplay_GetFrontendModalWakeDelayUs(void) {
 		return 0;
 	}
 	nowUs = XwaTime_GetElapsedUs();
-	return g_flightFrontendModalNextFrameElapsedUs > nowUs
-			   ? g_flightFrontendModalNextFrameElapsedUs - nowUs
-			   : 0;
+	return g_flightFrontendModalNextFrameElapsedUs > nowUs ? g_flightFrontendModalNextFrameElapsedUs - nowUs
+														   : 0;
 }
 #endif
 

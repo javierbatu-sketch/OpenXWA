@@ -41,8 +41,7 @@ XwaPresentationRect XwaPresentation_ClassicSafeFrame(void);
 /* Maps an original pixel position to the center of its corresponding pixel
  * footprint in the presentation safe frame. Pixel-center mapping makes the
  * integer forward/inverse transforms exact for all 640x480 input positions. */
-void XwaPresentation_FromClassic(int classic_x, int classic_y, int* presentation_x,
-								 int* presentation_y);
+void XwaPresentation_FromClassic(int classic_x, int classic_y, int* presentation_x, int* presentation_y);
 
 /* Maps application-logical mouse coordinates into the original 640x480
  * domain. The returned coordinates are clipped; the return value reports

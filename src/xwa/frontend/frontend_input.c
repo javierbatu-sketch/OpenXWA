@@ -1,7 +1,7 @@
 #include "xwa/frontend/frontend_input.h"
 
-#include "xwa_runtime/compat/winmm/joystick.h"
 #include "xwa/config/game_config.h"
+#include "xwa_runtime/compat/winmm/joystick.h"
 
 #include <string.h>
 

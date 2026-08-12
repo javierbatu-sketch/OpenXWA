@@ -3220,7 +3220,8 @@ void Backdrop_FreeCoordinateBuffers(void) {
 	for (regionIdx = 0; regionIdx < g_missionRegionCount; ++regionIdx) {
 		for (recordIdx = 0; recordIdx < (unsigned int)g_backdropCountByRegion[regionIdx]; ++recordIdx) {
 			if (g_backdropRecordsByRegion[regionIdx][recordIdx].stripSegmentCount > 0) {
-				Memory_FreeTagged("WORLDRECTCOORDS", g_backdropRecordsByRegion[regionIdx][recordIdx].stripCoords);
+				Memory_FreeTagged("WORLDRECTCOORDS",
+								  g_backdropRecordsByRegion[regionIdx][recordIdx].stripCoords);
 				g_backdropRecordsByRegion[regionIdx][recordIdx].stripSegmentCount = 0;
 				g_backdropRecordsByRegion[regionIdx][recordIdx].stripCoords = NULL;
 			}

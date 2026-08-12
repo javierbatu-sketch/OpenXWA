@@ -5,13 +5,13 @@
 
 #include "aeron/aeron.h"
 
-#include "xwa/frontend/frontend_image.h"
 #include "xwa/assets/model_texture.h"
 #include "xwa/audio/cd_audio.h"
 #include "xwa/config/game_config.h"
 #include "xwa/flight/flight_display.h"
 #include "xwa/frontend/frontend_cursor.h"
 #include "xwa/frontend/frontend_draw.h"
+#include "xwa/frontend/frontend_image.h"
 #include "xwa/frontend/frontend_text.h"
 #include "xwa/render/effects.h"
 #include "xwa/render/renderer.h"

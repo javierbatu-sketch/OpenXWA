@@ -5,11 +5,6 @@
 #include "xwa/flight/hangar.h"
 
 #include "aeron/log.h"
-#include "xwa/flight/ai/pai.h"
-#include "xwa/flight/ai/pai_plan.h"
-#include "xwa/flight/ai/paifight.h"
-#include "xwa/flight/ai/paiman.h"
-#include "xwa/flight/ai/paiorder.h"
 #include "xwa/assets/flight_model.h"
 #include "xwa/assets/model_bounds.h"
 #include "xwa/assets/model_def.h"
@@ -18,36 +13,40 @@
 #include "xwa/assets/model_type.h"
 #include "xwa/assets/opt_model.h"
 #include "xwa/assets/string_table.h"
+#include "xwa/audio/fsfx.h"
 #include "xwa/audio/music.h"
 #include "xwa/audio/sound.h"
-#include "xwa_runtime/compat/winmm/joystick.h"
 #include "xwa/config/game_config.h"
 #include "xwa/console/console.h"
-#include "xwa/flight/object/collision.h"
-#include "xwa/flight/object/damage.h"
+#include "xwa/flight/ai/pai.h"
+#include "xwa/flight/ai/pai_plan.h"
+#include "xwa/flight/ai/paifight.h"
+#include "xwa/flight/ai/paiman.h"
+#include "xwa/flight/ai/paiorder.h"
 #include "xwa/flight/death_star.h"
+#include "xwa/flight/film.h"
 #include "xwa/flight/flight_display.h"
 #include "xwa/flight/flight_light.h"
-#include "xwa/audio/fsfx.h"
+#include "xwa/flight/flight_net.h"
+#include "xwa/flight/hud/hud.h"
+#include "xwa/flight/mission/mission.h"
+#include "xwa/flight/net_session.h"
+#include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/damage.h"
+#include "xwa/flight/object/laser.h"
+#include "xwa/flight/player/player.h"
 #include "xwa/flight/starfield.h"
+#include "xwa/flight/yard.h"
 #include "xwa/frontend/film_room.h"
 #include "xwa/frontend/frontend_color.h"
 #include "xwa/frontend/frontend_input.h"
 #include "xwa/frontend/frontend_mission.h"
 #include "xwa/frontend/mission_setup.h"
-#include "xwa/flight/hud/hud.h"
 #include "xwa/input/dinput.h"
 #include "xwa/input/forcefeedback.h"
 #include "xwa/math/fixed.h"
 #include "xwa/math/scalar.h"
 #include "xwa/math/trig2.h"
-#include "xwa/flight/mission/mission.h"
-#include "xwa/flight/yard.h"
-#include "xwa/flight/film.h"
-#include "xwa/flight/flight_net.h"
-#include "xwa/flight/net_session.h"
-#include "xwa/flight/object/laser.h"
-#include "xwa/flight/player/player.h"
 #include "xwa/render/effects.h"
 #include "xwa/render/renderer.h"
 #include "xwa/render/renderer_internal.h"
@@ -55,6 +54,7 @@
 #include "xwa/util/memory.h"
 #include "xwa/util/random.h"
 #include "xwa/util/time.h"
+#include "xwa_runtime/compat/winmm/joystick.h"
 #ifdef XWA_MODERN
 #include "xwa_runtime/input/mouse_flight.h"
 #include "xwa_runtime/timing/modern_flight_timing.h"
@@ -5467,14 +5467,6 @@ void Flight_UpdateDivePulloutPitchTarget(int objectIdx) {
 	}
 }
 
-
-
-
-
-
-
-
-
 static void Flight_SetStepScaleFromDelta(uint16_t deltaTicks) {
 	uint16_t scale;
 
@@ -6881,7 +6873,6 @@ process_film_overlay_input:
 	return 1;
 }
 
-
 // FUNCTION: XWA 0x5117F0
 // Decide whether the flight loop should continue, return to the hangar, restart/debrief,
 // or save a recorded film, based on film playback/record state, end-of-mission flags, and
@@ -7001,7 +6992,6 @@ int Flight_CheckMissionEndAndExitRequest(void) {
 	return (uint8_t)missionEndPending;
 }
 
-
 // FUNCTION: XWA 0x4D4640
 int sub_4D4640(void) {
 	g_unusedFlightResumeResetSlot0 = -1;
@@ -7020,8 +7010,6 @@ void Flight_UpdateActivePlayerCount(void) {
 		}
 	}
 }
-
-
 
 // FUNCTION: XWA 0x4F3D20
 void Flight_UpdateTimers(void) {
@@ -7358,8 +7346,6 @@ void Flight_UpdateTimers(void) {
 		Hud_AdvanceFlightMessagePaneTimers();
 	}
 }
-
-
 
 static __inline void FlightAction_PlayEngineClick(unsigned int playerIdx) {
 	fsfx_PlaySound(68, 0xffffu, playerIdx);
