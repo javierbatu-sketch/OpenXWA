@@ -14,8 +14,8 @@ void XwaPort_Tick(int32_t delta_us);
  * frame. The port still runs the recovered render path for its view, audio, and
  * snapshot side effects; the DirectDraw/Direct3D shims discard only GPU work. */
 void XwaPort_SetClassicFlightRenderingEnabled(int enabled);
-/* Re-submits the last complete classic frame during a deliberate transition
- * before a newly enabled HD flight frame has been produced. */
+/* Forces the last complete classic frame into a presentation whose normal
+ * classic output was suppressed earlier in the host frame. */
 void XwaPort_SubmitRetainedClassicFrame(void);
 uint64_t XwaPort_GetClassicFlightFrameSerial(void);
 /* Host-paused frame: the game tick is skipped (sim + snapshots

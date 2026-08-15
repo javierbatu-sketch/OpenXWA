@@ -1,6 +1,7 @@
 #include "xwa_runtime/runtime/port.h"
 
 #include "aeron/aeron.h"
+#include "aeron/dx5/compat.h"
 #include "xwa/assets/file_io.h"
 #include "xwa/assets/linez.h"
 #include "xwa/assets/opt_model.h"
@@ -30,6 +31,7 @@
 #include "xwa_runtime/runtime/flight_task.h"
 #include "xwa_runtime/runtime/frontend_task.h"
 #include "xwa_runtime/runtime/movie_task.h"
+#include "xwa_runtime/runtime/presentation.h"
 #include "xwa_runtime/snapshot/snapshot.h"
 #include "xwa_runtime/timing/host_clock.h"
 
@@ -53,6 +55,19 @@ static int g_xwaPortMouseCaptureSuspended;
  * next to each capture decision; -1 forces the first call through. */
 static int g_xwaPortHostCursorVisible = -1;
 
+static AeronDx5Rect XwaPort_Dx5PresentationRect(void* context, int surfaceWidth, int surfaceHeight) {
+	const XwaPresentationRect rect = XwaPresentation_ClassicSafeFrame();
+	(void)context;
+	(void)surfaceWidth;
+	(void)surfaceHeight;
+	return (AeronDx5Rect) { rect.x, rect.y, rect.width, rect.height };
+}
+
+static void XwaPort_Dx5Presented(void* context, int surfaceWidth, int surfaceHeight) {
+	(void)context;
+	XwaSnapshot_EmitSurfaceEvent(XWA_SURFACE_EVENT_PRESENT, 0, 0, surfaceWidth - 1, surfaceHeight - 1);
+}
+
 static const char XWA_STRING_DATA_TAG[] = "STRINGDATA";
 
 enum {
@@ -72,16 +87,16 @@ static void XwaPort_FreeStartupAssets(void) {
 static void XwaPort_ApplyClassicFlightRenderingPolicy(void) {
 	const int suppress = XwaFlightTask_IsActive() && !FlightDisplay_IsFrontendModalActive() &&
 						 !g_xwaPortClassicFlightRenderingEnabled;
-	DDrawCompat_SetClassicFlightRenderingSuppressed(suppress);
+	AeronDx5_SetClassicFlightRenderingSuppressed(suppress);
 }
 
 void XwaPort_SetClassicFlightRenderingEnabled(int enabled) {
 	g_xwaPortClassicFlightRenderingEnabled = enabled ? 1 : 0;
 }
 
-void XwaPort_SubmitRetainedClassicFrame(void) { DDrawCompat_SubmitLastPresented(); }
+void XwaPort_SubmitRetainedClassicFrame(void) { AeronDx5_ForceSubmitRetainedFrame(); }
 
-uint64_t XwaPort_GetClassicFlightFrameSerial(void) { return DDrawCompat_GetClassicFlightFrameSerial(); }
+uint64_t XwaPort_GetClassicFlightFrameSerial(void) { return AeronDx5_GetClassicFlightFrameSerial(); }
 
 void XwaPort_SetCommandLine(const char* commandLine) {
 	if (commandLine == 0) {
@@ -93,6 +108,10 @@ void XwaPort_SetCommandLine(const char* commandLine) {
 }
 
 int XwaPort_Init(void) {
+	AeronDx5_Configure(&(AeronDx5Config) {
+		.presentation_rect = XwaPort_Dx5PresentationRect,
+		.presented = XwaPort_Dx5Presented,
+	});
 	XwaTime_Reset();
 	File_SetVfs(Aeron_GetVfs());
 	if (SpriteResource_LoadCatalog("Resdata.txt") != 0) {
@@ -312,12 +331,9 @@ void XwaPort_Tick(int32_t delta_us) {
 	if (movieTick || XwaMovieTask_IsActive()) {
 		return;
 	}
-	/* Present-model alignment (TIE shell model): on ticks the classic
-	 * presented nothing (flight fixed-step skips, modal pumps), the
-	 * shim re-submits the last presented frame so every host frame
-	 * carries a full layer stack — required now that the debug overlay
-	 * can force a swapchain pass on otherwise-empty frames. */
-	DDrawCompat_ResubmitIfIdle();
+	/* Complete the compatibility renderer's host frame after all recovered
+	 * presents have been coalesced and before remaster layers are submitted. */
+	AeronDx5_EndFrame();
 }
 
 void XwaPort_PausedFrame(void) {
@@ -330,7 +346,7 @@ void XwaPort_PausedFrame(void) {
 		XwaMovieTask_PausedFrame();
 		return;
 	}
-	DDrawCompat_ResubmitIfIdle();
+	AeronDx5_EndFrame();
 }
 
 void XwaPort_Shutdown(void) {
@@ -347,13 +363,13 @@ void XwaPort_Shutdown(void) {
 	XwaFrontendTask_Shutdown();
 	FlightDisplay_FreeSurfaces();
 	FrontendDisplay_FreeSurfaces();
+	AeronDx5_Shutdown();
 	XwaPort_FreeStartupAssets();
 	g_xwaPortInitialized = 0;
 	g_xwaPortShouldQuit = 0;
 	g_xwaPortHadFocus = 0;
 	g_xwaPortEverHadFocus = 0;
 	g_xwaPortClassicFlightRenderingEnabled = 1;
-	DDrawCompat_SetClassicFlightRenderingSuppressed(0);
 }
 
 int XwaPort_ShouldQuit(void) {

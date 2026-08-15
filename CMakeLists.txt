@@ -38,6 +38,7 @@ option(XWA_BUILD_TOOLS "Build OpenXWA and Aeron asset/developer tools" ON)
 set(AERON_BUILD_TOOLS ${XWA_BUILD_TOOLS})
 set(AERON_ENABLE_VIDEO ON)
 set(AERON_HOST_TOOLS_ONLY OFF)
+set(AERON_ENABLE_DX5_COMPAT ON)
 # In-game debug UI (ImGui overlay, backquote to toggle).
 option(XWA_ENABLE_DEBUG_UI "Build the Aeron ImGui debug overlay" ON)
 set(AERON_DEBUG_UI ${XWA_ENABLE_DEBUG_UI})
@@ -190,9 +191,6 @@ set(XWA_RECOVERED_SOURCES
 )
 
 set(XWA_RUNTIME_SOURCES
-    src/xwa_runtime/compat/directx/directdraw_create.c
-    src/xwa_runtime/compat/directx/ddraw_compat.c
-    src/xwa_runtime/compat/directx/d3d_compat.c
     src/xwa_runtime/compat/directx/dinput_compat.c
     src/xwa_runtime/compat/directx/dsound_compat.c
     src/xwa_runtime/compat/winmm/joystick_compat.c
@@ -289,8 +287,6 @@ aeron_compile_hlsl(XWA_SHADER_OUTPUTS ${CMAKE_BINARY_DIR}/shaders
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_tunnel.vert.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_tunnel.frag.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/hyperspace_environment.comp.hlsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/d3d_projected_triangle.vert.hlsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/d3d_projected_triangle.frag.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/sky_stars.vert.hlsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/sky_stars.frag.hlsl
 )
@@ -311,6 +307,7 @@ target_include_directories(xwa_core
 target_link_libraries(xwa_core
     PUBLIC
         aeron
+        aeron_dx5
         aeron_video
 )
 
