@@ -4,11 +4,14 @@
 
 #include "aeron/aeron.h"
 #include "aeron/config_file.h"
+#include "aeron/asset/opt_model.h"
 #include "aeron/scene/billboard.h"
 #include "aeron/scene/bloom.h"
 #include "aeron/scene/image_cache.h"
 #include "aeron/scene/present.h"
 #include "aeron/scene/scene3d.h"
+#include "aeron/scene/settings.h"
+#include "aeron/scene/world.h"
 #include "xwa_remaster/color.h"
 #include "xwa_remaster/effects.h"
 #include "xwa_remaster/flight_map.h"
@@ -17,7 +20,6 @@
 #include "xwa_remaster/hyperspace.h"
 #include "xwa_remaster/ship.h"
 #include "xwa_remaster/sky_stars.h"
-#include "xwa_remaster/world.h"
 #include "xwa_remaster/xwa_remaster.h"
 #include "xwa_runtime/runtime/presentation.h"
 #include "xwa_runtime/timing/host_clock.h"
@@ -151,6 +153,8 @@ static struct {
 	int config_loaded;
 	XwaFlightShadowParams shadows;
 	XwaFlightShadowParams shadows_default;
+	int shadow_debug_atlas;
+	int shadow_debug_atlas_cascade;
 	XwaFlightHangarLightingParams hangar_lighting;
 	XwaFlightHangarLightingParams hangar_lighting_default;
 	/* Point-light calibration knobs (same lifecycle as ssao). */
@@ -377,35 +381,10 @@ static int fl_cfg_validate(const AeronConfigFile* config, const char** error_pat
 	static const char* ints[] = {
 		"presentation.vsync_divisor",
 		"presentation.msaa_samples",
-		"ssao.quality",
 		"motion_blur.quality",
-		"shadows.atlas_size",
-		"shadows.cascade_count",
-		"shadows.filter_quality",
 		"point_lights.cluster_depth_slices",
 	};
 	static const char* floats[] = {
-		"ssao.intensity",
-		"ssao.power",
-		"ssao.radius_view",
-		"ssao.bias_view",
-		"ssao.direct",
-		"ssao.min_screen_frac",
-		"ssao.max_screen_frac",
-		"ssao.sample_jitter",
-		"shadows.max_distance",
-		"shadows.split_lambda",
-		"shadows.split_1",
-		"shadows.split_2",
-		"shadows.split_3",
-		"shadows.filter_radius",
-		"shadows.light_angular_radius_degrees",
-		"shadows.max_filter_radius",
-		"shadows.pcss_min_filter_radius",
-		"shadows.normal_bias_texels",
-		"shadows.depth_bias_texels",
-		"shadows.transition_fraction",
-		"shadows.distance_fade_fraction",
 		"hangar_lighting.direction_x",
 		"hangar_lighting.direction_y",
 		"hangar_lighting.direction_z",
@@ -472,17 +451,16 @@ static int fl_cfg_validate(const AeronConfigFile* config, const char** error_pat
 		"texture_filtering.max_anisotropy",
 	};
 	static const char* bools[] = {
-		"presentation.hdr_output",       "ssao.debug_viz",
+		"presentation.hdr_output",
 		"point_lights.enabled",          "point_lights.clustered",
 		"point_lights.cluster_debug",    "skybox.enabled",
 		"motion_blur.camera_blur",       "motion_blur.pause_keep_blur",
 		"motion_blur.velocity_viz",      "motion_blur.fsr_direct_motion",
-		"texture_filtering.anisotropic", "shadows.explicit_splits",
-		"shadows.contact_hardening",     "shadows.debug_cascades",
+		"texture_filtering.anisotropic",
 		"hangar_lighting.enabled",       "lighting.spec_geom_adapt",
 	};
 	static const char* strings[] = {
-		"shadows.mode", "shadows.fit_mode", "skybox.path", "skybox.mode", "tonemap.operator",
+		"skybox.path", "skybox.mode", "tonemap.operator",
 		"tonemap.agx_look", "temporal_upscaling.mode",
 	};
 	for (size_t i = 0; i < sizeof ints / sizeof ints[0]; i++) {
@@ -510,30 +488,6 @@ static int fl_cfg_validate(const AeronConfigFile* config, const char** error_pat
 		}
 	}
 	return 1;
-}
-
-static int fl_ssao_config_valid(const XwaFlightSsaoParams* p) {
-	return p->quality >= 0 && p->quality <= 2 && isfinite(p->intensity) && p->intensity >= 0.0f &&
-		   isfinite(p->power) && p->power > 0.0f && isfinite(p->radius_view) && p->radius_view > 0.0f &&
-		   isfinite(p->bias_view) && p->bias_view >= 0.0f && isfinite(p->direct) && p->direct >= 0.0f &&
-		   p->direct <= 1.0f && isfinite(p->min_screen_frac) && p->min_screen_frac >= 0.0f &&
-		   isfinite(p->max_screen_frac) && p->max_screen_frac >= 0.0f && isfinite(p->sample_jitter) &&
-		   p->sample_jitter >= 0.0f && p->sample_jitter <= 1.0f;
-}
-
-static int fl_shadows_config_valid(const XwaFlightShadowParams* p) {
-	return p->atlas_size >= 1024 && p->atlas_size <= 8192 && (p->atlas_size & (p->atlas_size - 1)) == 0 &&
-		   p->cascade_count >= 1 && p->cascade_count <= AERON_SCENE_SHADOW_MAX_CASCADES &&
-		   p->filter_quality >= 0 && p->filter_quality <= 3 && p->max_distance > FL_NEAR_Z &&
-		   p->split_lambda >= 0.0f && p->split_lambda <= 1.0f && p->split_positions[0] > 0.0f &&
-		   p->split_positions[0] < p->split_positions[1] && p->split_positions[1] < p->split_positions[2] &&
-		   p->split_positions[2] < 1.0f && p->filter_radius >= 0.5f && p->filter_radius <= 3.0f &&
-		   p->light_angular_radius_degrees >= 0.0f && p->light_angular_radius_degrees <= 5.0f &&
-		   p->max_filter_radius >= p->filter_radius && p->max_filter_radius <= 16.0f &&
-		   p->pcss_min_filter_radius >= 0.5f && p->pcss_min_filter_radius <= p->filter_radius &&
-		   p->normal_bias_texels >= 0.0f && p->normal_bias_texels <= 4.0f && p->depth_bias_texels >= 0.0f &&
-		   p->depth_bias_texels <= 4.0f && p->transition_fraction >= 0.0f && p->transition_fraction <= 0.5f &&
-		   p->distance_fade_fraction >= 0.0f && p->distance_fade_fraction <= 0.5f;
 }
 
 static int fl_hangar_lighting_config_valid(const XwaFlightHangarLightingParams* p, float direction_length) {
@@ -719,6 +673,22 @@ int XwaRemasterFlight_InitConfig(AeronVfs* vfs) {
 		return 1;
 	}
 
+	static const char* scene_path = "aeron/flight_scene.yaml";
+	AeronConfigFile* scene_cf = NULL;
+	AeronConfigError scene_error;
+	if (!vfs || !AeronConfigFile_LoadYaml(vfs, AERON_VFS_ROOT_RESOURCE, scene_path, &scene_cf)) {
+		Aeron_LogError("xwa.remaster", "required Aeron flight profile unavailable or invalid: %s",
+					   scene_path);
+		return 0;
+	}
+	if (!AeronSceneSettings_Load(AeronConfigFile_Root(scene_cf), &s.ssao, &s.shadows, &scene_error)) {
+		Aeron_LogError("xwa.remaster", "%s:%d:%d: %s", scene_path, scene_error.line,
+					   scene_error.column, scene_error.message);
+		AeronConfigFile_Destroy(scene_cf);
+		return 0;
+	}
+	AeronConfigFile_Destroy(scene_cf);
+
 	static const char* path = "remaster/config.yaml";
 	AeronConfigFile* cf = NULL;
 	if (!vfs || !AeronConfigFile_LoadYaml(vfs, AERON_VFS_ROOT_RESOURCE, path, &cf)) {
@@ -728,6 +698,12 @@ int XwaRemasterFlight_InitConfig(AeronVfs* vfs) {
 	const char* error_path = NULL;
 	if (!fl_cfg_validate(cf, &error_path)) {
 		Aeron_LogError("xwa.remaster", "%s: missing or invalid required setting '%s'", path, error_path);
+		AeronConfigFile_Destroy(cf);
+		return 0;
+	}
+	if (!AeronSceneSettings_Overlay(AeronConfigFile_Root(cf), &s.ssao, &s.shadows, &scene_error)) {
+		Aeron_LogError("xwa.remaster", "%s:%d:%d: %s", path, scene_error.line, scene_error.column,
+					   scene_error.message);
 		AeronConfigFile_Destroy(cf);
 		return 0;
 	}
@@ -760,72 +736,7 @@ int XwaRemasterFlight_InitConfig(AeronVfs* vfs) {
 			return 0;
 	}
 	s.configured_hdr_output = AeronConfigFile_GetBool(cf, "presentation.hdr_output", 0);
-	s.ssao.quality = (int)AeronConfigFile_GetInt(cf, "ssao.quality", 0);
-	s.ssao.intensity = (float)AeronConfigFile_GetFloat(cf, "ssao.intensity", 0.0);
-	s.ssao.power = (float)AeronConfigFile_GetFloat(cf, "ssao.power", 0.0);
-	s.ssao.radius_view = (float)AeronConfigFile_GetFloat(cf, "ssao.radius_view", 0.0);
-	s.ssao.bias_view = (float)AeronConfigFile_GetFloat(cf, "ssao.bias_view", 0.0);
-	s.ssao.direct = (float)AeronConfigFile_GetFloat(cf, "ssao.direct", 0.0);
-	s.ssao.debug_viz = AeronConfigFile_GetBool(cf, "ssao.debug_viz", 0);
-	s.ssao.min_screen_frac = (float)AeronConfigFile_GetFloat(cf, "ssao.min_screen_frac", 0.0);
-	s.ssao.max_screen_frac = (float)AeronConfigFile_GetFloat(cf, "ssao.max_screen_frac", 0.0);
-	s.ssao.sample_jitter = (float)AeronConfigFile_GetFloat(cf, "ssao.sample_jitter", 0.0);
-	if (!fl_ssao_config_valid(&s.ssao)) {
-		Aeron_LogError("xwa.remaster", "%s: invalid ssao settings", path);
-		AeronConfigFile_Destroy(cf);
-		return 0;
-	}
-	const char* shadow_mode = AeronConfigFile_GetString(cf, "shadows.mode", NULL);
-	if (strcmp(shadow_mode, "off") == 0) {
-		s.shadows.mode = XWA_FLIGHT_SHADOWS_OFF;
-	} else if (strcmp(shadow_mode, "pcf") == 0) {
-		s.shadows.mode = XWA_FLIGHT_SHADOWS_PCF;
-	} else {
-		Aeron_LogError("xwa.remaster", "%s: shadows.mode must be 'off' or 'pcf'", path);
-		AeronConfigFile_Destroy(cf);
-		return 0;
-	}
-	s.shadows.atlas_size = (int)AeronConfigFile_GetInt(cf, "shadows.atlas_size", 0);
-	s.shadows.cascade_count = (int)AeronConfigFile_GetInt(cf, "shadows.cascade_count", 0);
-	const char* shadow_fit_mode = AeronConfigFile_GetString(cf, "shadows.fit_mode", NULL);
-	if (strcmp(shadow_fit_mode, "stable") == 0) {
-		s.shadows.fit_mode = AERON_SCENE_SHADOW_FIT_STABLE;
-	} else if (strcmp(shadow_fit_mode, "frustum") == 0) {
-		s.shadows.fit_mode = AERON_SCENE_SHADOW_FIT_FRUSTUM;
-	} else if (strcmp(shadow_fit_mode, "scene_dependent") == 0) {
-		s.shadows.fit_mode = AERON_SCENE_SHADOW_FIT_SCENE_DEPENDENT;
-	} else {
-		Aeron_LogError("xwa.remaster",
-					   "%s: shadows.fit_mode must be 'stable', 'frustum', or 'scene_dependent'", path);
-		AeronConfigFile_Destroy(cf);
-		return 0;
-	}
-	s.shadows.max_distance = (float)AeronConfigFile_GetFloat(cf, "shadows.max_distance", 0.0);
-	s.shadows.split_lambda = (float)AeronConfigFile_GetFloat(cf, "shadows.split_lambda", 0.0);
-	s.shadows.explicit_splits = AeronConfigFile_GetBool(cf, "shadows.explicit_splits", 0);
-	s.shadows.split_positions[0] = (float)AeronConfigFile_GetFloat(cf, "shadows.split_1", 0.0);
-	s.shadows.split_positions[1] = (float)AeronConfigFile_GetFloat(cf, "shadows.split_2", 0.0);
-	s.shadows.split_positions[2] = (float)AeronConfigFile_GetFloat(cf, "shadows.split_3", 0.0);
-	s.shadows.filter_quality = (int)AeronConfigFile_GetInt(cf, "shadows.filter_quality", 0);
-	s.shadows.filter_radius = (float)AeronConfigFile_GetFloat(cf, "shadows.filter_radius", 0.0);
-	s.shadows.contact_hardening = AeronConfigFile_GetBool(cf, "shadows.contact_hardening", 0);
-	s.shadows.light_angular_radius_degrees =
-		(float)AeronConfigFile_GetFloat(cf, "shadows.light_angular_radius_degrees", 0.0);
-	s.shadows.max_filter_radius = (float)AeronConfigFile_GetFloat(cf, "shadows.max_filter_radius", 0.0);
-	s.shadows.pcss_min_filter_radius =
-		(float)AeronConfigFile_GetFloat(cf, "shadows.pcss_min_filter_radius", 0.0);
-	s.shadows.normal_bias_texels = (float)AeronConfigFile_GetFloat(cf, "shadows.normal_bias_texels", 0.0);
-	s.shadows.depth_bias_texels = (float)AeronConfigFile_GetFloat(cf, "shadows.depth_bias_texels", 0.0);
-	s.shadows.transition_fraction = (float)AeronConfigFile_GetFloat(cf, "shadows.transition_fraction", 0.0);
-	s.shadows.distance_fade_fraction =
-		(float)AeronConfigFile_GetFloat(cf, "shadows.distance_fade_fraction", 0.0);
-	s.shadows.debug_cascades = AeronConfigFile_GetBool(cf, "shadows.debug_cascades", 0);
-	s.shadows.debug_atlas_cascade = -1;
-	if (!fl_shadows_config_valid(&s.shadows)) {
-		Aeron_LogError("xwa.remaster", "%s: invalid shadows settings", path);
-		AeronConfigFile_Destroy(cf);
-		return 0;
-	}
+	s.shadow_debug_atlas_cascade = -1;
 	s.hangar_lighting.enabled = AeronConfigFile_GetBool(cf, "hangar_lighting.enabled", 0);
 	s.hangar_lighting.direction[0] = (float)AeronConfigFile_GetFloat(cf, "hangar_lighting.direction_x", 0.0);
 	s.hangar_lighting.direction[1] = (float)AeronConfigFile_GetFloat(cf, "hangar_lighting.direction_y", 0.0);
@@ -1012,8 +923,9 @@ int XwaRemasterFlight_InitConfig(AeronVfs* vfs) {
 	Aeron_LogInfo("xwa.remaster",
 				  "flight ssao: quality %d intensity %.2f power %.2f radius %.1f bias %.2f "
 				  "direct %.2f%s",
-				  s.ssao.quality, (double)s.ssao.intensity, (double)s.ssao.power, (double)s.ssao.radius_view,
-				  (double)s.ssao.bias_view, (double)s.ssao.direct, s.ssao.debug_viz ? " (debug viz)" : "");
+				  s.ssao.ssao_quality, (double)s.ssao.ssao_intensity, (double)s.ssao.ssao_power,
+				  (double)s.ssao.ssao_radius_view, (double)s.ssao.ssao_bias_view,
+				  (double)s.ssao.ssao_direct, s.ssao.ssao_debug_viz ? " (debug viz)" : "");
 	if (s.texture_filtering.anisotropic) {
 		Aeron_LogInfo("xwa.remaster", "flight mesh filtering: trilinear + %.0fx anisotropic",
 					  (double)s.texture_filtering.max_anisotropy);
@@ -1119,7 +1031,7 @@ void XwaRemasterFlight_SetShadows(const XwaFlightShadowParams* in) {
 	if (!in || !fl_cfg_ensure())
 		return;
 	s.shadows = *in;
-	s.shadows.mode = in->mode == XWA_FLIGHT_SHADOWS_PCF ? XWA_FLIGHT_SHADOWS_PCF : XWA_FLIGHT_SHADOWS_OFF;
+	s.shadows.enabled = in->enabled ? 1 : 0;
 	if (s.shadows.atlas_size != 1024 && s.shadows.atlas_size != 2048 && s.shadows.atlas_size != 4096 &&
 		s.shadows.atlas_size != 8192) {
 		s.shadows.atlas_size = s.shadows_default.atlas_size;
@@ -1150,19 +1062,28 @@ void XwaRemasterFlight_SetShadows(const XwaFlightShadowParams* in) {
 	s.shadows.transition_fraction = fminf(fmaxf(s.shadows.transition_fraction, 0.0f), 0.5f);
 	s.shadows.distance_fade_fraction = fminf(fmaxf(s.shadows.distance_fade_fraction, 0.0f), 0.5f);
 	s.shadows.debug_cascades = in->debug_cascades ? 1 : 0;
-	s.shadows.debug_atlas = in->debug_atlas ? 1 : 0;
-	s.shadows.debug_atlas_cascade = in->debug_atlas_cascade;
-	s.shadows.debug_atlas_cascade =
-		s.shadows.debug_atlas_cascade < -1
-			? -1
-			: (s.shadows.debug_atlas_cascade >= s.shadows.cascade_count ? s.shadows.cascade_count - 1
-																		: s.shadows.debug_atlas_cascade);
 }
 
 void XwaRemasterFlight_GetShadowsDefault(XwaFlightShadowParams* out) {
 	if (out && fl_cfg_ensure()) {
 		*out = s.shadows_default;
 	}
+}
+
+void XwaRemasterFlight_GetShadowAtlasDebug(int* enabled, int* cascade) {
+	if (enabled)
+		*enabled = s.shadow_debug_atlas;
+	if (cascade)
+		*cascade = s.shadow_debug_atlas_cascade;
+}
+
+void XwaRemasterFlight_SetShadowAtlasDebug(int enabled, int cascade) {
+	s.shadow_debug_atlas = enabled ? 1 : 0;
+	if (cascade < -1)
+		cascade = -1;
+	if (cascade >= (int)s.shadows.cascade_count)
+		cascade = (int)s.shadows.cascade_count - 1;
+	s.shadow_debug_atlas_cascade = cascade;
 }
 
 void XwaRemasterFlight_GetShadowStats(AeronSceneDirectionalShadowStats* out) {
@@ -1562,7 +1483,7 @@ static int fl_ensure(int target_w, int target_h) {
 		.sample_count = requested_samples,
 		.temporal_mode = s.fsr_mode,
 		.temporal_sharpness = s.fsr_sharpness,
-		.view_space_to_meters = 1.0f / 40.96f,
+		.view_space_to_meters = AERON_OPT_METERS_PER_UNIT,
 	});
 	if (!s.scene) {
 		Aeron_LogError("xwa.remaster", "flight: scene create failed at %dx%d", target_w, target_h);
@@ -1673,7 +1594,7 @@ static int fl_build_view_at_origin(const XwaFlightCamera* cam, const int32_t ori
 	const float cy = (float)cam->vp_center_y + (float)cam->proj_offset_y;
 
 	memcpy(out->origin_world, origin_world, sizeof out->origin_world);
-	XwaRemasterWorld_LocalI32(origin_world, cam->world_pos, scene_camera->pos);
+	AeronWorld_LocalI32(origin_world, cam->world_pos, scene_camera->pos);
 	scene_camera->v_half_rad = atanf(hh / ps);
 	const float aspect = (float)target_w / (float)target_h;
 	scene_camera->h_half_rad = atanf(tanf(scene_camera->v_half_rad) * aspect);
@@ -1720,7 +1641,7 @@ int XwaRemasterFlight_ProjectWorldI32(const XwaRemasterFlightView* view, const i
 	float local[3];
 	if (!view || !world)
 		return 0;
-	XwaRemasterWorld_LocalI32(view->origin_world, world, local);
+	AeronWorld_LocalI32(view->origin_world, world, local);
 	return XwaRemasterFlight_ProjectLocal(view, local, out_x, out_y, out_depth);
 }
 
@@ -1827,7 +1748,7 @@ static void fl_object_world(const float cur[3][3], float out[9]) {
  * transpose consumption the model preview validated (Math3D_RotateVec3
  * is column-major over the stored rows). */
 static void fl_model_matrix(const float basis[9], const float delta[3], float m[16]) {
-	const float scale = XWA_AERON_METERS_TO_MODEL_UNITS;
+	const float scale = AERON_OPT_UNITS_PER_METER;
 	m[0] = scale * basis[0];
 	m[1] = scale * basis[3];
 	m[2] = scale * basis[6];
@@ -1863,7 +1784,7 @@ static void fl_apply_death_star_beam_scale(const XwaSnapshot* snap, float model[
 }
 
 static void fl_object_local(const XwaFlightObject* object, float out[3]) {
-	XwaRemasterWorld_LocalI32(s.origin_world, object->world_pos, out);
+	AeronWorld_LocalI32(s.origin_world, object->world_pos, out);
 }
 
 static int fl_object_is_projectile(const XwaFlightObject* object) {
@@ -1886,7 +1807,7 @@ static void fl_object_pose(const XwaFlightObject* object, const int32_t camera_w
 		fl_curmat_from_euler(object, cur);
 	if (roll_align) {
 		float camera_delta[3];
-		XwaRemasterWorld_DeltaI32(camera_world, object->world_pos, camera_delta);
+		AeronWorld_DeltaI32(camera_world, object->world_pos, camera_delta);
 		const float side_dot =
 			camera_delta[0] * cur[0][0] + camera_delta[1] * cur[0][1] + camera_delta[2] * cur[0][2];
 		const float up_dot =
@@ -1938,7 +1859,7 @@ int XwaRemasterFlight_ObjectModelMatrixAtOrigin(const XwaFlightObject* object, c
 		fl_curmat_from_euler(object, cur);
 	float basis[9], local[3];
 	fl_object_world(cur, basis);
-	XwaRemasterWorld_LocalI32(origin_world, object->world_pos, local);
+	AeronWorld_LocalI32(origin_world, object->world_pos, local);
 	fl_model_matrix(basis, local, out);
 	return 1;
 }
@@ -1961,7 +1882,7 @@ static const XwaFlightObject* fl_instance_motion(AeronSceneMeshInstance* inst, c
 	}
 	const XwaFlightObject* pf = &s.mb_prev_snap->flight_objects[s.mb_prev_index[walk_index]];
 	float prev_local[3];
-	XwaRemasterWorld_LocalI32(s.origin_world, pf->world_pos, prev_local);
+	AeronWorld_LocalI32(s.origin_world, pf->world_pos, prev_local);
 	if (is_bolt) {
 		memcpy(inst->prev_transform, inst->transform, sizeof inst->prev_transform);
 		inst->prev_transform[3] = prev_local[0];
@@ -2375,7 +2296,7 @@ static void fl_bb_geometry_corners_local(const FlBillboardGeometry* g, const Xwa
 	const float ax[2] = { g->half_w * ca, -g->half_w * sa };
 	const float ay[2] = { g->half_h * sa, g->half_h * ca };
 	float camera_local[3];
-	XwaRemasterWorld_LocalI32(s.origin_world, cam->world_pos, camera_local);
+	AeronWorld_LocalI32(s.origin_world, cam->world_pos, camera_local);
 	for (int c = 0; c < 4; c++) {
 		const float sw = (c == 0 || c == 3) ? 1.0f : -1.0f;
 		const float sh = c <= 1 ? 1.0f : -1.0f;
@@ -2441,7 +2362,7 @@ static int fl_object_billboard_geometry(const XwaFlightObject* f, const XwaFligh
 		return 0; /* classic queue gate: tex levels loaded + frame in range */
 
 	float delta_world[3];
-	XwaRemasterWorld_DeltaI32(f->world_pos, cam->world_pos, delta_world);
+	AeronWorld_DeltaI32(f->world_pos, cam->world_pos, delta_world);
 	float v[3];
 	fl_world_to_view(world_to_view, delta_world[0], delta_world[1], delta_world[2], v);
 	if (v[2] < 1.0f)
@@ -2523,7 +2444,7 @@ static int fl_wreck_flame_base_geometry(const XwaFlightObject* f, const XwaFligh
 		return 0;
 	}
 	float delta_world[3];
-	XwaRemasterWorld_DeltaI32(f->world_pos, cam->world_pos, delta_world);
+	AeronWorld_DeltaI32(f->world_pos, cam->world_pos, delta_world);
 	fl_world_to_view(world_to_view, delta_world[0], delta_world[1], delta_world[2], out->center);
 	if (out->center[2] < 1.0f)
 		return 0;
@@ -2727,7 +2648,7 @@ static void fl_derive_lens_flares(const XwaSnapshot* snap, XwaRemasterAssets* as
 		}
 		float v[3];
 		float delta_world[3];
-		XwaRemasterWorld_DeltaI32(f->world_pos, cam->world_pos, delta_world);
+		AeronWorld_DeltaI32(f->world_pos, cam->world_pos, delta_world);
 		fl_world_to_view(s.crows, delta_world[0], delta_world[1], delta_world[2], v);
 		if (v[2] <= 0.0f || v[2] >= 16384.0f) {
 			continue; /* classic viewZ < 0x4000 */
@@ -2908,7 +2829,7 @@ static void fl_derive_point_lights(const XwaSnapshot* snap) {
 		const float i = 100000.0f;
 		const float cx[3] = { 0.0f, XwaRemaster_SrgbToLinear(1.0f) * i, XwaRemaster_SrgbToLinear(0.2f) * i };
 		float local[3];
-		XwaRemasterWorld_LocalI32(s.origin_world, cam->ds_beam_world_pos, local);
+		AeronWorld_LocalI32(s.origin_world, cam->ds_beam_world_pos, local);
 		fl_pl_push(local, fl_pl_range(i, 16384.0f), cx);
 	}
 	for (uint32_t i = 0; i < snap->flight_object_count; i++) {
@@ -2959,7 +2880,7 @@ static void fl_derive_point_lights(const XwaSnapshot* snap) {
 		const float intensity = 125.0f;
 		const float cxi[3] = { intensity, intensity, XwaRemaster_SrgbToLinear(0.75f) * intensity };
 		float local[3];
-		XwaRemasterWorld_LocalPoint(s.origin_world, effect->emitter_world_pos.base,
+		AeronWorld_LocalPointI32F32(s.origin_world, effect->emitter_world_pos.base,
 									effect->emitter_world_pos.offset, local);
 		fl_pl_push(local, fl_pl_range(intensity, 0.0f), cxi);
 	}
@@ -3194,7 +3115,7 @@ static int fl_map_submit_object(const XwaFlightMapObject* map_object, const XwaF
 			fl_derive_wreck_flames(f, snapshot_index, context->assets, NULL, NULL);
 		if (s.glow_ok) {
 			XwaRemasterShip_SubmitEngineGlows(s.scene, prepared.mesh, model_matrix,
-											  XWA_AERON_METERS_TO_MODEL_UNITS, prepared.table,
+											  AERON_OPT_UNITS_PER_METER, prepared.table,
 											  f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(f),
 											  s.crows, s.camera_local, &s.glow_ref);
 		}
@@ -3369,7 +3290,7 @@ static void fl_submit_hyperspace_cockpit(AeronCommandBuffer* cmd, XwaRemasterAss
 	}
 	if (s.glow_ok && player_f) {
 		XwaRemasterShip_SubmitEngineGlows(
-			s.scene, cockpit_mesh, m, XWA_AERON_METERS_TO_MODEL_UNITS, inst.mesh_table,
+			s.scene, cockpit_mesh, m, AERON_OPT_UNITS_PER_METER, inst.mesh_table,
 			player_f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(player_f), s.crows,
 			s.camera_local, &s.glow_ref);
 	}
@@ -3616,16 +3537,16 @@ static AeronTexture* fl_render_hyperspace(AeronCommandBuffer* cmd, const XwaSnap
 	 * disabled: the tunnel/streak hook has no velocity attachment, and the
 	 * hyperspace effects encode their own motion in geometry and shader animation. */
 	AeronScene_SetPost(s.scene, &(AeronScenePostDesc) {
-									.ssao_quality = s.ssao.quality,
-									.ssao_intensity = s.ssao.intensity,
-									.ssao_power = s.ssao.power,
-									.ssao_radius_view = s.ssao.radius_view,
-									.ssao_bias_view = s.ssao.bias_view,
-									.ssao_direct = s.ssao.direct,
-									.ssao_debug_viz = s.ssao.debug_viz,
-									.ssao_min_screen_frac = s.ssao.min_screen_frac,
-									.ssao_max_screen_frac = s.ssao.max_screen_frac,
-									.ssao_sample_jitter = s.ssao.sample_jitter,
+									.ssao_quality = s.ssao.ssao_quality,
+									.ssao_intensity = s.ssao.ssao_intensity,
+									.ssao_power = s.ssao.ssao_power,
+									.ssao_radius_view = s.ssao.ssao_radius_view,
+									.ssao_bias_view = s.ssao.ssao_bias_view,
+									.ssao_direct = s.ssao.ssao_direct,
+									.ssao_debug_viz = s.ssao.ssao_debug_viz,
+									.ssao_min_screen_frac = s.ssao.ssao_min_screen_frac,
+									.ssao_max_screen_frac = s.ssao.ssao_max_screen_frac,
+									.ssao_sample_jitter = s.ssao.ssao_sample_jitter,
 									.mb_quality = 0,
 									.mb_fsr_direct_motion = s.mb_fsr_direct_motion,
 								});
@@ -3645,13 +3566,13 @@ static AeronTexture* fl_render_hyperspace(AeronCommandBuffer* cmd, const XwaSnap
 	int render_w, render_h;
 	AeronScene_RenderDims(s.scene, &render_w, &render_h);
 	const XwaShipAoParams ao = {
-		.intensity = s.ssao.intensity,
-		.power = s.ssao.power,
+		.intensity = s.ssao.ssao_intensity,
+		.power = s.ssao.ssao_power,
 		.rt_w = (float)render_w,
 		.rt_h = (float)render_h,
-		.direct = s.ssao.direct,
+		.direct = s.ssao.ssao_direct,
 	};
-	const int ao_on = s.ssao.quality > 0 && s.ssao.intensity > 0.0f;
+	const int ao_on = s.ssao.ssao_quality > 0 && s.ssao.ssao_intensity > 0.0f;
 	XwaShipAmbientCube ambient;
 	XwaRemasterShip_GetAmbientCube(&ambient);
 	if (lighting_ready) {
@@ -4021,7 +3942,7 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 	/* Preserve the classic directional fill inside the sealed Death Star,
 	 * but do not let its backdrop light cast exterior shadows in the tunnel. */
 	const int shadows_active =
-		!cam->death_star_mode && s.shadows.mode == XWA_FLIGHT_SHADOWS_PCF &&
+		!cam->death_star_mode && s.shadows.enabled &&
 		fl_key_directional_light(scene_lighting.lights, scene_lighting.light_count, shadow_light_dir);
 	if (!s.mb_enabled) {
 		uint32_t motion_reset_reasons = 0;
@@ -4081,8 +4002,8 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 			.transition_fraction = s.shadows.transition_fraction,
 			.distance_fade_fraction = s.shadows.distance_fade_fraction,
 			.debug_cascades = s.shadows.debug_cascades,
-			.debug_atlas = s.shadows.debug_atlas,
-			.debug_atlas_cascade = s.shadows.debug_atlas_cascade,
+			.debug_atlas = s.shadow_debug_atlas,
+			.debug_atlas_cascade = s.shadow_debug_atlas_cascade,
 		};
 		AeronScene_SetDirectionalShadow(s.scene, &shadow);
 	}
@@ -4153,16 +4074,16 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 	const int mb_allow = !paused || s.mb_pause_keep_blur;
 	const float mb_shutter = mb_allow ? fl_mb_logical_frame_shutter() : 0.0f;
 	AeronScene_SetPost(s.scene, &(AeronScenePostDesc) {
-									.ssao_quality = s.ssao.quality,
-									.ssao_intensity = s.ssao.intensity,
-									.ssao_power = s.ssao.power,
-									.ssao_radius_view = s.ssao.radius_view,
-									.ssao_bias_view = s.ssao.bias_view,
-									.ssao_direct = s.ssao.direct,
-									.ssao_debug_viz = s.ssao.debug_viz,
-									.ssao_min_screen_frac = s.ssao.min_screen_frac,
-									.ssao_max_screen_frac = s.ssao.max_screen_frac,
-									.ssao_sample_jitter = s.ssao.sample_jitter,
+									.ssao_quality = s.ssao.ssao_quality,
+									.ssao_intensity = s.ssao.ssao_intensity,
+									.ssao_power = s.ssao.ssao_power,
+									.ssao_radius_view = s.ssao.ssao_radius_view,
+									.ssao_bias_view = s.ssao.ssao_bias_view,
+									.ssao_direct = s.ssao.ssao_direct,
+									.ssao_debug_viz = s.ssao.ssao_debug_viz,
+									.ssao_min_screen_frac = s.ssao.ssao_min_screen_frac,
+									.ssao_max_screen_frac = s.ssao.ssao_max_screen_frac,
+									.ssao_sample_jitter = s.ssao.ssao_sample_jitter,
 									.mb_quality = mb_on ? s.mb_quality : 0,
 									.mb_shutter = mb_shutter,
 									.mb_camera_blur = s.mb_camera_blur,
@@ -4177,13 +4098,13 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 	int render_w, render_h;
 	AeronScene_RenderDims(s.scene, &render_w, &render_h);
 	const XwaShipAoParams ao = {
-		.intensity = s.ssao.intensity,
-		.power = s.ssao.power,
+		.intensity = s.ssao.ssao_intensity,
+		.power = s.ssao.ssao_power,
 		.rt_w = (float)render_w,
 		.rt_h = (float)render_h,
-		.direct = s.ssao.direct,
+		.direct = s.ssao.ssao_direct,
 	};
-	const int ao_on = s.ssao.quality > 0 && s.ssao.intensity > 0.0f;
+	const int ao_on = s.ssao.ssao_quality > 0 && s.ssao.ssao_intensity > 0.0f;
 
 	s.bolt_count = 0;
 	s.table_count = 0;
@@ -4304,7 +4225,7 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 		if (fl_is_death_star_beam(snap, f) && s.mb_enabled) {
 			if (previous_f && fl_is_death_star_beam(s.mb_prev_snap, previous_f)) {
 				float previous_local[3];
-				XwaRemasterWorld_LocalI32(s.origin_world, previous_f->world_pos, previous_local);
+				AeronWorld_LocalI32(s.origin_world, previous_f->world_pos, previous_local);
 				fl_model_matrix(bw, previous_local, inst.prev_transform);
 				fl_apply_death_star_beam_scale(s.mb_prev_snap, inst.prev_transform);
 			} else {
@@ -4345,7 +4266,7 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 			 * gates — no craft / dead subsystems — return 0 and skip). */
 			if (s.glow_ok) {
 				XwaRemasterShip_SubmitEngineGlows(s.scene, prepared.mesh, model_matrix,
-												  XWA_AERON_METERS_TO_MODEL_UNITS, inst.mesh_table,
+											  AERON_OPT_UNITS_PER_METER, inst.mesh_table,
 												  f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(f),
 												  s.crows, s.camera_local, &s.glow_ref);
 			}
@@ -4445,7 +4366,7 @@ AeronTexture* XwaRemasterFlight_Render(AeronCommandBuffer* cmd, const XwaSnapsho
 			 * the PLAYER craft's state. */
 			if (s.glow_ok && player_f) {
 				XwaRemasterShip_SubmitEngineGlows(
-					s.scene, cockpit_mesh, m, XWA_AERON_METERS_TO_MODEL_UNITS, inst.mesh_table,
+					s.scene, cockpit_mesh, m, AERON_OPT_UNITS_PER_METER, inst.mesh_table,
 					player_f->eg_knockout_mask, XwaRemasterShip_EngineGlowScale(player_f), s.crows,
 					s.camera_local, &s.glow_ref);
 			}

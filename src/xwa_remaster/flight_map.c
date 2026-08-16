@@ -3,7 +3,7 @@
 #include "aeron/scene/draw_list2d.h"
 #include "xwa_remaster/color.h"
 #include "xwa_remaster/text.h"
-#include "xwa_remaster/world.h"
+#include "aeron/scene/world.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -86,7 +86,7 @@ static void map_argb_linear(uint32_t argb, float out[4]) {
 static void map_world_to_eye(const XwaFlightCamera* camera, const float world_to_eye[9],
 							 const int32_t world[3], float out[3]) {
 	float delta[3];
-	XwaRemasterWorld_DeltaI32(world, camera->world_pos, delta);
+	AeronWorld_DeltaI32(world, camera->world_pos, delta);
 	for (int row = 0; row < 3; row++) {
 		out[row] = world_to_eye[row * 3 + 0] * delta[0] + world_to_eye[row * 3 + 1] * delta[1] +
 				   world_to_eye[row * 3 + 2] * delta[2];

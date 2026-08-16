@@ -12,7 +12,8 @@
 #include "xwa_remaster/hud_cmd_math.h"
 #include "xwa_remaster/hud_layout.h"
 #include "xwa_remaster/ship.h"
-#include "xwa_remaster/world.h"
+#include "aeron/asset/opt_model.h"
+#include "aeron/scene/world.h"
 #include "xwa_remaster/xwa_remaster.h"
 
 #include <math.h>
@@ -237,7 +238,7 @@ static int cmd_submit_model(AeronCommandBuffer* cmd, XwaRemasterAssets* assets, 
 										  instance.mesh_table, 1.0f);
 		if (glow_ref) {
 			XwaRemasterShip_SubmitEngineGlows(
-				s_cmd.scene, mesh, transform, XWA_AERON_METERS_TO_MODEL_UNITS, instance.mesh_table,
+				s_cmd.scene, mesh, transform, AERON_OPT_UNITS_PER_METER, instance.mesh_table,
 				object->eg_knockout_mask, cmd_engine_glow_scale(object, snapshot->tick_index), NULL, NULL,
 				glow_ref);
 		}
@@ -428,7 +429,7 @@ static void cmd_add_particle_lights(const XwaSnapshot* snapshot, const float row
 		if (s_cmd.particle_light_id_count < XWA_SNAP_MAX_PARTICLE_EFFECTS)
 			s_cmd.particle_light_ids[s_cmd.particle_light_id_count++] = effect->stable_id;
 		float delta[3];
-		XwaRemasterWorld_LocalPoint(target->world_pos, effect->emitter_world_pos.base,
+		AeronWorld_LocalPointI32F32(target->world_pos, effect->emitter_world_pos.base,
 									effect->emitter_world_pos.offset, delta);
 		XwaShipPointLight* light = &s_cmd.point_candidates[s_cmd.point_candidate_count++];
 		for (int r = 0; r < 3; r++)

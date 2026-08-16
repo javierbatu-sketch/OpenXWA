@@ -24,6 +24,7 @@
 
 #include "aeron/render.h"
 #include "aeron/scene/scene3d.h"
+#include "aeron/scene/settings.h"
 #include "aeron/vfs.h"
 #include "xwa_remaster/assets.h"
 #include "xwa_runtime/snapshot/snapshot.h"
@@ -32,29 +33,9 @@
 extern "C" {
 #endif
 
-/* SSAO knobs loaded from mandatory remaster/config.yaml, then mutated live by
- * the debug inspector or user menu (applied on the next rendered
- * frame). The user menu persists only the quality selection.
- * radius/bias are view-space units (XWA world unit ~= 1/40.96 m). */
-typedef struct XwaFlightSsaoParams {
-	int quality; /* 0 = off, 1 = low (8-tap), 2 = high (16-tap + blur) */
-	float intensity;
-	float power;
-	float radius_view;
-	float bias_view;
-	float direct;
-	int debug_viz;
-	/* Screen-space radius clamp (fractions of NDC half-width; 0 = off).
-	 * min_screen_frac raises the effective sampling radius on distant surfaces
-	 * to remove the kernel-aliasing grid; max_screen_frac caps it on near
-	 * surfaces so the finite tap set stays dense. */
-	float min_screen_frac;
-	float max_screen_frac;
-	/* Per-pixel kernel-radius jitter [0,1]; breaks the discrete taps into
-	 * blur-smoothable noise so a large footprint does not resolve into
-	 * separate offset occlusions on near surfaces. 0 = off. */
-	float sample_jitter;
-} XwaFlightSsaoParams;
+/* Common scene settings are loaded from Aeron's flight profile, then mutated
+ * live by the debug inspector or user menu. Distances are native view units. */
+typedef AeronSceneSsaoSettings XwaFlightSsaoParams;
 
 int XwaRemasterFlight_InitConfig(AeronVfs* vfs);
 /* Returns the required shipped presentation baseline loaded by InitConfig. */
@@ -63,40 +44,13 @@ void XwaRemasterFlight_GetSsao(XwaFlightSsaoParams* out);
 void XwaRemasterFlight_SetSsao(const XwaFlightSsaoParams* in);
 void XwaRemasterFlight_GetSsaoDefault(XwaFlightSsaoParams* out);
 
-enum {
-	XWA_FLIGHT_SHADOWS_OFF = 0,
-	XWA_FLIGHT_SHADOWS_PCF = 1,
-};
-
-/* Global directional-shadow settings (`shadows:` in remaster/config.yaml). */
-typedef struct XwaFlightShadowParams {
-	int mode;
-	int atlas_size;
-	int cascade_count;
-	int fit_mode; /* AeronSceneShadowFitMode */
-	float max_distance;
-	float split_lambda;
-	int explicit_splits;
-	/* Normalized over [camera near, max_distance]; first cascade_count - 1 are active. */
-	float split_positions[3];
-	int filter_quality;
-	float filter_radius;
-	int contact_hardening;
-	float light_angular_radius_degrees; /* source half-angle */
-	float max_filter_radius;            /* atlas texels */
-	float pcss_min_filter_radius;       /* atlas texels */
-	float normal_bias_texels;           /* lateral receiver offset at grazing incidence */
-	float depth_bias_texels;            /* receiver comparison offset along the light */
-	float transition_fraction;
-	float distance_fade_fraction;
-	int debug_cascades;
-	int debug_atlas;
-	int debug_atlas_cascade; /* -1 = whole atlas, 0..3 = one cascade */
-} XwaFlightShadowParams;
+typedef AeronSceneShadowSettings XwaFlightShadowParams;
 
 void XwaRemasterFlight_GetShadows(XwaFlightShadowParams* out);
 void XwaRemasterFlight_SetShadows(const XwaFlightShadowParams* in);
 void XwaRemasterFlight_GetShadowsDefault(XwaFlightShadowParams* out);
+void XwaRemasterFlight_GetShadowAtlasDebug(int* enabled, int* cascade);
+void XwaRemasterFlight_SetShadowAtlasDebug(int enabled, int cascade);
 void XwaRemasterFlight_GetShadowStats(AeronSceneDirectionalShadowStats* out);
 
 /* Artificial ceiling light used only during the enclosed hangar scene.

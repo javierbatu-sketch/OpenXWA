@@ -4,6 +4,7 @@
 
 #include "aeron/aeron.h"
 #include "aeron/asset/flight_model.h"
+#include "aeron/asset/opt_model.h"
 #include "aeron/scene/billboard.h"
 #include "xwa_remaster/color.h"
 #include "xwa_remaster/glow_marks.h"
@@ -1200,9 +1201,9 @@ uint32_t XwaRemasterShip_CollectEngineGlowPointLights(const AeronSceneMesh* mesh
 		/* Classic gates: disabled emitters and small glows skip (raw
 		 * OPT dims; only LARGE engines — capitals — light their hull).
 		 * The classic light law does NOT consult damage knockouts. */
-		const float dim_x = g->dimensions.x * XWA_AERON_METERS_TO_MODEL_UNITS;
-		const float dim_y = g->dimensions.y * XWA_AERON_METERS_TO_MODEL_UNITS;
-		const float dim_z = g->dimensions.z * XWA_AERON_METERS_TO_MODEL_UNITS;
+		const float dim_x = g->dimensions.x * AERON_OPT_UNITS_PER_METER;
+		const float dim_y = g->dimensions.y * AERON_OPT_UNITS_PER_METER;
+		const float dim_z = g->dimensions.z * AERON_OPT_UNITS_PER_METER;
 		if (!g->enabled || (dim_x <= 2000.0f && dim_y <= 2000.0f)) {
 			continue;
 		}

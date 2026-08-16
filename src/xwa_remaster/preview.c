@@ -23,6 +23,10 @@
 
 #include "xwa_remaster/preview.h"
 
+#include "aeron/asset/opt_model.h"
+
+#include "aeron/asset/opt_model.h"
+
 #include "aeron/aeron.h"
 #include "aeron/scene/bloom.h"
 #include "aeron/scene/present.h"
@@ -63,7 +67,7 @@ static int preview_ensure(void) {
 		.color_format = AERON_TEXTURE_FORMAT_RGBA16_FLOAT,
 		.with_normal_rt = 1,
 		.sample_count = requested_samples,
-		.view_space_to_meters = 1.0f / 40.96f,
+		.view_space_to_meters = AERON_OPT_METERS_PER_UNIT,
 	});
 	if (!s.scene) {
 		Aeron_LogError("xwa.remaster", "preview: scene create failed");
@@ -146,28 +150,28 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 	XwaFlightSsaoParams ssao = { 0 };
 	XwaRemasterFlight_GetSsao(&ssao);
 	AeronScene_SetPost(s.scene, &(AeronScenePostDesc) {
-									.ssao_quality = ssao.quality,
-									.ssao_intensity = ssao.intensity,
-									.ssao_power = ssao.power,
-									.ssao_radius_view = ssao.radius_view,
-									.ssao_bias_view = ssao.bias_view,
-									.ssao_direct = ssao.direct,
-									.ssao_debug_viz = ssao.debug_viz,
-									.ssao_min_screen_frac = ssao.min_screen_frac,
-									.ssao_max_screen_frac = ssao.max_screen_frac,
-									.ssao_sample_jitter = ssao.sample_jitter,
+									.ssao_quality = ssao.ssao_quality,
+									.ssao_intensity = ssao.ssao_intensity,
+									.ssao_power = ssao.ssao_power,
+									.ssao_radius_view = ssao.ssao_radius_view,
+									.ssao_bias_view = ssao.ssao_bias_view,
+									.ssao_direct = ssao.ssao_direct,
+									.ssao_debug_viz = ssao.ssao_debug_viz,
+									.ssao_min_screen_frac = ssao.ssao_min_screen_frac,
+									.ssao_max_screen_frac = ssao.ssao_max_screen_frac,
+									.ssao_sample_jitter = ssao.ssao_sample_jitter,
 								});
 	int render_w;
 	int render_h;
 	AeronScene_RenderDims(s.scene, &render_w, &render_h);
 	const XwaShipAoParams ao = {
-		.intensity = ssao.intensity,
-		.power = ssao.power,
+		.intensity = ssao.ssao_intensity,
+		.power = ssao.ssao_power,
 		.rt_w = (float)render_w,
 		.rt_h = (float)render_h,
-		.direct = ssao.direct,
+		.direct = ssao.ssao_direct,
 	};
-	const int ao_on = ssao.quality > 0 && ssao.intensity > 0.0f;
+	const int ao_on = ssao.ssao_quality > 0 && ssao.ssao_intensity > 0.0f;
 
 	/* Eye-space lighting env: the engine's own preview light
 	 * (world-space dir_lights channel) rotated by this view's captured
@@ -190,7 +194,7 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 		inst.mesh = mesh;
 		inst.variant = (uint8_t)p->node_switch_index;
 		const float preview_scale = p->model_scale > 0.0f ? p->model_scale : 1.0f;
-		const float k = preview_scale * XWA_AERON_METERS_TO_MODEL_UNITS;
+		const float k = preview_scale * AERON_OPT_UNITS_PER_METER;
 		float* m = inst.transform;
 		m[0] = k * p->obj_basis[0];
 		m[1] = k * p->obj_basis[3];

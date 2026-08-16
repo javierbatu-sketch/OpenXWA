@@ -132,33 +132,33 @@ static void xwa_tool_ssao(int* open, void* user) {
 	XwaRemasterFlight_GetSsao(&p);
 	bool changed = false;
 
-	int quality = p.quality;
+	int quality = p.ssao_quality;
 	ImGui::RadioButton("Off", &quality, 0);
 	ImGui::SameLine();
 	ImGui::RadioButton("Low (8 taps)", &quality, 1);
 	ImGui::SameLine();
 	ImGui::RadioButton("High (16 taps + blur)", &quality, 2);
-	if (quality != p.quality) {
-		p.quality = quality;
+	if (quality != p.ssao_quality) {
+		p.ssao_quality = quality;
 		changed = true;
 	}
 
-	changed |= ImGui::SliderFloat("Intensity", &p.intensity, 0.0f, 1.0f, "%.2f");
-	changed |= ImGui::SliderFloat("Radius (view units)", &p.radius_view, 1.0f, 4096.0f, "%.1f",
+	changed |= ImGui::SliderFloat("Intensity", &p.ssao_intensity, 0.0f, 1.0f, "%.2f");
+	changed |= ImGui::SliderFloat("Radius (view units)", &p.ssao_radius_view, 1.0f, 4096.0f, "%.1f",
 								  ImGuiSliderFlags_Logarithmic);
 	ImGui::TextDisabled("XWA view unit ~= 2.4 cm. TIE's shipped calibration is 655\n"
 						"(~16 m, craft-scale cavity shading; TIE shows it as 0.01 in\n"
 						"its own km-scale view units). 16 ~= 0.4 m contact AO.");
-	changed |= ImGui::SliderFloat("Bias (view units)", &p.bias_view, 0.0f, 256.0f, "%.2f",
+	changed |= ImGui::SliderFloat("Bias (view units)", &p.ssao_bias_view, 0.0f, 256.0f, "%.2f",
 								  ImGuiSliderFlags_Logarithmic);
 	ImGui::TextDisabled("Self-occlusion rejection; keep ~ radius / 20 (TIE: 32.8).");
-	changed |= ImGui::SliderFloat("Power (contrast)", &p.power, 0.25f, 4.0f, "%.2f");
-	changed |= ImGui::SliderFloat("Direct-diffuse weight", &p.direct, 0.0f, 1.0f, "%.2f");
+	changed |= ImGui::SliderFloat("Power (contrast)", &p.ssao_power, 0.25f, 4.0f, "%.2f");
+	changed |= ImGui::SliderFloat("Direct-diffuse weight", &p.ssao_direct, 0.0f, 1.0f, "%.2f");
 	ImGui::TextDisabled("How much AO also occludes the direct sun diffuse\n"
 						"(0 = ambient-only, physically strict).");
-	bool viz = p.debug_viz != 0;
+	bool viz = p.ssao_debug_viz != 0;
 	if (ImGui::Checkbox("Debug viz (raw AO as grayscale)", &viz)) {
-		p.debug_viz = viz ? 1 : 0;
+		p.ssao_debug_viz = viz ? 1 : 0;
 		changed = true;
 	}
 
@@ -166,13 +166,13 @@ static void xwa_tool_ssao(int* open, void* user) {
 	ImGui::TextDisabled("Screen-space radius clamp. A world-space radius shrinks to\n"
 						"sub-texel on far hulls (kernel aliases into a grid) and over-\n"
 						"spreads on near ones. Fractions of NDC half-width; 0 = off.");
-	changed |= ImGui::SliderFloat("Min screen radius", &p.min_screen_frac, 0.0f, 0.05f, "%.4f");
+	changed |= ImGui::SliderFloat("Min screen radius", &p.ssao_min_screen_frac, 0.0f, 0.05f, "%.4f");
 	ImGui::TextDisabled("Footprint floor on distant surfaces (~ frac * ao_w texels).\n"
 						"Raise until the far grid disappears.");
-	changed |= ImGui::SliderFloat("Max screen radius", &p.max_screen_frac, 0.0f, 0.25f, "%.4f");
+	changed |= ImGui::SliderFloat("Max screen radius", &p.ssao_max_screen_frac, 0.0f, 0.25f, "%.4f");
 	ImGui::TextDisabled("Footprint ceiling on near surfaces; raise the base radius,\n"
 						"then lower this until the separated tap copies merge. 0 = off.");
-	changed |= ImGui::SliderFloat("Sample jitter", &p.sample_jitter, 0.0f, 1.0f, "%.2f");
+	changed |= ImGui::SliderFloat("Sample jitter", &p.ssao_sample_jitter, 0.0f, 1.0f, "%.2f");
 	ImGui::TextDisabled("Per-pixel radius jitter. Raise to dissolve the 'separate\n"
 						"shadows' from discrete taps into blur-smoothed noise; too\n"
 						"high adds grain. Free (one ALU hash). 0 = off.");
@@ -207,9 +207,9 @@ static void xwa_tool_shadows(int* open, void* user) {
 	XwaFlightShadowParams p;
 	XwaRemasterFlight_GetShadows(&p);
 	bool changed = false;
-	bool enabled = p.mode == XWA_FLIGHT_SHADOWS_PCF;
+	bool enabled = p.enabled != 0;
 	if (ImGui::Checkbox("Enabled", &enabled)) {
-		p.mode = enabled ? XWA_FLIGHT_SHADOWS_PCF : XWA_FLIGHT_SHADOWS_OFF;
+		p.enabled = enabled ? 1 : 0;
 		changed = true;
 	}
 	static const char* atlas_names[] = { "1024", "2048", "4096", "8192" };
@@ -218,9 +218,17 @@ static void xwa_tool_shadows(int* open, void* user) {
 		p.atlas_size = 1024 << atlas_index;
 		changed = true;
 	}
-	changed |= ImGui::SliderInt("Cascades", &p.cascade_count, 1, AERON_SCENE_SHADOW_MAX_CASCADES);
+	int cascade_count = (int)p.cascade_count;
+	if (ImGui::SliderInt("Cascades", &cascade_count, 1, AERON_SCENE_SHADOW_MAX_CASCADES)) {
+		p.cascade_count = (uint32_t)cascade_count;
+		changed = true;
+	}
 	static const char* fit_names[] = { "Stable sphere", "Frustum rectangle", "Scene-dependent PSSM" };
-	changed |= ImGui::Combo("Cascade fit", &p.fit_mode, fit_names, 3);
+	int fit_mode = (int)p.fit_mode;
+	if (ImGui::Combo("Cascade fit", &fit_mode, fit_names, 3)) {
+		p.fit_mode = (uint32_t)fit_mode;
+		changed = true;
+	}
 	changed |= ImGui::SliderFloat("Maximum distance", &p.max_distance, 4096.0f, 1048576.0f, "%.0f",
 								  ImGuiSliderFlags_Logarithmic);
 	bool explicit_splits = p.explicit_splits != 0;
@@ -242,7 +250,11 @@ static void xwa_tool_shadows(int* open, void* user) {
 	}
 	static const char* filter_names[] = { "Hard", "Low (3x3 PCF / 8-tap PCSS)",
 										  "Medium (5x5 PCF / 16-tap PCSS)", "High (7x7 PCF / 24-tap PCSS)" };
-	changed |= ImGui::Combo("Filter", &p.filter_quality, filter_names, 4);
+	int filter_quality = (int)p.filter_quality;
+	if (ImGui::Combo("Filter", &filter_quality, filter_names, 4)) {
+		p.filter_quality = (uint32_t)filter_quality;
+		changed = true;
+	}
 	changed |= ImGui::SliderFloat("Filter radius", &p.filter_radius, 0.5f, 3.0f, "%.2f texels");
 	bool contact_hardening = p.contact_hardening != 0;
 	if (ImGui::Checkbox("Contact-hardening PCSS", &contact_hardening)) {
@@ -270,21 +282,22 @@ static void xwa_tool_shadows(int* open, void* user) {
 		p.debug_cascades = debug_cascades ? 1 : 0;
 		changed = true;
 	}
-	bool debug_atlas = p.debug_atlas != 0;
+	int debug_atlas_value = 0;
+	int debug_atlas_cascade = -1;
+	XwaRemasterFlight_GetShadowAtlasDebug(&debug_atlas_value, &debug_atlas_cascade);
+	bool debug_atlas = debug_atlas_value != 0;
 	if (ImGui::Checkbox("Visualize shadow atlas", &debug_atlas)) {
-		p.debug_atlas = debug_atlas ? 1 : 0;
-		changed = true;
+		XwaRemasterFlight_SetShadowAtlasDebug(debug_atlas ? 1 : 0, debug_atlas_cascade);
 	}
 	if (!debug_atlas) {
 		ImGui::BeginDisabled();
 	}
 	static const char* atlas_view_names[] = { "Whole atlas", "Cascade 0", "Cascade 1", "Cascade 2",
 											  "Cascade 3" };
-	int atlas_view = p.debug_atlas_cascade + 1;
+	int atlas_view = debug_atlas_cascade + 1;
 	atlas_view = atlas_view < 0 ? 0 : (atlas_view > p.cascade_count ? p.cascade_count : atlas_view);
 	if (ImGui::Combo("Atlas view", &atlas_view, atlas_view_names, p.cascade_count + 1)) {
-		p.debug_atlas_cascade = atlas_view - 1;
-		changed = true;
+		XwaRemasterFlight_SetShadowAtlasDebug(debug_atlas ? 1 : 0, atlas_view - 1);
 	}
 	if (!debug_atlas) {
 		ImGui::EndDisabled();

@@ -3,7 +3,7 @@
 #include "aeron/aeron.h"
 #include "aeron/scene/billboard.h"
 #include "xwa_remaster/color.h"
-#include "xwa_remaster/world.h"
+#include "aeron/scene/world.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -116,7 +116,7 @@ static const XwaFlightObject* effect_find_owner(const XwaSnapshot* snapshot, uin
 
 static void effect_world_to_eye(const XwaRemasterEffectView* view, const int32_t world[3], float eye[3]) {
 	float delta[3];
-	XwaRemasterWorld_DeltaI32(world, view->origin_world, delta);
+	AeronWorld_DeltaI32(world, view->origin_world, delta);
 	const float x = delta[0];
 	const float y = delta[1];
 	const float z = delta[2];
@@ -134,7 +134,7 @@ static void effect_eye_to_scene(const XwaRemasterEffectView* view, const float e
 static void effect_point_to_eye(const XwaRemasterEffectView* view, const XwaPreciseWorldPoint* point,
 								float eye[3]) {
 	float delta[3];
-	XwaRemasterWorld_LocalPoint(view->origin_world, point->base, point->offset, delta);
+	AeronWorld_LocalPointI32F32(view->origin_world, point->base, point->offset, delta);
 	for (int r = 0; r < 3; r++)
 		eye[r] = view->origin_eye[r] + view->world_to_eye[r * 3] * delta[0] +
 				 view->world_to_eye[r * 3 + 1] * delta[1] + view->world_to_eye[r * 3 + 2] * delta[2];

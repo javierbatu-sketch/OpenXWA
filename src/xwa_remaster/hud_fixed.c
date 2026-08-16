@@ -7,7 +7,7 @@
 #include "xwa_remaster/hud_cmd.h"
 #include "xwa_remaster/hud_layout.h"
 #include "xwa_remaster/hud_text.h"
-#include "xwa_remaster/world.h"
+#include "aeron/scene/world.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -781,7 +781,7 @@ int XwaRemasterHudFixed_ProjectTargetArrow(const XwaSnapshot* snapshot, XwaHudPr
 			return 0;
 		const XwaFlightCamera* camera = &snapshot->flight_camera;
 		float delta[3];
-		XwaRemasterWorld_DeltaI32(target->world_pos, camera->world_pos, delta);
+		AeronWorld_DeltaI32(target->world_pos, camera->world_pos, delta);
 		float view[3];
 		for (int row = 0; row < 3; row++)
 			view[row] = camera->rows[row * 3] * delta[0] + camera->rows[row * 3 + 1] * delta[1] +
@@ -868,7 +868,7 @@ static int fixed_project_reticle(const XwaSnapshot* snapshot, XwaHudProfileIndex
 		const XwaFlightObject* player = fixed_player_object(snapshot, h);
 		if (player && player->has_mobj) {
 			float local[3];
-			XwaRemasterWorld_LocalI32(flight_view->origin_world, player->world_pos, local);
+			AeronWorld_LocalI32(flight_view->origin_world, player->world_pos, local);
 			for (int axis = 0; axis < 3; axis++)
 				local[axis] += player->rows[3 + axis] * (1000000.0f / 32768.0f);
 			XwaRemasterFlight_ProjectLocal(flight_view, local, &target_x, &target_y, NULL);

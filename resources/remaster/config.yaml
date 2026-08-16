@@ -127,51 +127,6 @@ presentation:
 texture_filtering:
   anisotropic: true
   max_anisotropy: 8.0
-ssao:
-  quality: 2
-  intensity: 1.0
-  power: 3.0
-  radius_view: 2048.0
-  bias_view: 0.0
-  direct: 1.0
-  debug_viz: false
-  # Screen-space radius clamp (fractions of NDC half-width; 0 = off). A
-  # world-space radius shrinks to sub-texel on distant hulls, where the kernel
-  # aliases into a grid. min_screen_frac raises the effective radius on far
-  # surfaces (footprint floor ~= frac * ao_w texels) to remove that grid;
-  # max_screen_frac caps it on near surfaces so the finite tap set stays dense.
-  min_screen_frac: 0.00
-  #max_screen_frac: 0.25
-  max_screen_frac: 0.1
-  # Per-pixel kernel-radius jitter [0,1]. Breaks the discrete taps into blur-
-  # smoothable noise so a large sampling footprint does not resolve into
-  # separate offset occlusions on near surfaces. 0 = off.
-  sample_jitter: 0.2
-shadows:
-  mode: "pcf"
-  atlas_size: 4096
-  cascade_count: 4
-  # stable, frustum, or scene_dependent. Scene-dependent PSSM focuses each
-  # cascade on relevant visible receivers while retaining off-screen casters.
-  fit_mode: "scene_dependent"
-  max_distance: 262144.0
-  split_lambda: 0.80
-  # When enabled, these normalized positions replace split_lambda.
-  explicit_splits: true
-  split_1: 0.005
-  split_2: 0.035
-  split_3: 0.180
-  filter_quality: 2
-  filter_radius: 2.0
-  contact_hardening: true
-  light_angular_radius_degrees: 0.6
-  max_filter_radius: 8.0
-  pcss_min_filter_radius: 0.75
-  normal_bias_texels: 2.0
-  depth_bias_texels: 1.0
-  transition_fraction: 0.10
-  distance_fade_fraction: 0.10
-  debug_cascades: false
 hangar_lighting:
   # Artificial ceiling source for the enclosed hangar. The launch-reference
   # backdrop receives shadows but does not cast into this light.

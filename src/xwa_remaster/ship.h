@@ -20,8 +20,6 @@
 extern "C" {
 #endif
 
-#define XWA_AERON_METERS_TO_MODEL_UNITS (65536.0f / 1600.0f)
-
 /* Mirror the classic engine's live processed-OPT set published in the
  * snapshot. Reconciliation performs every disk read, conversion and GPU
  * upload before scene rendering; MeshForName is lookup-only. */

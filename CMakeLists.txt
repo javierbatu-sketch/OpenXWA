@@ -260,7 +260,6 @@ add_library(xwa_remaster STATIC
     src/xwa_remaster/sky_stars.c
     src/xwa_remaster/assets.c
     src/xwa_remaster/text.c
-    src/xwa_remaster/world.c
 )
 if(XWA_ENABLE_DEBUG_UI)
     target_sources(xwa_remaster PRIVATE
@@ -328,6 +327,9 @@ target_link_libraries(xwa
 target_include_directories(xwa PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/xwa_app)
 
+set(XWA_AERON_FLIGHT_PROFILE
+    "${CMAKE_CURRENT_SOURCE_DIR}/aeron/config/flight_scene.yaml")
+
 set(XWA_VERSION "0.0.0-dev" CACHE STRING "OpenXWA application version")
 target_compile_definitions(xwa_core PRIVATE
     OPENXWA_VERSION="${XWA_VERSION}"
@@ -366,6 +368,11 @@ if(APPLE)
         HEADER_FILE_ONLY TRUE
         MACOSX_PACKAGE_LOCATION Resources/resources/remaster)
 
+    target_sources(xwa PRIVATE "${XWA_AERON_FLIGHT_PROFILE}")
+    set_source_files_properties("${XWA_AERON_FLIGHT_PROFILE}" PROPERTIES
+        HEADER_FILE_ONLY TRUE
+        MACOSX_PACKAGE_LOCATION Resources/resources/aeron)
+
     set(XWA_MACOS_SHADER_OUTPUTS ${AERON_SHADER_OUTPUTS} ${XWA_SHADER_OUTPUTS})
     target_sources(xwa PRIVATE ${XWA_MACOS_SHADER_OUTPUTS})
     set_source_files_properties(${XWA_MACOS_SHADER_OUTPUTS} PROPERTIES
@@ -395,6 +402,17 @@ if(APPLE)
     )
     install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixupMacBundle.cmake")
 else()
+    add_custom_target(xwa_aeron_flight_profile
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:xwa>/resources/aeron"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${XWA_AERON_FLIGHT_PROFILE}"
+            "$<TARGET_FILE_DIR:xwa>/resources/aeron/flight_scene.yaml"
+        DEPENDS "${XWA_AERON_FLIGHT_PROFILE}"
+        COMMENT "Staging Aeron flight scene profile for OpenXWA"
+        VERBATIM
+    )
+    add_dependencies(xwa xwa_aeron_flight_profile)
     add_custom_command(TARGET xwa POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_CURRENT_SOURCE_DIR}/resources

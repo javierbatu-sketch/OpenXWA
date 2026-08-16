@@ -250,7 +250,7 @@ void XwaRemaster_GetVideoOptions(XwaModernVideoOptions* out) {
 	XwaRemasterFlight_GetShadows(&shadows);
 	XwaRemasterFlight_GetMotionBlur(&motion_blur);
 	XwaRemasterFlight_GetTemporal(&temporal);
-	out->ssao_quality = (XwaModernSsaoQuality)ssao.quality;
+	out->ssao_quality = (XwaModernSsaoQuality)ssao.ssao_quality;
 	out->shadow_quality =
 		shadows.atlas_size >= RM_SHADOW_ATLAS_HIGH ? XWA_MODERN_SHADOW_HIGH : XWA_MODERN_SHADOW_STANDARD;
 	out->fsr_upscaling = XwaRemaster_FromTemporalMode(temporal.mode);
@@ -272,7 +272,7 @@ void XwaRemaster_SetVideoOptions(const XwaModernVideoOptions* options) {
 		return;
 	}
 	XwaRemasterFlight_GetSsao(&ssao);
-	ssao.quality = options->ssao_quality;
+	ssao.ssao_quality = options->ssao_quality;
 	XwaRemasterFlight_SetSsao(&ssao);
 
 	XwaRemasterFlight_GetShadows(&shadows);

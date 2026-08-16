@@ -3,6 +3,7 @@
 #include "xwa_remaster/hyperspace.h"
 
 #include "aeron/aeron.h"
+#include "aeron/asset/opt_model.h"
 #include "xwa_remaster/color.h"
 #include "xwa_remaster/flight.h"
 
@@ -307,7 +308,7 @@ static void hyper_emit_streak(HyperStreakVertex* out, const XwaHyperspaceStreak*
 	float model[16];
 	XwaRemasterFlight_ObjectModelMatrixForCameraDelta(&synthetic, NULL, 0, model);
 	/* The shared model matrix expects meter-space geometry; streak seeds retain XWA model units. */
-	const float model_units_to_meters = 1600.0f / 65536.0f;
+	const float model_units_to_meters = AERON_OPT_METERS_PER_UNIT;
 	const float half = (float)streak->half_width * model_units_to_meters;
 	extent *= model_units_to_meters;
 	const float corners[4][3] = {
