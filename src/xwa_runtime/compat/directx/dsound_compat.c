@@ -115,14 +115,22 @@ static float DSoundCompat_GainFromMillibels(int millibels) {
 	return powf(10.0f, (float)millibels / 2000.0f);
 }
 
-static float DSoundCompat_PanFromMillibels(int millibels) {
-	if (millibels < -10000) {
-		millibels = -10000;
+/* DirectSound leaves one channel at full volume and attenuates the opposite
+ * channel by the signed hundredths-of-a-decibel pan value. */
+static float DSoundCompat_BalanceFromMillibels(int millibels) {
+	if (millibels <= -10000) {
+		return -1.0f;
 	}
-	if (millibels > 10000) {
-		millibels = 10000;
+	if (millibels >= 10000) {
+		return 1.0f;
 	}
-	return (float)millibels / 10000.0f;
+	if (millibels < 0) {
+		return powf(10.0f, (float)millibels / 2000.0f) - 1.0f;
+	}
+	if (millibels > 0) {
+		return 1.0f - powf(10.0f, (float)-millibels / 2000.0f);
+	}
+	return 0.0f;
 }
 
 static float DSoundCompat_Pitch(const DSBuffer* buffer) {
@@ -666,8 +674,8 @@ static int DSoundBuffer_Play(void* self, uint32_t reserved1, uint32_t priority, 
 		b->voice =
 			Aeron_AudioVoicePlay3D(b->clip, gain, pitch, b->looping, b->pos3, b->min_dist, b->max_dist);
 	} else {
-		b->voice =
-			Aeron_AudioVoicePlay(b->clip, gain, DSoundCompat_PanFromMillibels(b->pan_mb), pitch, b->looping);
+		b->voice = Aeron_AudioVoicePlay(b->clip, gain, DSoundCompat_BalanceFromMillibels(b->pan_mb), pitch,
+										b->looping);
 	}
 	return DS_OK;
 }
@@ -701,7 +709,7 @@ static int DSoundBuffer_SetPan(void* self, int32_t pan) {
 	DSBuffer* b = (DSBuffer*)self;
 	b->pan_mb = pan;
 	if (b->voice) {
-		Aeron_AudioVoiceSetPan(b->voice, DSoundCompat_PanFromMillibels(pan));
+		Aeron_AudioVoiceSetPan(b->voice, DSoundCompat_BalanceFromMillibels(pan));
 	}
 	return DS_OK;
 }
