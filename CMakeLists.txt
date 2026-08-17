@@ -327,8 +327,8 @@ target_link_libraries(xwa
 target_include_directories(xwa PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/src/xwa_app)
 
-set(XWA_AERON_FLIGHT_PROFILE
-    "${CMAKE_CURRENT_SOURCE_DIR}/aeron/config/flight_scene.yaml")
+set(XWA_AERON_SCENE3D_DEFAULTS
+    "${CMAKE_CURRENT_SOURCE_DIR}/aeron/config/scene3d_defaults.yaml")
 
 set(XWA_VERSION "0.0.0-dev" CACHE STRING "OpenXWA application version")
 target_compile_definitions(xwa_core PRIVATE
@@ -368,8 +368,8 @@ if(APPLE)
         HEADER_FILE_ONLY TRUE
         MACOSX_PACKAGE_LOCATION Resources/resources/remaster)
 
-    target_sources(xwa PRIVATE "${XWA_AERON_FLIGHT_PROFILE}")
-    set_source_files_properties("${XWA_AERON_FLIGHT_PROFILE}" PROPERTIES
+    target_sources(xwa PRIVATE "${XWA_AERON_SCENE3D_DEFAULTS}")
+    set_source_files_properties("${XWA_AERON_SCENE3D_DEFAULTS}" PROPERTIES
         HEADER_FILE_ONLY TRUE
         MACOSX_PACKAGE_LOCATION Resources/resources/aeron)
 
@@ -402,17 +402,17 @@ if(APPLE)
     )
     install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixupMacBundle.cmake")
 else()
-    add_custom_target(xwa_aeron_flight_profile
+    add_custom_target(xwa_aeron_scene3d_defaults
         COMMAND ${CMAKE_COMMAND} -E make_directory
             "$<TARGET_FILE_DIR:xwa>/resources/aeron"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${XWA_AERON_FLIGHT_PROFILE}"
-            "$<TARGET_FILE_DIR:xwa>/resources/aeron/flight_scene.yaml"
-        DEPENDS "${XWA_AERON_FLIGHT_PROFILE}"
-        COMMENT "Staging Aeron flight scene profile for OpenXWA"
+            "${XWA_AERON_SCENE3D_DEFAULTS}"
+            "$<TARGET_FILE_DIR:xwa>/resources/aeron/scene3d_defaults.yaml"
+        DEPENDS "${XWA_AERON_SCENE3D_DEFAULTS}"
+        COMMENT "Staging Aeron Scene3D defaults for OpenXWA"
         VERBATIM
     )
-    add_dependencies(xwa xwa_aeron_flight_profile)
+    add_dependencies(xwa xwa_aeron_scene3d_defaults)
     add_custom_command(TARGET xwa POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_CURRENT_SOURCE_DIR}/resources

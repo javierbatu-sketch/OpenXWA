@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/* Common scene settings are loaded from Aeron's flight profile, then mutated
+/* Common scene settings are loaded from Aeron's Scene3D defaults, then mutated
  * live by the debug inspector or user menu. Distances are native view units. */
 typedef AeronSceneSsaoSettings XwaFlightSsaoParams;
 

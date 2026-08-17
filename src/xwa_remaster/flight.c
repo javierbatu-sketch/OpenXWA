@@ -673,21 +673,22 @@ int XwaRemasterFlight_InitConfig(AeronVfs* vfs) {
 		return 1;
 	}
 
-	static const char* scene_path = "aeron/flight_scene.yaml";
-	AeronConfigFile* scene_cf = NULL;
+	static const char* scene_defaults_path = "aeron/scene3d_defaults.yaml";
+	AeronConfigFile* scene_defaults = NULL;
 	AeronConfigError scene_error;
-	if (!vfs || !AeronConfigFile_LoadYaml(vfs, AERON_VFS_ROOT_RESOURCE, scene_path, &scene_cf)) {
-		Aeron_LogError("xwa.remaster", "required Aeron flight profile unavailable or invalid: %s",
-					   scene_path);
+	if (!vfs ||
+		!AeronConfigFile_LoadYaml(vfs, AERON_VFS_ROOT_RESOURCE, scene_defaults_path, &scene_defaults)) {
+		Aeron_LogError("xwa.remaster", "required Aeron Scene3D defaults unavailable or invalid: %s",
+					   scene_defaults_path);
 		return 0;
 	}
-	if (!AeronSceneSettings_Load(AeronConfigFile_Root(scene_cf), &s.ssao, &s.shadows, &scene_error)) {
-		Aeron_LogError("xwa.remaster", "%s:%d:%d: %s", scene_path, scene_error.line,
+	if (!AeronSceneSettings_Load(AeronConfigFile_Root(scene_defaults), &s.ssao, &s.shadows, &scene_error)) {
+		Aeron_LogError("xwa.remaster", "%s:%d:%d: %s", scene_defaults_path, scene_error.line,
 					   scene_error.column, scene_error.message);
-		AeronConfigFile_Destroy(scene_cf);
+		AeronConfigFile_Destroy(scene_defaults);
 		return 0;
 	}
-	AeronConfigFile_Destroy(scene_cf);
+	AeronConfigFile_Destroy(scene_defaults);
 
 	static const char* path = "remaster/config.yaml";
 	AeronConfigFile* cf = NULL;
