@@ -2,6 +2,7 @@
 
 #include "xwa_remaster/glow_marks.h"
 
+#include "aeron/asset/opt_model.h"
 #include "aeron/scene/mesh_overlay.h"
 
 #include <math.h>
@@ -131,8 +132,11 @@ static void build_projected_geometry(GlowGeometryCache* cache, const XwaGlowMark
 		for (int triangle_vertex_index = 0; triangle_vertex_index < 3; triangle_vertex_index++) {
 			float relative_position[3];
 			for (int coordinate_axis = 0; coordinate_axis < 3; coordinate_axis++) {
+				/* Aeron retains flight-model vertices in metres, while the
+				 * classic projector parameters remain in native OPT units. */
 				relative_position[coordinate_axis] =
-					triangle_vertices[triangle_vertex_index]->pos[coordinate_axis] -
+					triangle_vertices[triangle_vertex_index]->pos[coordinate_axis] *
+						AERON_OPT_UNITS_PER_METER -
 					mark->center[coordinate_axis];
 			}
 			plane_distances[triangle_vertex_index] = relative_position[0] * mark->normal[0] +
