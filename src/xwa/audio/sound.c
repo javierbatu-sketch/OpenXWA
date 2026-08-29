@@ -805,9 +805,8 @@ uint8_t Sound_DuplicateOrCreateHardwareBuffer(IDirectSoundBuffer* sourceBuffer,
 	destinationDesc.dwBufferBytes = destinationBufferBytes;
 	destinationDesc.lpwfxFormat = &sourceFormat;
 	destinationDesc.dwSize = sourceCaps.dwSize;
-	destinationDesc.dwFlags = DSBCAPS_STATIC_XWA | DSBCAPS_LOCHARDWARE_XWA | DSBCAPS_CTRL3D_XWA |
-							  DSBCAPS_CTRLFREQUENCY_XWA | DSBCAPS_CTRLVOLUME_XWA |
-							  DSBCAPS_MUTE3DATMAXDISTANCE_XWA;
+	destinationDesc.dwFlags = DSBCAPS_STATIC | DSBCAPS_LOCHARDWARE | DSBCAPS_CTRL3D | DSBCAPS_CTRLFREQUENCY |
+							  DSBCAPS_CTRLVOLUME | DSBCAPS_MUTE3DATMAXDISTANCE;
 	{
 		IDirectSound* device = (IDirectSound*)g_directSound;
 		createResult = device->lpVtbl->CreateSoundBuffer(device, &destinationDesc, &destinationBuffer, NULL);
@@ -872,10 +871,10 @@ uint8_t Sound_DuplicateOrCreateHardwareBuffer(IDirectSoundBuffer* sourceBuffer,
 
 		playbackBuffer->lpVtbl->GetCaps(playbackBuffer, &sourceCaps);
 		if (sourceBuffer->lpVtbl->Lock(sourceBuffer, 0, sourceBufferBytes, &sourceAudio, &sourceAudioBytes,
-									   NULL, &unusedAudioBytes, DSBLOCK_ENTIREBUFFER_XWA) >= 0) {
+									   NULL, &unusedAudioBytes, DSBLOCK_ENTIREBUFFER) >= 0) {
 			int destinationLockResult = playbackBuffer->lpVtbl->Lock(
 				playbackBuffer, 0, sourceBufferBytes, &destinationAudio, &destinationAudioBytes, NULL,
-				&unusedAudioBytes, DSBLOCK_ENTIREBUFFER_XWA);
+				&unusedAudioBytes, DSBLOCK_ENTIREBUFFER);
 			if (destinationLockResult < 0) {
 				sourceBuffer->lpVtbl->Unlock(sourceBuffer, sourceAudio, sourceAudioBytes, NULL, 0);
 			} else {

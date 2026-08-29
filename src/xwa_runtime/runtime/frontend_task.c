@@ -1,6 +1,6 @@
 #include "xwa_runtime/runtime/frontend_task.h"
 
-#include "aeron/dx5/compat.h"
+#include "aeron/compat/host.h"
 #include "xwa/audio/music.h"
 #include "xwa/config/game_config.h"
 #include "xwa/frontend/concourse.h"

@@ -6,8 +6,8 @@
  * and execute buffer, and enumerates texture formats. Recovered from the original
  * std3D_* functions (0x594063, 0x59453F, 0x598C92, 0x598E49, ...). */
 
-#include "xwa_runtime/compat/directx/d3d.h"
-#include "xwa_runtime/compat/directx/ddraw.h"
+#include "aeron/compat/d3d.h"
+#include "aeron/compat/ddraw.h"
 #include "xwa/render/renderer.h"
 
 #include <stdint.h>

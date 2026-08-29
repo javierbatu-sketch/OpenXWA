@@ -1,7 +1,7 @@
 #ifndef XWA_AUDIO_SOUND_H
 #define XWA_AUDIO_SOUND_H
 
-#include "xwa_runtime/compat/directx/dsound_compat.h"
+#include "aeron/compat/dsound.h"
 
 #include <stddef.h>
 #include <stdint.h>

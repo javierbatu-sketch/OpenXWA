@@ -1,5 +1,6 @@
 #include "xwa/input/forcefeedback.h"
 
+#include "aeron/compat/dinput.h"
 #include "xwa/config/game_config.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/mission/mission.h"
@@ -8,7 +9,6 @@
 #include "xwa/flight/player/player.h"
 #include "xwa/render/renderer.h"
 #include "xwa/util/debug.h"
-#include "xwa_runtime/compat/directx/dinput.h"
 #ifdef XWA_MODERN
 #include "xwa_runtime/timing/modern_flight_timing.h"
 #endif
@@ -61,8 +61,8 @@ uint8_t g_forceFeedbackSuppressEffect7RestartOnce;
 static void ForceFeedback_StartEffect(int effectNum);
 int ForceFeedback_ReportError(int hresult);
 int ForceFeedback_InitEffect(void);
-int XWA_DXAPI ForceFeedback_EnumDeviceCallback(const DIDEVICEINSTANCEA* deviceInstance, void* context);
-int XWA_DXAPI ForceFeedback_EnumEffectsNoopCallback(const DIEFFECTINFOA* effectInfo, void* context);
+int AERON_DXAPI ForceFeedback_EnumDeviceCallback(const DIDEVICEINSTANCEA* deviceInstance, void* context);
+int AERON_DXAPI ForceFeedback_EnumEffectsNoopCallback(const DIEFFECTINFOA* effectInfo, void* context);
 
 // FUNCTION: XWA 0x435490
 uint8_t ForceFeedback_CheckDevice(void) {
@@ -116,7 +116,7 @@ uint8_t ForceFeedback_CheckDevice(void) {
 }
 
 // FUNCTION: XWA 0x4355D0
-int XWA_DXAPI ForceFeedback_EnumDeviceCallback(const DIDEVICEINSTANCEA* deviceInstance, void* context) {
+int AERON_DXAPI ForceFeedback_EnumDeviceCallback(const DIDEVICEINSTANCEA* deviceInstance, void* context) {
 	IDirectInputDeviceA* baseDevice;
 	DxGuid guidInstance;
 	HRESULT hr;
@@ -782,7 +782,7 @@ int ForceFeedback_InitEffect(void) {
 }
 
 // FUNCTION: XWA 0x436A20
-int XWA_DXAPI ForceFeedback_EnumEffectsNoopCallback(const DIEFFECTINFOA* effectInfo, void* context) {
+int AERON_DXAPI ForceFeedback_EnumEffectsNoopCallback(const DIEFFECTINFOA* effectInfo, void* context) {
 	(void)effectInfo;
 	(void)context;
 	return DIENUM_STOP;

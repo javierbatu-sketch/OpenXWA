@@ -1,13 +1,15 @@
 #include "xwa/frontend/frontend_input.h"
 
+#include "aeron/compat/mmsystem.h"
 #include "xwa/config/game_config.h"
-#include "xwa_runtime/compat/winmm/joystick.h"
+#include "xwa_runtime/input/winmm_joystick_provider.h"
 
 #include <string.h>
 
-typedef MMRESULT(XWA_WINMMAPI* JoyGetPosExFunc)(uint32_t deviceId, JOYINFOEX* joyInfo);
-typedef MMRESULT(XWA_WINMMAPI* JoyGetDevCapsFunc)(uint32_t deviceId, JOYCAPSA* joyCaps, uint32_t joyCapsSize);
-typedef uint32_t(XWA_WINMMAPI* JoyGetNumDevsFunc)(void);
+typedef MMRESULT(AERON_WINMMAPI* JoyGetPosExFunc)(uint32_t deviceId, JOYINFOEX* joyInfo);
+typedef MMRESULT(AERON_WINMMAPI* JoyGetDevCapsFunc)(uint32_t deviceId, JOYCAPSA* joyCaps,
+													uint32_t joyCapsSize);
+typedef uint32_t(AERON_WINMMAPI* JoyGetNumDevsFunc)(void);
 
 // GLOBAL: XWA 0x5A92A4
 JoyGetPosExFunc g_joyGetPosEx = joyGetPosEx;

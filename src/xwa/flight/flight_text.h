@@ -1,8 +1,8 @@
 #ifndef XWA_FLIGHT_FLIGHT_TEXT_H
 #define XWA_FLIGHT_FLIGHT_TEXT_H
 
+#include "aeron/compat/ddraw.h"
 #include "xwa/assets/sprite_texture.h"
-#include "xwa_runtime/compat/directx/ddraw.h"
 
 #include <stdint.h>
 

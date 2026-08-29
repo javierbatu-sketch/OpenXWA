@@ -3,14 +3,14 @@
 
 #include <stdint.h>
 
-#include "xwa_runtime/compat/directx/dinput.h"
+#include "aeron/compat/dinput.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Recovered DirectInput keyboard/mouse layer. The devices are created and polled
- * through the DirectInput compatibility shim (compat/directx/dinput.h), backed by
+ * through the DirectInput compatibility shim (aeron/compat/dinput.h), backed by
  * Aeron input. Consumers read the immediate keyboard state array + cached modifier
  * flags, drain buffered keys via DInput_GetKey/HasKeyReady, and read the DIMOUSESTATE
  * populated by DInput_PollMouseState. */

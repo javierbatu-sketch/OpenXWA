@@ -806,7 +806,7 @@ static int std3D_Log2Floor(int n) {
 }
 
 // FUNCTION: XWA 0x5995F0
-static HRESULT XWA_DXAPI std3D_EnumTextureFormats(DDSURFACEDESC* pddsd, void* lParam) {
+static HRESULT AERON_DXAPI std3D_EnumTextureFormats(DDSURFACEDESC* pddsd, void* lParam) {
 	Std3DTexFmt* fmt;
 	int blueShift;
 	uint32_t mask;
@@ -937,9 +937,9 @@ static HRESULT XWA_DXAPI std3D_EnumTextureFormats(DDSURFACEDESC* pddsd, void* lP
 /* --- device enumeration -------------------------------------------------- */
 
 // FUNCTION: XWA 0x5991CC
-static HRESULT XWA_DXAPI std3D_EnumDevicesCallback(DxGuid* lpGuid, char* lpDeviceDesc, char* lpDeviceName,
-												   D3DDEVICEDESC* lpHWDesc, D3DDEVICEDESC* lpHELDesc,
-												   void* lpUserArg) {
+static HRESULT AERON_DXAPI std3D_EnumDevicesCallback(DxGuid* lpGuid, char* lpDeviceDesc, char* lpDeviceName,
+													 D3DDEVICEDESC* lpHWDesc, D3DDEVICEDESC* lpHELDesc,
+													 void* lpUserArg) {
 	Std3DDevice* dev;
 	(void)lpUserArg;
 

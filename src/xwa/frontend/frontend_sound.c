@@ -1,4 +1,6 @@
 #include "xwa/frontend/frontend_sound.h"
+#include "aeron/compat/dsound.h"
+#include "aeron/compat/win_types.h"
 #include "aeron/log.h"
 #include "xwa/assets/file_io.h"
 #include "xwa/audio/music.h"
@@ -8,26 +10,24 @@
 #include "xwa/frontend/frontend_wave_stream.h"
 #include "xwa/util/memory.h"
 #include "xwa/util/time.h"
-#include "xwa_runtime/compat/directx/dsound_compat.h"
-#include "xwa_runtime/compat/directx/dx_win_types.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-enum { DSERR_BUFFERLOST_XWA = (int)0x88780096u };
+enum { DSERR_BUFFERLOST = (int)0x88780096u };
 
 typedef struct FrontendDirectSound FrontendDirectSound;
 typedef struct FrontendDirectSoundVtbl {
 	void* QueryInterface;
 	void* AddRef;
-	int(XWA_DXAPI* Release)(FrontendDirectSound* self);
-	int(XWA_DXAPI* CreateSoundBuffer)(FrontendDirectSound* self, const DSBufferDesc* desc, void** buffer,
-									  void* outer);
+	int(AERON_DXAPI* Release)(FrontendDirectSound* self);
+	int(AERON_DXAPI* CreateSoundBuffer)(FrontendDirectSound* self, const DSBufferDesc* desc, void** buffer,
+										void* outer);
 	void* GetCaps;
-	int(XWA_DXAPI* DuplicateSoundBuffer)(FrontendDirectSound* self, IDirectSoundBuffer* source,
-										 IDirectSoundBuffer** duplicate);
-	int(XWA_DXAPI* SetCooperativeLevel)(FrontendDirectSound* self, void* hwnd, uint32_t level);
+	int(AERON_DXAPI* DuplicateSoundBuffer)(FrontendDirectSound* self, IDirectSoundBuffer* source,
+										   IDirectSoundBuffer** duplicate);
+	int(AERON_DXAPI* SetCooperativeLevel)(FrontendDirectSound* self, void* hwnd, uint32_t level);
 } FrontendDirectSoundVtbl;
 
 struct FrontendDirectSound {
@@ -169,7 +169,7 @@ void DirectSound_StopBuffer(void* buffer) {
 	}
 
 	vtbl = *(void***)buffer;
-	((int(XWA_DXAPI*)(void*))vtbl[18])(buffer);
+	((int(AERON_DXAPI*)(void*))vtbl[18])(buffer);
 }
 
 // FUNCTION: XWA 0x539560
@@ -179,9 +179,9 @@ int DirectSound_LockBuffer(IDirectSoundBuffer* buffer, uint32_t offset, uint32_t
 
 	if (buffer != NULL) {
 		vtbl = *(void***)buffer;
-		if (((int(XWA_DXAPI*)(IDirectSoundBuffer*, uint32_t, uint32_t, void**, uint32_t*, void**, uint32_t*,
-							  uint32_t))vtbl[11])(buffer, offset, bytes, audioPtr1, audioBytes1, audioPtr2,
-												  audioBytes2, 0) >= 0) {
+		if (((int(AERON_DXAPI*)(IDirectSoundBuffer*, uint32_t, uint32_t, void**, uint32_t*, void**, uint32_t*,
+								uint32_t))vtbl[11])(buffer, offset, bytes, audioPtr1, audioBytes1, audioPtr2,
+													audioBytes2, 0) >= 0) {
 			return 1;
 		}
 	}
@@ -195,7 +195,7 @@ void DirectSound_UnlockBuffer(IDirectSoundBuffer* buffer, void* audioPtr1, uint3
 
 	if (buffer != NULL) {
 		vtbl = *(void***)buffer;
-		((int(XWA_DXAPI*)(IDirectSoundBuffer*, void*, uint32_t, void*, uint32_t))vtbl[19])(
+		((int(AERON_DXAPI*)(IDirectSoundBuffer*, void*, uint32_t, void*, uint32_t))vtbl[19])(
 			buffer, audioPtr1, audioBytes1, audioPtr2, audioBytes2);
 	}
 }
@@ -507,7 +507,7 @@ int DirectSound_CreateWaveBuffer(void* directSound, IDirectSoundBuffer** outBuff
 	desc.dwFlags = create3DFlags != 0 ? 194u : 234u;
 #ifdef XWA_MODERN
 	// The compatibility shim needs an explicit marker to distinguish this streaming buffer.
-	desc.dwFlags |= (uint32_t)DSBCAPS_GETCURRENTPOSITION2_XWA;
+	desc.dwFlags |= (uint32_t)DSBCAPS_GETCURRENTPOSITION2;
 #endif
 	desc.dwBufferBytes = bufferBytes;
 	if (format == NULL) {
@@ -571,14 +571,14 @@ unsigned int DirectSound_CreateStreamingWaveBuffer(void* directSound, IDirectSou
 			void* lockPtr1;
 			void* lockPtr2;
 			uint32_t lockBytes2;
-			if (((int(XWA_DXAPI*)(IDirectSoundBuffer*, uint32_t, uint32_t, void**, uint32_t*, void**,
-								  uint32_t*, uint32_t))(*outBuffer)
+			if (((int(AERON_DXAPI*)(IDirectSoundBuffer*, uint32_t, uint32_t, void**, uint32_t*, void**,
+									uint32_t*, uint32_t))(*outBuffer)
 					 ->lpVtbl->Lock)(*outBuffer, 0, initialBytes, &lockPtr1, &lockBytes1, &lockPtr2,
 									 &lockBytes2, 0) >= 0) {
 				unsigned int copyBytes = lockBytes1 < initialBytes ? lockBytes1 : initialBytes;
 				memcpy(samples, lockPtr1, copyBytes);
 				copyBytes = lockBytes1 < initialBytes ? lockBytes1 : initialBytes;
-				((int(XWA_DXAPI*)(IDirectSoundBuffer*, void*, uint32_t, void*, uint32_t))(*outBuffer)
+				((int(AERON_DXAPI*)(IDirectSoundBuffer*, void*, uint32_t, void*, uint32_t))(*outBuffer)
 					 ->lpVtbl->Unlock)(*outBuffer, lockPtr1, copyBytes, lockPtr2, 0);
 				Mem_Free(header);
 				return initialBytes;
@@ -621,7 +621,7 @@ int FrontendSound_InitDirectSound(void* hwnd) {
 
 	// DEVIATION: the original probes A3D (Aureal) then DirectSoundCreate; the
 	// port routes straight to the Aeron-backed DirectSound shim.
-	if (DSoundCompat_Create(&g_frontendDirectSound) < 0) {
+	if (DirectSoundCreate(NULL, &g_frontendDirectSound, NULL) < 0) {
 		return 0;
 	}
 
@@ -632,7 +632,7 @@ int FrontendSound_InitDirectSound(void* hwnd) {
 	// needed (DEVIATION: no hardware-cap query, no primary format set).
 	memset(&primaryDesc, 0, sizeof(primaryDesc));
 	primaryDesc.dwSize = 20;
-	primaryDesc.dwFlags = DSBCAPS_PRIMARYBUFFER_XWA;
+	primaryDesc.dwFlags = DSBCAPS_PRIMARYBUFFER;
 	if (device->lpVtbl->CreateSoundBuffer(device, &primaryDesc, (void**)&g_frontendPrimarySoundBuffer, NULL) <
 			0 ||
 		device->lpVtbl->SetCooperativeLevel(device, hwnd, 2) < 0) {
@@ -868,7 +868,7 @@ int FrontendSound_PlayUISound(char* soundName, int allowRestartExisting, int loo
 
 		loopFlag = loop == 1;
 		playResult = playBuffer->lpVtbl->Play(playBuffer, 0, 0, (uint32_t)loopFlag);
-		if (playResult == DSERR_BUFFERLOST_XWA) {
+		if (playResult == DSERR_BUFFERLOST) {
 			playResult = DirectSound_ReloadWaveBuffer(g_frontendSoundBuffers[bufferIndex].buffer,
 													  g_frontendSoundBuffers[bufferIndex].fileName);
 			if (playResult == 1) {

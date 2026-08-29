@@ -1,6 +1,7 @@
 #ifndef XWA_RENDER_RENDERER_H
 #define XWA_RENDER_RENDERER_H
 
+#include "aeron/compat/d3d.h"
 #include "xwa/assets/opt_model.h"
 #include "xwa/assets/sprite_texture.h"
 #include "xwa/flight/object/object.h"
@@ -8,7 +9,6 @@
 #include "xwa/math/vec3i.h"
 #include "xwa/util/color.h"
 #include "xwa/util/memory.h"
-#include "xwa_runtime/compat/directx/d3d.h"
 
 #include <stddef.h>
 #include <stdint.h>

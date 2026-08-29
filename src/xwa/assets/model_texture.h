@@ -1,8 +1,8 @@
 #ifndef XWA_ASSETS_MODEL_TEXTURE_H
 #define XWA_ASSETS_MODEL_TEXTURE_H
 
+#include "aeron/compat/ddraw.h"
 #include "xwa/assets/sprite_texture.h"
-#include "xwa_runtime/compat/directx/ddraw.h"
 
 #include "xwa/assets/opt_model.h"
 

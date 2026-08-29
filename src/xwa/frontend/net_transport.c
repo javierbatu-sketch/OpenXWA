@@ -102,7 +102,8 @@ int Net_OpenDirectPlaySession(XwaGuid appGuid, int hostFlag, const char* session
 int Net_CreateDirectPlayPlayer(const char* localPlayerInfo, const char* localPlayerName);
 int Net_RefreshPlayerRoster(void);
 int* Net_WaitForAppPacket(int* outPlayerId, int* outPacketType, int timeoutSeconds);
-HRESULT XWA_DXAPI DirectPlayCreate(const XwaGuid* providerGuid, XwaDirectPlay4** outDirectPlay, void* outer);
+HRESULT AERON_DXAPI DirectPlayCreate(const XwaGuid* providerGuid, XwaDirectPlay4** outDirectPlay,
+									 void* outer);
 #endif
 
 // FLAGS: /O2 /G6

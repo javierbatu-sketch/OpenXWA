@@ -1,10 +1,10 @@
 #ifndef XWA_FRONTEND_FRONTEND_DISPLAY_H
 #define XWA_FRONTEND_FRONTEND_DISPLAY_H
 
+#include "aeron/compat/ddraw.h"
 #include "aeron/render.h"
 #include "aeron/surface.h"
 #include "xwa/frontend/frontend_rect.h"
-#include "xwa_runtime/compat/directx/ddraw.h"
 
 #ifdef __cplusplus
 extern "C" {

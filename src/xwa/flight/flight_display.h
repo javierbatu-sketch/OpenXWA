@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "xwa_runtime/compat/directx/ddraw.h"
+#include "aeron/compat/ddraw.h"
 
 #ifdef __cplusplus
 extern "C" {

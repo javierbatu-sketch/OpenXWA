@@ -36,8 +36,8 @@ typedef void* FrontendTextHdc;
 typedef void* FrontendTextGdiObject;
 typedef void* FrontendTextHfont;
 
-typedef HRESULT(XWA_DXAPI* FrontendTextSurfaceGetDcFunc)(IDirectDrawSurface*, FrontendTextHdc*);
-typedef HRESULT(XWA_DXAPI* FrontendTextSurfaceReleaseDcFunc)(IDirectDrawSurface*, FrontendTextHdc);
+typedef HRESULT(AERON_DXAPI* FrontendTextSurfaceGetDcFunc)(IDirectDrawSurface*, FrontendTextHdc*);
+typedef HRESULT(AERON_DXAPI* FrontendTextSurfaceReleaseDcFunc)(IDirectDrawSurface*, FrontendTextHdc);
 
 #if defined(_WIN32)
 __declspec(dllimport) FrontendTextHfont __stdcall

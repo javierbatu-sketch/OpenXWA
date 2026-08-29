@@ -4,6 +4,7 @@
 #include "xwa/flight/flight_map.h"
 #include "xwa/flight/hangar.h"
 
+#include "aeron/compat/mmsystem.h"
 #include "aeron/log.h"
 #include "xwa/assets/flight_model.h"
 #include "xwa/assets/model_bounds.h"
@@ -54,7 +55,7 @@
 #include "xwa/util/memory.h"
 #include "xwa/util/random.h"
 #include "xwa/util/time.h"
-#include "xwa_runtime/compat/winmm/joystick.h"
+#include "xwa_runtime/input/winmm_joystick_provider.h"
 #ifdef XWA_MODERN
 #include "xwa_runtime/input/mouse_flight.h"
 #include "xwa_runtime/timing/modern_flight_timing.h"

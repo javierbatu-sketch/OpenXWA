@@ -1,7 +1,8 @@
 #include "xwa_runtime/runtime/port.h"
 
 #include "aeron/aeron.h"
-#include "aeron/dx5/compat.h"
+#include "aeron/compat/ddraw.h"
+#include "aeron/compat/host.h"
 #include "xwa/assets/file_io.h"
 #include "xwa/assets/linez.h"
 #include "xwa/assets/opt_model.h"
@@ -20,14 +21,14 @@
 #include "xwa/render/renderer.h"
 #include "xwa/util/memory.h"
 #include "xwa/xwa_options.h"
-#include "xwa_runtime/compat/directx/ddraw.h"
-#include "xwa_runtime/compat/directx/dinput.h"
 #include "xwa_runtime/config/modern_controller_options_screen.h"
 #include "xwa_runtime/config/modern_input_options.h"
 #include "xwa_runtime/config/modern_video_options.h"
 #include "xwa_runtime/input/controller_mapping.h"
 #include "xwa_runtime/input/input_bridge.h"
 #include "xwa_runtime/input/mouse_flight.h"
+#include "xwa_runtime/input/rumble_provider.h"
+#include "xwa_runtime/input/winmm_joystick_provider.h"
 #include "xwa_runtime/runtime/flight_task.h"
 #include "xwa_runtime/runtime/frontend_task.h"
 #include "xwa_runtime/runtime/movie_task.h"
@@ -112,6 +113,8 @@ int XwaPort_Init(void) {
 		.presentation_rect = XwaPort_Dx5PresentationRect,
 		.presented = XwaPort_Dx5Presented,
 	});
+	XwaWinmmJoystick_RegisterSource();
+	XwaRumble_RegisterProvider();
 	XwaTime_Reset();
 	File_SetVfs(Aeron_GetVfs());
 	if (SpriteResource_LoadCatalog("Resdata.txt") != 0) {
@@ -228,7 +231,7 @@ static void XwaPort_TickBody(int32_t delta_us) {
 		input = Aeron_InputSnapshot();
 		/* Capture this host frame's keyboard/mouse edges into the DirectInput shim so
 		 * buffered key events are not lost on frames the fixed-step flight loop skips. */
-		DInputShim_Pump();
+		AeronCompat_Update(0);
 		/* Same for mouse flight: fold this host frame's mouse deltas into its
 		 * accumulator so motion on unsampled frames is not lost. */
 		XwaMouseFlight_Pump();
@@ -249,7 +252,7 @@ static void XwaPort_TickBody(int32_t delta_us) {
 		} else {
 			/* A click inside the window re-captures a released pointer. The shim
 			 * already dropped this frame's buttons -- capture was still off when
-			 * DInputShim_Pump ran -- so the restoring click is not also delivered
+			 * AeronCompat_Update ran -- so the restoring click is not also delivered
 			 * to the flight sim. */
 			if (g_xwaPortMouseCaptureSuspended && input != 0 && input->has_focus &&
 				input->mouse.inside_content && input->mouse.pressed_buttons != 0u) {
@@ -339,7 +342,7 @@ void XwaPort_Tick(int32_t delta_us) {
 void XwaPort_PausedFrame(void) {
 	XwaPort_ApplyClassicFlightRenderingPolicy();
 	if (XwaFlightTask_IsActive()) {
-		DInputShim_PumpSuppressed();
+		AeronCompat_Update(1);
 	}
 	XwaMovieTask_ReapFinished();
 	if (XwaMovieTask_IsActive()) {

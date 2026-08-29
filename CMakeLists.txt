@@ -38,7 +38,7 @@ option(XWA_BUILD_TOOLS "Build OpenXWA and Aeron asset/developer tools" ON)
 set(AERON_BUILD_TOOLS ${XWA_BUILD_TOOLS})
 set(AERON_ENABLE_VIDEO ON)
 set(AERON_HOST_TOOLS_ONLY OFF)
-set(AERON_ENABLE_DX5_COMPAT ON)
+set(AERON_ENABLE_COMPAT ON)
 # In-game debug UI (ImGui overlay, backquote to toggle).
 option(XWA_ENABLE_DEBUG_UI "Build the Aeron ImGui debug overlay" ON)
 set(AERON_DEBUG_UI ${XWA_ENABLE_DEBUG_UI})
@@ -191,9 +191,6 @@ set(XWA_RECOVERED_SOURCES
 )
 
 set(XWA_RUNTIME_SOURCES
-    src/xwa_runtime/compat/directx/dinput_compat.c
-    src/xwa_runtime/compat/directx/dsound_compat.c
-    src/xwa_runtime/compat/winmm/joystick_compat.c
     src/xwa_runtime/config/modern_input_options.c
     src/xwa_runtime/config/modern_controller_options_screen.c
     src/xwa_runtime/config/modern_input_options_screen.c
@@ -204,6 +201,8 @@ set(XWA_RUNTIME_SOURCES
     src/xwa_runtime/hooks/orientation_hook.c
     src/xwa_runtime/input/input_bridge.c
     src/xwa_runtime/input/controller_mapping.c
+    src/xwa_runtime/input/rumble_provider.c
+    src/xwa_runtime/input/winmm_joystick_provider.c
     src/xwa_runtime/input/mouse_flight.c
     src/xwa_runtime/runtime/flight_task.c
     src/xwa_runtime/runtime/frontend_task.c
@@ -306,7 +305,7 @@ target_include_directories(xwa_core
 target_link_libraries(xwa_core
     PUBLIC
         aeron
-        aeron_dx5
+        aeron_compat
         aeron_video
 )
 
@@ -573,6 +572,8 @@ set(XWA_FORMAT_HEADERS
     src/xwa_runtime/runtime/frontend_task.h
     src/xwa_runtime/timing/host_clock.h
     src/xwa_runtime/input/input_bridge.h
+    src/xwa_runtime/input/rumble_provider.h
+    src/xwa_runtime/input/winmm_joystick_provider.h
     src/xwa_runtime/input/controller_mapping.h
     src/xwa_runtime/input/mouse_flight.h
     src/xwa_runtime/timing/modern_flight_timing.h
@@ -583,14 +584,7 @@ set(XWA_FORMAT_HEADERS
     src/xwa_runtime/snapshot/snapshot.h
     src/xwa_runtime/snapshot/snapshot_flight_map.h
     src/xwa_runtime/snapshot/snapshot_hud.h
-    src/xwa_runtime/compat/directx/d3d.h
-    src/xwa_runtime/compat/directx/ddraw.h
-    src/xwa_runtime/compat/directx/ddraw_compat_internal.h
-    src/xwa_runtime/compat/directx/dinput.h
-    src/xwa_runtime/compat/directx/dsound_compat.h
-    src/xwa_runtime/compat/directx/dx_win_types.h
     src/xwa_runtime/compat/middleware_crt.h
-    src/xwa_runtime/compat/winmm/joystick.h
     src/xwa_app/host_config.h
     src/xwa_app/setup.h
     src/xwa/util/byte_order.h
