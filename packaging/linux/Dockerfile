@@ -202,7 +202,7 @@ RUN mkdir -p /build/package/openxwa-linux-x86_64/licenses \
     && cp /build/xwa/OpenXWA /build/package/openxwa-linux-x86_64/ \
     && cp /build/xwa/shaders/*.spv \
         /build/package/openxwa-linux-x86_64/shaders/ \
-    && cp -a /src/resources /build/package/openxwa-linux-x86_64/ \
+    && cp -a /build/xwa/resources /build/package/openxwa-linux-x86_64/ \
     && cp /src/README.md \
         /build/package/openxwa-linux-x86_64/README.md \
     && cp /opt/xwa-licenses/SDL3.txt \
@@ -235,6 +235,7 @@ RUN test -f /build/package/openxwa-linux-x86_64/shaders/hyperspace_streak.vert.s
     && test -f /build/package/openxwa-linux-x86_64/shaders/hyperspace_streak.frag.spv \
     && test -f /build/package/openxwa-linux-x86_64/shaders/hyperspace_tunnel.vert.spv \
     && test -f /build/package/openxwa-linux-x86_64/shaders/hyperspace_tunnel.frag.spv \
+    && test -f /build/package/openxwa-linux-x86_64/resources/aeron/scene3d_defaults.yaml \
     && test -f /build/package/openxwa-linux-x86_64/resources/remaster/config.yaml \
     && file /build/package/openxwa-linux-x86_64/OpenXWA \
     && env -u LD_LIBRARY_PATH ldd /build/package/openxwa-linux-x86_64/OpenXWA \

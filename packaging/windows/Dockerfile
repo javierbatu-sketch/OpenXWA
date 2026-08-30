@@ -240,7 +240,7 @@ RUN mkdir -p /build/package/openxwa-windows-x86_64/licenses \
     && cp /build/xwa/OpenXWA.exe /build/package/openxwa-windows-x86_64/ \
     && cp /build/xwa/shaders/*.dxil /build/xwa/shaders/*.spv \
         /build/package/openxwa-windows-x86_64/shaders/ \
-    && cp -a /src/resources /build/package/openxwa-windows-x86_64/ \
+    && cp -a /build/xwa/resources /build/package/openxwa-windows-x86_64/ \
     && cp /src/README.md \
         /build/package/openxwa-windows-x86_64/README.md \
     && cp /opt/xwa-licenses/SDL3.txt \
@@ -277,6 +277,7 @@ RUN test -f /build/package/openxwa-windows-x86_64/shaders/hyperspace_streak.vert
     && test -f /build/package/openxwa-windows-x86_64/shaders/hyperspace_tunnel.frag.dxil \
     && test -f /build/package/openxwa-windows-x86_64/shaders/hyperspace_tunnel.vert.spv \
     && test -f /build/package/openxwa-windows-x86_64/shaders/hyperspace_tunnel.frag.spv \
+    && test -f /build/package/openxwa-windows-x86_64/resources/aeron/scene3d_defaults.yaml \
     && test -f /build/package/openxwa-windows-x86_64/resources/remaster/config.yaml \
     && x86_64-w64-mingw32-objdump -p \
         /build/package/openxwa-windows-x86_64/OpenXWA.exe \
