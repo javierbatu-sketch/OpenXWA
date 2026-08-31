@@ -221,6 +221,7 @@ bool XwaRemasterOptMesh_Build(AeronVfs* vfs, const char* basename,
 				.emissive = true,
 				.alpha_overrides = alpha_overrides,
 				.alpha_override_count = alpha_override_count,
+				.max_atlas_size = 8192,
 			},
 			out, &build_error);
 	free(bytes);
