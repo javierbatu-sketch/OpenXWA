@@ -147,5 +147,85 @@ int main(void) {
         printf("PASS: DAT type-25 LZMA decodificado correctamente\n");
     }
 
+
+    {
+        /*
+         * Un bloque BC3 de 4x4.
+         * Todos los p?xeles deben resultar rojo opaco.
+         */
+        static const uint8_t bc3_data[16] = {
+            0xff, 0xff, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+
+            0x00, 0xf8, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        };
+
+        enum {
+            bc3_header_size = 44,
+            bc3_payload_size = bc3_header_size + sizeof bc3_data,
+            bc3_record_size = 18 + bc3_payload_size
+        };
+
+        uint8_t bc3_record[bc3_record_size];
+        memset(bc3_record, 0, sizeof bc3_record);
+
+        put_u16(bc3_record + 0, 25);
+        put_u16(bc3_record + 2, 4);
+        put_u16(bc3_record + 4, 4);
+        put_u16(bc3_record + 12, 9);
+        put_u32(bc3_record + 14, bc3_payload_size);
+
+        uint8_t* bc3_payload = bc3_record + 18;
+
+        put_u32(bc3_payload + 8, bc3_header_size);
+
+        /* XWAU: color_count = 2 significa BC3. */
+        put_u32(bc3_payload + 40, 2);
+
+        memcpy(
+            bc3_payload + bc3_header_size,
+            bc3_data,
+            sizeof bc3_data);
+
+        Xwa2dFrame bc3_frame;
+        char bc3_error[256] = { 0 };
+
+        if (!Xwa2d_DecodeDatSprite(
+                bc3_record,
+                sizeof bc3_record,
+                &bc3_frame,
+                bc3_error,
+                sizeof bc3_error)) {
+            fprintf(
+                stderr,
+                "FAIL: OpenXWA rechaza DAT type-25 BC3: %s\n",
+                bc3_error);
+            return 1;
+        }
+
+        if (!bc3_frame.rgba) {
+            fprintf(stderr, "FAIL: BC3 no produjo pixels RGBA\n");
+            return 1;
+        }
+
+        for (int i = 0; i < 16; i++) {
+            const uint8_t* pixel = bc3_frame.rgba + i * 4;
+
+            if (pixel[0] != 255 ||
+                pixel[1] != 0 ||
+                pixel[2] != 0 ||
+                pixel[3] != 255) {
+                fprintf(stderr, "FAIL: salida BC3 RGBA incorrecta\n");
+                free(bc3_frame.rgba);
+                return 1;
+            }
+        }
+
+        free(bc3_frame.rgba);
+
+        printf("PASS: DAT type-25 BC3 decodificado correctamente\n");
+    }
+
     return 0;
 }
