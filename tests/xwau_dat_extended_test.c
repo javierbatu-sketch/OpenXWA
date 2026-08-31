@@ -393,5 +393,100 @@ int main(void) {
         printf("PASS: DAT type-25 BC7 decodificado correctamente\n");
     }
 
+    {
+        /*
+         * Regresion DAT clasico:
+         * type 25 con paleta normal y color_count > 3
+         * debe seguir usando el decoder retail original.
+         */
+        enum {
+            classic_header_size = 44,
+            classic_color_count = 4,
+            classic_palette_size = classic_color_count * 3,
+            classic_rows_offset =
+                classic_header_size + classic_palette_size,
+            classic_pixel_size = 2,
+            classic_payload_size =
+                classic_rows_offset + classic_pixel_size,
+            classic_record_size =
+                18 + classic_payload_size
+        };
+
+        uint8_t classic_record[classic_record_size];
+        memset(classic_record, 0, sizeof classic_record);
+
+        put_u16(classic_record + 0, 25);
+        put_u16(classic_record + 2, 1);
+        put_u16(classic_record + 4, 1);
+        put_u16(classic_record + 12, 12);
+        put_u32(
+            classic_record + 14,
+            classic_payload_size);
+
+        uint8_t* classic_payload =
+            classic_record + 18;
+
+        put_u32(
+            classic_payload + 4,
+            classic_header_size);
+
+        put_u32(
+            classic_payload + 8,
+            classic_rows_offset);
+
+        put_u32(
+            classic_payload + 40,
+            classic_color_count);
+
+        uint8_t* palette =
+            classic_payload + classic_header_size;
+
+        /* color 2 = RGB(10, 20, 30) */
+        palette[6] = 10;
+        palette[7] = 20;
+        palette[8] = 30;
+
+        uint8_t* pixel =
+            classic_payload + classic_rows_offset;
+
+        pixel[0] = 2;
+        pixel[1] = 200;
+
+        Xwa2dFrame classic_frame;
+        char classic_error[256] = { 0 };
+
+        if (!Xwa2d_DecodeDatSprite(
+                classic_record,
+                sizeof classic_record,
+                &classic_frame,
+                classic_error,
+                sizeof classic_error)) {
+            fprintf(
+                stderr,
+                "FAIL: DAT clasico type-25 rechazado: %s\n",
+                classic_error);
+            return 1;
+        }
+
+        if (!classic_frame.rgba ||
+            classic_frame.rgba[0] != 10 ||
+            classic_frame.rgba[1] != 20 ||
+            classic_frame.rgba[2] != 30 ||
+            classic_frame.rgba[3] != 200) {
+
+            fprintf(
+                stderr,
+                "FAIL: regresion DAT clasico type-25\n");
+
+            free(classic_frame.rgba);
+            return 1;
+        }
+
+        free(classic_frame.rgba);
+
+        printf(
+            "PASS: DAT clasico type-25 conserva decoder retail\n");
+    }
+
     return 0;
 }
