@@ -542,6 +542,99 @@ done:
     clean_test_root();
     return ok;
 }
+static int test_frontend_corrupt_user_hd_does_not_fallback(void) {
+    static const uint8_t red_rgb[3] = { 255, 0, 0 };
+    static const uint8_t green_bgra[4] = { 0, 255, 0, 255 };
+    static const uint8_t corrupt_hd[] = { 'b', 'a', 'd' };
+    uint8_t original_bmp[66];
+    uint8_t asset_hd_dat[124];
+    Xwa2dFrameSet frames = { 0 };
+    char error[256] = { 0 };
+    XwaRemasterOriginal2dLoadStatus status;
+    int ok = 0;
+
+    if (!prepare_frontend_roots())
+        goto done;
+
+    build_bmp(original_bmp, red_rgb);
+    build_dat(asset_hd_dat, green_bgra);
+
+    if (!write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT.BMP",
+            original_bmp,
+            sizeof original_bmp) ||
+        !write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT_HD.dat",
+            asset_hd_dat,
+            sizeof asset_hd_dat) ||
+        !write_bytes(
+            TEST_USER_ROOT,
+            "FRONT_HD.dat",
+            corrupt_hd,
+            sizeof corrupt_hd))
+        goto done;
+
+    status = load_frontend(&frames, error, sizeof error);
+    if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+        fprintf(
+            stderr,
+            "FAIL frontend-corrupt-user-hd: corrupt USER FRONT_HD.dat "
+            "was silently hidden by lower-priority fallback\n");
+        goto done;
+    }
+
+    ok = 1;
+
+done:
+    Xwa2dFrameSet_Free(&frames);
+    clean_test_root();
+    return ok;
+}
+
+static int test_frontend_corrupt_asset_hd_does_not_fallback(void) {
+    static const uint8_t red_rgb[3] = { 255, 0, 0 };
+    static const uint8_t corrupt_hd[] = { 'b', 'a', 'd' };
+    uint8_t original_bmp[66];
+    Xwa2dFrameSet frames = { 0 };
+    char error[256] = { 0 };
+    XwaRemasterOriginal2dLoadStatus status;
+    int ok = 0;
+
+    if (!prepare_frontend_roots())
+        goto done;
+
+    build_bmp(original_bmp, red_rgb);
+
+    if (!write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT.BMP",
+            original_bmp,
+            sizeof original_bmp) ||
+        !write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT_HD.dat",
+            corrupt_hd,
+            sizeof corrupt_hd))
+        goto done;
+
+    status = load_frontend(&frames, error, sizeof error);
+    if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+        fprintf(
+            stderr,
+            "FAIL frontend-corrupt-asset-hd: corrupt ASSET FRONT_HD.dat "
+            "was silently hidden by original fallback\n");
+        goto done;
+    }
+
+    ok = 1;
+
+done:
+    Xwa2dFrameSet_Free(&frames);
+    clean_test_root();
+    return ok;
+}
 static int test_frontend_hd_dat_uses_dat_read_limit(void) {
     static const uint8_t green_bgra[4] = { 0, 255, 0, 255 };
     uint8_t user_hd_dat[124];
@@ -594,6 +687,15 @@ int main(void) {
         ++failures;
     else
         printf("PASS: frontend ASSET *_HD.dat preferred over lower-priority resources\n");
+    if (!test_frontend_corrupt_user_hd_does_not_fallback())
+        ++failures;
+    else
+        printf("PASS: corrupt frontend USER *_HD.dat is not silently hidden\n");
+
+    if (!test_frontend_corrupt_asset_hd_does_not_fallback())
+        ++failures;
+    else
+        printf("PASS: corrupt frontend ASSET *_HD.dat is not silently hidden\n");
     if (!test_frontend_hd_dat_uses_dat_read_limit())
         ++failures;
     else
