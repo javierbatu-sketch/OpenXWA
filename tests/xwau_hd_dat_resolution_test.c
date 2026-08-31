@@ -11,6 +11,8 @@
 #define TEST_GROUP_ID 42
 #define TEST_SPRITE_ID 7
 #define TEST_ROOT "xwau_hd_dat_test_assets"
+#define TEST_ASSET_ROOT TEST_ROOT "/asset"
+#define TEST_USER_ROOT TEST_ROOT "/user"
 
 struct AeronVfs {
     const char* asset_root;
@@ -175,6 +177,29 @@ static size_t build_dat(uint8_t out[124], const uint8_t bgra[4]) {
     return 124;
 }
 
+static size_t build_bmp(uint8_t out[66], const uint8_t rgb[3]) {
+    memset(out, 0, 66);
+
+    out[0] = 'B';
+    out[1] = 'M';
+    put_u32(out + 2, 66);
+    put_u32(out + 10, 62);
+    put_u32(out + 14, 40);
+    put_u32(out + 18, 1);
+    put_u32(out + 22, 1);
+    put_u16(out + 26, 1);
+    put_u16(out + 28, 8);
+    put_u32(out + 34, 4);
+    put_u32(out + 46, 2);
+
+    out[58] = rgb[2];
+    out[59] = rgb[1];
+    out[60] = rgb[0];
+    out[61] = 0;
+
+    out[62] = 1;
+    return 66;
+}
 static int write_bytes(
     const char* root,
     const char* name,
@@ -203,6 +228,11 @@ static void clean_test_root(void) {
     remove(TEST_ROOT "/RESDATA.TXT");
     remove(TEST_ROOT "/TEST.DAT");
     remove(TEST_ROOT "/TEST_HD.DAT");
+    remove(TEST_ASSET_ROOT "/FRONT.BMP");
+    remove(TEST_ASSET_ROOT "/FRONT_HD.dat");
+    remove(TEST_USER_ROOT "/FRONT_HD.dat");
+    rmdir(TEST_ASSET_ROOT);
+    rmdir(TEST_USER_ROOT);
     rmdir(TEST_ROOT);
 }
 
@@ -218,6 +248,44 @@ static int prepare_root(void) {
         sizeof("TEST.DAT\n") - 1);
 }
 
+static int prepare_frontend_roots(void) {
+    clean_test_root();
+
+    if (mkdir(TEST_ROOT, 0700) != 0 && errno != EEXIST)
+        return 0;
+    if (mkdir(TEST_ASSET_ROOT, 0700) != 0 && errno != EEXIST)
+        return 0;
+    if (mkdir(TEST_USER_ROOT, 0700) != 0 && errno != EEXIST)
+        return 0;
+
+    return 1;
+}
+
+static XwaRemasterOriginal2dLoadStatus load_frontend(
+    Xwa2dFrameSet* frames,
+    char* error,
+    size_t error_size) {
+    struct AeronVfs vfs = {
+        .asset_root = TEST_ASSET_ROOT,
+        .user_root = TEST_USER_ROOT
+    };
+    XwaRemasterOriginal2d* reader =
+        XwaRemasterOriginal2d_Create((AeronVfs*)&vfs);
+    XwaRemasterOriginal2dLoadStatus status;
+
+    if (!reader)
+        return XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
+
+    status = XwaRemasterOriginal2d_LoadFrontend(
+        reader,
+        "FRONT.BMP",
+        frames,
+        error,
+        error_size);
+
+    XwaRemasterOriginal2d_Destroy(reader);
+    return status;
+}
 static XwaRemasterOriginal2dLoadStatus load_group(
     Xwa2dFrameSet* frames,
     char* error,
@@ -373,8 +441,61 @@ done:
     return ok;
 }
 
+static int test_frontend_user_hd_preferred(void) {
+    static const uint8_t red_rgb[3] = { 255, 0, 0 };
+    static const uint8_t green_bgra[4] = { 0, 255, 0, 255 };
+    uint8_t original_bmp[66];
+    uint8_t user_hd_dat[124];
+    Xwa2dFrameSet frames = { 0 };
+    char error[256] = { 0 };
+    int ok = 0;
+
+    if (!prepare_frontend_roots())
+        goto done;
+
+    build_bmp(original_bmp, red_rgb);
+    build_dat(user_hd_dat, green_bgra);
+
+    if (!write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT.BMP",
+            original_bmp,
+            sizeof original_bmp) ||
+        !write_bytes(
+            TEST_USER_ROOT,
+            "FRONT_HD.dat",
+            user_hd_dat,
+            sizeof user_hd_dat))
+        goto done;
+
+    if (load_frontend(&frames, error, sizeof error) !=
+        XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+        fprintf(stderr, "FAIL frontend-user-hd: load failed: %s\n", error);
+        goto done;
+    }
+
+    if (!frame_is_rgba(&frames, 0, 255, 0, 255)) {
+        fprintf(
+            stderr,
+            "FAIL frontend-user-hd: expected USER FRONT_HD.dat (green), "
+            "but original frontend resource won\n");
+        goto done;
+    }
+
+    ok = 1;
+
+done:
+    Xwa2dFrameSet_Free(&frames);
+    clean_test_root();
+    return ok;
+}
 int main(void) {
     int failures = 0;
+
+    if (!test_frontend_user_hd_preferred())
+        ++failures;
+    else
+        printf("PASS: frontend USER *_HD.dat preferred over original resource\n");
 
     if (!test_hd_preferred())
         ++failures;
