@@ -1,0 +1,16 @@
+name: XWAU OPT Atlas Test
+
+on:
+  push:
+    branches:
+      - xwau-001-opt-atlas
+
+jobs:
+  opt-atlas-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify OpenXWA OPT atlas request
+        run: python3 tests/xwau_opt_atlas_test.py
