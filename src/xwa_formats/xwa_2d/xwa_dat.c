@@ -86,6 +86,40 @@ int Xwa2d_DecodeDatSprite(const uint8_t* record, size_t record_size, Xwa2dFrame*
 	uint32_t color_offset = xwa2d_u32(payload + 4);
 	uint32_t rows_offset = xwa2d_u32(payload + 8);
 	uint32_t color_count = xwa2d_u32(payload + 40);
+
+    if (type == 25 && color_count == 0) {
+        if (rows_offset >= payload_size)
+            return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
+
+        const size_t pixel_count = (size_t)width * (size_t)height;
+
+        if (pixel_count > SIZE_MAX / 4u ||
+            (size_t)(payload_size - rows_offset) != pixel_count * 4u)
+            return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
+
+        const uint8_t* bgra = payload + rows_offset;
+        uint8_t* rgba = (uint8_t*)malloc(pixel_count * 4u);
+
+        if (!rgba)
+            return xwa2d_fail(error, error_size, "DAT sprite allocation failed");
+
+        for (size_t i = 0; i < pixel_count; i++) {
+            rgba[4 * i] = bgra[4 * i + 2];
+            rgba[4 * i + 1] = bgra[4 * i + 1];
+            rgba[4 * i + 2] = bgra[4 * i];
+            rgba[4 * i + 3] = bgra[4 * i + 3];
+        }
+
+        out->rgba = rgba;
+        out->width = width;
+        out->height = height;
+        out->sprite_id = xwa2d_u16(record + 12);
+        out->anchor_x = xwa2d_i32(payload + 24);
+        out->anchor_y = xwa2d_i32(payload + 28);
+
+        return 1;
+    }
+
 	if (!color_count || color_count > 256 || color_offset > payload_size || rows_offset >= payload_size ||
 		3u * color_count > payload_size - color_offset)
 		return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
