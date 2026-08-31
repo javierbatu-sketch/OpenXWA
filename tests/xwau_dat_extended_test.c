@@ -76,5 +76,76 @@ int main(void) {
     free(frame.rgba);
 
     printf("PASS: DAT type-25 BGRA decodificado correctamente\n");
+
+    {
+        static const uint8_t lzma_data[] = {
+            0x5d, 0x00, 0x00, 0x10, 0x00,
+            0x00, 0x0f, 0x05, 0x55, 0xf5, 0x25, 0xb9,
+            0x0b, 0x5e, 0x40, 0x92, 0xf8, 0xf0, 0xff,
+            0xff, 0x09, 0x20, 0x00, 0x00
+        };
+
+        enum {
+            lzma_header_size = 44,
+            lzma_payload_size = lzma_header_size + sizeof lzma_data,
+            lzma_record_size = 18 + lzma_payload_size
+        };
+
+        uint8_t lzma_record[lzma_record_size];
+        memset(lzma_record, 0, sizeof lzma_record);
+
+        put_u16(lzma_record + 0, 25);
+        put_u16(lzma_record + 2, 2);
+        put_u16(lzma_record + 4, 1);
+        put_u16(lzma_record + 10, 42);
+        put_u16(lzma_record + 12, 8);
+        put_u32(lzma_record + 14, lzma_payload_size);
+
+        uint8_t* lzma_payload = lzma_record + 18;
+
+        put_u32(lzma_payload + 8, lzma_header_size);
+        put_u32(lzma_payload + 40, 1);
+
+        memcpy(
+            lzma_payload + lzma_header_size,
+            lzma_data,
+            sizeof lzma_data);
+
+        const uint8_t lzma_expected[] = {
+            10, 20, 30, 40,
+            1, 2, 3, 4
+        };
+
+        Xwa2dFrame lzma_frame;
+        char lzma_error[256] = { 0 };
+
+        if (!Xwa2d_DecodeDatSprite(
+                lzma_record,
+                sizeof lzma_record,
+                &lzma_frame,
+                lzma_error,
+                sizeof lzma_error)) {
+            fprintf(
+                stderr,
+                "FAIL: OpenXWA rechaza DAT type-25 LZMA: %s\n",
+                lzma_error);
+            return 1;
+        }
+
+        if (!lzma_frame.rgba ||
+            memcmp(
+                lzma_frame.rgba,
+                lzma_expected,
+                sizeof lzma_expected) != 0) {
+            fprintf(stderr, "FAIL: salida LZMA RGBA incorrecta\n");
+            free(lzma_frame.rgba);
+            return 1;
+        }
+
+        free(lzma_frame.rgba);
+
+        printf("PASS: DAT type-25 LZMA decodificado correctamente\n");
+    }
+
     return 0;
 }
