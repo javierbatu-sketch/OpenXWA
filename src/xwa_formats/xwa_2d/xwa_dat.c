@@ -1,5 +1,334 @@
 #include "xwa_2d_internal.h"
 
+#include "LzmaDec.h"
+
+#define BCDEC_IMPLEMENTATION
+#include "bcdec.h"
+
+static void* dat_lzma_alloc(ISzAllocPtr allocator, size_t size) {
+    (void)allocator;
+    return malloc(size);
+}
+
+static void dat_lzma_free(ISzAllocPtr allocator, void* address) {
+    (void)allocator;
+    free(address);
+}
+
+static const ISzAlloc dat_lzma_allocator = {
+    dat_lzma_alloc,
+    dat_lzma_free
+};
+
+static uint8_t dat_expand_5(uint16_t value) {
+    return (uint8_t)((value << 3) | (value >> 2));
+}
+
+static uint8_t dat_expand_6(uint16_t value) {
+    return (uint8_t)((value << 2) | (value >> 4));
+}
+
+static void dat_decode_bc3_block(const uint8_t* block, uint8_t rgba[64]) {
+    uint8_t alphas[8];
+
+    alphas[0] = block[0];
+    alphas[1] = block[1];
+
+    if (alphas[0] > alphas[1]) {
+        for (int i = 1; i <= 6; i++)
+            alphas[i + 1] =
+                (uint8_t)(((7 - i) * alphas[0] + i * alphas[1]) / 7);
+    } else {
+        for (int i = 1; i <= 4; i++)
+            alphas[i + 1] =
+                (uint8_t)(((5 - i) * alphas[0] + i * alphas[1]) / 5);
+
+        alphas[6] = 0;
+        alphas[7] = 255;
+    }
+
+    uint64_t alpha_indices = 0;
+
+    for (int i = 0; i < 6; i++)
+        alpha_indices |= (uint64_t)block[2 + i] << (8 * i);
+
+    uint8_t colors[4][3];
+
+    const uint16_t color0 = xwa2d_u16(block + 8);
+    const uint16_t color1 = xwa2d_u16(block + 10);
+
+    colors[0][0] = dat_expand_5((uint16_t)(color0 >> 11));
+    colors[0][1] = dat_expand_6((uint16_t)((color0 >> 5) & 0x3f));
+    colors[0][2] = dat_expand_5((uint16_t)(color0 & 0x1f));
+
+    colors[1][0] = dat_expand_5((uint16_t)(color1 >> 11));
+    colors[1][1] = dat_expand_6((uint16_t)((color1 >> 5) & 0x3f));
+    colors[1][2] = dat_expand_5((uint16_t)(color1 & 0x1f));
+
+    for (int channel = 0; channel < 3; channel++) {
+        colors[2][channel] =
+            (uint8_t)((2 * colors[0][channel] + colors[1][channel]) / 3);
+
+        colors[3][channel] =
+            (uint8_t)((colors[0][channel] + 2 * colors[1][channel]) / 3);
+    }
+
+    const uint32_t color_indices = xwa2d_u32(block + 12);
+
+    for (int i = 0; i < 16; i++) {
+        const uint8_t color_index =
+            (uint8_t)((color_indices >> (2 * i)) & 3u);
+
+        const uint8_t alpha_index =
+            (uint8_t)((alpha_indices >> (3 * i)) & 7u);
+
+        rgba[4 * i] = colors[color_index][0];
+        rgba[4 * i + 1] = colors[color_index][1];
+        rgba[4 * i + 2] = colors[color_index][2];
+        rgba[4 * i + 3] = alphas[alpha_index];
+    }
+}
+
+static int dat_decode_bc3(
+    const uint8_t* blocks,
+    size_t encoded_size,
+    int width,
+    int height,
+    uint8_t* rgba) {
+
+    const size_t block_width = ((size_t)width + 3u) / 4u;
+    const size_t block_height = ((size_t)height + 3u) / 4u;
+
+    if (block_width > SIZE_MAX / block_height)
+        return 0;
+
+    const size_t block_count = block_width * block_height;
+
+    if (block_count > encoded_size / 16u ||
+        encoded_size != block_count * 16u)
+        return 0;
+
+    for (size_t block_y = 0; block_y < block_height; block_y++) {
+        for (size_t block_x = 0; block_x < block_width; block_x++) {
+            uint8_t decoded[64];
+
+            const uint8_t* block =
+                blocks + (block_y * block_width + block_x) * 16u;
+
+            dat_decode_bc3_block(block, decoded);
+
+            for (size_t y = 0;
+                 y < 4 && block_y * 4u + y < (size_t)height;
+                 y++) {
+
+                for (size_t x = 0;
+                     x < 4 && block_x * 4u + x < (size_t)width;
+                     x++) {
+
+                    memcpy(
+                        rgba +
+                            ((block_y * 4u + y) * (size_t)width +
+                             block_x * 4u + x) *
+                                4u,
+                        decoded + (y * 4u + x) * 4u,
+                        4u);
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
+static void dat_decode_bc4_block(
+    const uint8_t* block,
+    uint8_t values[16]) {
+
+    uint8_t palette[8];
+
+    palette[0] = block[0];
+    palette[1] = block[1];
+
+    if (palette[0] > palette[1]) {
+        for (int i = 1; i <= 6; i++)
+            palette[i + 1] =
+                (uint8_t)(((7 - i) * palette[0] +
+                           i * palette[1]) / 7);
+    } else {
+        for (int i = 1; i <= 4; i++)
+            palette[i + 1] =
+                (uint8_t)(((5 - i) * palette[0] +
+                           i * palette[1]) / 5);
+
+        palette[6] = 0;
+        palette[7] = 255;
+    }
+
+    uint64_t indices = 0;
+
+    for (int i = 0; i < 6; i++)
+        indices |= (uint64_t)block[2 + i] << (8 * i);
+
+    for (int i = 0; i < 16; i++)
+        values[i] =
+            palette[(indices >> (3 * i)) & 7u];
+}
+
+static void dat_decode_bc5_block(
+    const uint8_t* block,
+    uint8_t rgba[64]) {
+
+    uint8_t red[16];
+    uint8_t green[16];
+
+    dat_decode_bc4_block(block, red);
+    dat_decode_bc4_block(block + 8, green);
+
+    for (int i = 0; i < 16; i++) {
+        rgba[4 * i] = red[i];
+        rgba[4 * i + 1] = green[i];
+        rgba[4 * i + 2] = 0;
+        rgba[4 * i + 3] = 255;
+    }
+}
+
+static int dat_decode_bc5(
+    const uint8_t* blocks,
+    size_t encoded_size,
+    int width,
+    int height,
+    uint8_t* rgba) {
+
+    const size_t block_width =
+        ((size_t)width + 3u) / 4u;
+
+    const size_t block_height =
+        ((size_t)height + 3u) / 4u;
+
+    if (block_width > SIZE_MAX / block_height)
+        return 0;
+
+    const size_t block_count =
+        block_width * block_height;
+
+    if (block_count > encoded_size / 16u ||
+        encoded_size != block_count * 16u)
+        return 0;
+
+    for (size_t block_y = 0;
+         block_y < block_height;
+         block_y++) {
+
+        for (size_t block_x = 0;
+             block_x < block_width;
+             block_x++) {
+
+            uint8_t decoded[64];
+
+            const uint8_t* block =
+                blocks +
+                (block_y * block_width + block_x) * 16u;
+
+            dat_decode_bc5_block(block, decoded);
+
+            for (size_t y = 0;
+                 y < 4 &&
+                 block_y * 4u + y < (size_t)height;
+                 y++) {
+
+                for (size_t x = 0;
+                     x < 4 &&
+                     block_x * 4u + x < (size_t)width;
+                     x++) {
+
+                    memcpy(
+                        rgba +
+                            ((block_y * 4u + y) *
+                                 (size_t)width +
+                             block_x * 4u + x) *
+                                4u,
+                        decoded +
+                            (y * 4u + x) * 4u,
+                        4u);
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
+static int dat_decode_bc7(
+    const uint8_t* blocks,
+    size_t encoded_size,
+    int width,
+    int height,
+    uint8_t* rgba) {
+
+    const size_t block_width =
+        ((size_t)width + 3u) / 4u;
+
+    const size_t block_height =
+        ((size_t)height + 3u) / 4u;
+
+    if (block_width > SIZE_MAX / block_height)
+        return 0;
+
+    const size_t block_count =
+        block_width * block_height;
+
+    if (block_count > encoded_size / BCDEC_BC7_BLOCK_SIZE ||
+        encoded_size !=
+            block_count * BCDEC_BC7_BLOCK_SIZE)
+        return 0;
+
+    for (size_t block_y = 0;
+         block_y < block_height;
+         block_y++) {
+
+        for (size_t block_x = 0;
+             block_x < block_width;
+             block_x++) {
+
+            uint8_t decoded[64];
+
+            const uint8_t* block =
+                blocks +
+                (block_y * block_width + block_x) *
+                    BCDEC_BC7_BLOCK_SIZE;
+
+            bcdec_bc7(
+                block,
+                decoded,
+                4 * 4);
+
+            for (size_t y = 0;
+                 y < 4 &&
+                 block_y * 4u + y < (size_t)height;
+                 y++) {
+
+                for (size_t x = 0;
+                     x < 4 &&
+                     block_x * 4u + x < (size_t)width;
+                     x++) {
+
+                    memcpy(
+                        rgba +
+                            ((block_y * 4u + y) *
+                                 (size_t)width +
+                             block_x * 4u + x) *
+                                4u,
+                        decoded +
+                            (y * 4u + x) * 4u,
+                        4u);
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
 typedef struct DatEntry {
 	uint16_t group;
 	uint16_t sprite_count;
@@ -86,6 +415,252 @@ int Xwa2d_DecodeDatSprite(const uint8_t* record, size_t record_size, Xwa2dFrame*
 	uint32_t color_offset = xwa2d_u32(payload + 4);
 	uint32_t rows_offset = xwa2d_u32(payload + 8);
 	uint32_t color_count = xwa2d_u32(payload + 40);
+
+    if (type == 25 && color_count == 0) {
+        if (rows_offset >= payload_size)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT sprite payload");
+
+        const size_t pixel_count =
+            (size_t)width * (size_t)height;
+
+        if (pixel_count > SIZE_MAX / 4u)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite dimensions are too large");
+
+        const size_t rgba_size =
+            pixel_count * 4u;
+
+        const uint8_t* encoded =
+            payload + rows_offset;
+
+        const size_t encoded_size =
+            payload_size - rows_offset;
+
+        uint8_t* rgba =
+            (uint8_t*)malloc(rgba_size);
+
+        if (!rgba)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite allocation failed");
+
+        /*
+         * XWAU type-25 / color_count 0:
+         *
+         * - tama?o completo RGBA -> BGRA32 sin comprimir
+         * - cualquier otro tama?o v?lido de bloques -> BC7
+         *
+         * La comprobaci?n BGRA tiene prioridad, igual que
+         * en la sem?ntica XWAU de referencia.
+         */
+        if (encoded_size == rgba_size) {
+            for (size_t i = 0; i < pixel_count; i++) {
+                rgba[4 * i] =
+                    encoded[4 * i + 2];
+
+                rgba[4 * i + 1] =
+                    encoded[4 * i + 1];
+
+                rgba[4 * i + 2] =
+                    encoded[4 * i];
+
+                rgba[4 * i + 3] =
+                    encoded[4 * i + 3];
+            }
+        } else if (!dat_decode_bc7(
+                       encoded,
+                       encoded_size,
+                       width,
+                       height,
+                       rgba)) {
+
+            free(rgba);
+
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT BC7 payload");
+        }
+
+        out->rgba = rgba;
+        out->width = width;
+        out->height = height;
+        out->sprite_id =
+            xwa2d_u16(record + 12);
+        out->anchor_x =
+            xwa2d_i32(payload + 24);
+        out->anchor_y =
+            xwa2d_i32(payload + 28);
+
+        return 1;
+    }
+
+    if (type == 25 && color_count == 1) {
+        if (rows_offset >= payload_size)
+            return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
+
+        const size_t pixel_count = (size_t)width * (size_t)height;
+
+        if (pixel_count > SIZE_MAX / 4u)
+            return xwa2d_fail(error, error_size, "DAT sprite dimensions are too large");
+
+        const size_t bgra_size = pixel_count * 4u;
+        const uint8_t* encoded = payload + rows_offset;
+        const size_t encoded_size = payload_size - rows_offset;
+
+        if (encoded_size <= LZMA_PROPS_SIZE)
+            return xwa2d_fail(error, error_size, "invalid DAT LZMA payload");
+
+        uint8_t* rgba = (uint8_t*)malloc(bgra_size);
+
+        if (!rgba)
+            return xwa2d_fail(error, error_size, "DAT sprite allocation failed");
+
+        SizeT decoded_size = (SizeT)bgra_size;
+        SizeT compressed_size = (SizeT)(encoded_size - LZMA_PROPS_SIZE);
+        ELzmaStatus status = LZMA_STATUS_NOT_SPECIFIED;
+
+        const SRes result = LzmaDecode(
+            rgba,
+            &decoded_size,
+            encoded + LZMA_PROPS_SIZE,
+            &compressed_size,
+            encoded,
+            LZMA_PROPS_SIZE,
+            LZMA_FINISH_END,
+            &status,
+            &dat_lzma_allocator);
+
+        if (result != SZ_OK ||
+            decoded_size != bgra_size ||
+            (status != LZMA_STATUS_FINISHED_WITH_MARK &&
+             status != LZMA_STATUS_MAYBE_FINISHED_WITHOUT_MARK)) {
+            free(rgba);
+            return xwa2d_fail(error, error_size, "invalid DAT LZMA payload");
+        }
+
+        for (size_t i = 0; i < pixel_count; i++) {
+            const uint8_t blue = rgba[4 * i];
+            rgba[4 * i] = rgba[4 * i + 2];
+            rgba[4 * i + 2] = blue;
+        }
+
+        out->rgba = rgba;
+        out->width = width;
+        out->height = height;
+        out->sprite_id = xwa2d_u16(record + 12);
+        out->anchor_x = xwa2d_i32(payload + 24);
+        out->anchor_y = xwa2d_i32(payload + 28);
+
+        return 1;
+    }
+
+    if (type == 25 && color_count == 2) {
+        if (rows_offset >= payload_size)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT BC3 payload");
+
+        const size_t pixel_count =
+            (size_t)width * (size_t)height;
+
+        if (pixel_count > SIZE_MAX / 4u)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite dimensions are too large");
+
+        uint8_t* rgba =
+            (uint8_t*)malloc(pixel_count * 4u);
+
+        if (!rgba)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite allocation failed");
+
+        if (!dat_decode_bc3(
+                payload + rows_offset,
+                payload_size - rows_offset,
+                width,
+                height,
+                rgba)) {
+
+            free(rgba);
+
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT BC3 payload");
+        }
+
+        out->rgba = rgba;
+        out->width = width;
+        out->height = height;
+        out->sprite_id = xwa2d_u16(record + 12);
+        out->anchor_x = xwa2d_i32(payload + 24);
+        out->anchor_y = xwa2d_i32(payload + 28);
+
+        return 1;
+    }
+
+    if (type == 25 && color_count == 3) {
+        if (rows_offset >= payload_size)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT BC5 payload");
+
+        const size_t pixel_count =
+            (size_t)width * (size_t)height;
+
+        if (pixel_count > SIZE_MAX / 4u)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite dimensions are too large");
+
+        uint8_t* rgba =
+            (uint8_t*)malloc(pixel_count * 4u);
+
+        if (!rgba)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite allocation failed");
+
+        if (!dat_decode_bc5(
+                payload + rows_offset,
+                payload_size - rows_offset,
+                width,
+                height,
+                rgba)) {
+
+            free(rgba);
+
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT BC5 payload");
+        }
+
+        out->rgba = rgba;
+        out->width = width;
+        out->height = height;
+        out->sprite_id = xwa2d_u16(record + 12);
+        out->anchor_x = xwa2d_i32(payload + 24);
+        out->anchor_y = xwa2d_i32(payload + 28);
+
+        return 1;
+    }
+
 	if (!color_count || color_count > 256 || color_offset > payload_size || rows_offset >= payload_size ||
 		3u * color_count > payload_size - color_offset)
 		return xwa2d_fail(error, error_size, "invalid DAT sprite payload");

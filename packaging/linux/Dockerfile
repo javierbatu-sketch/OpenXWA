@@ -178,6 +178,7 @@ COPY cmake /src/cmake
 COPY resources /src/resources
 COPY shaders /src/shaders
 COPY src /src/src
+COPY third_party /src/third_party
 
 ENV LD_LIBRARY_PATH=/opt/xwa-tools/lib:/opt/xwa-linux/lib
 ENV PKG_CONFIG_PATH=/opt/xwa-linux/lib/pkgconfig
