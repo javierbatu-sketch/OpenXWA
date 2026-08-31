@@ -154,6 +154,15 @@ XwaRemasterOriginal2d_LoadFrontend(XwaRemasterOriginal2d* reader, const char* so
 	}
 	if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING)
 		return status;
+	status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, hd_dat, &bytes, &size);
+	if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+		int ok = original_decode_dat_frames(bytes, size, out, error, error_size);
+		free(bytes);
+		return ok ? XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS
+				  : XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
+	}
+	if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING)
+		return status;
 	original_cbm_path(source_path, cbm);
 	status = original_read_asset(reader, AERON_VFS_ROOT_USER, cbm, &bytes, &size);
 	if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING) {
