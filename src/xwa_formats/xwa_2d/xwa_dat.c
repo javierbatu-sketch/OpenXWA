@@ -1,5 +1,22 @@
 #include "xwa_2d_internal.h"
 
+#include "LzmaDec.h"
+
+static void* dat_lzma_alloc(ISzAllocPtr allocator, size_t size) {
+    (void)allocator;
+    return malloc(size);
+}
+
+static void dat_lzma_free(ISzAllocPtr allocator, void* address) {
+    (void)allocator;
+    free(address);
+}
+
+static const ISzAlloc dat_lzma_allocator = {
+    dat_lzma_alloc,
+    dat_lzma_free
+};
+
 typedef struct DatEntry {
 	uint16_t group;
 	uint16_t sprite_count;
@@ -108,6 +125,66 @@ int Xwa2d_DecodeDatSprite(const uint8_t* record, size_t record_size, Xwa2dFrame*
             rgba[4 * i + 1] = bgra[4 * i + 1];
             rgba[4 * i + 2] = bgra[4 * i];
             rgba[4 * i + 3] = bgra[4 * i + 3];
+        }
+
+        out->rgba = rgba;
+        out->width = width;
+        out->height = height;
+        out->sprite_id = xwa2d_u16(record + 12);
+        out->anchor_x = xwa2d_i32(payload + 24);
+        out->anchor_y = xwa2d_i32(payload + 28);
+
+        return 1;
+    }
+
+    if (type == 25 && color_count == 1) {
+        if (rows_offset >= payload_size)
+            return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
+
+        const size_t pixel_count = (size_t)width * (size_t)height;
+
+        if (pixel_count > SIZE_MAX / 4u)
+            return xwa2d_fail(error, error_size, "DAT sprite dimensions are too large");
+
+        const size_t bgra_size = pixel_count * 4u;
+        const uint8_t* encoded = payload + rows_offset;
+        const size_t encoded_size = payload_size - rows_offset;
+
+        if (encoded_size <= LZMA_PROPS_SIZE)
+            return xwa2d_fail(error, error_size, "invalid DAT LZMA payload");
+
+        uint8_t* rgba = (uint8_t*)malloc(bgra_size);
+
+        if (!rgba)
+            return xwa2d_fail(error, error_size, "DAT sprite allocation failed");
+
+        SizeT decoded_size = (SizeT)bgra_size;
+        SizeT compressed_size = (SizeT)(encoded_size - LZMA_PROPS_SIZE);
+        ELzmaStatus status = LZMA_STATUS_NOT_SPECIFIED;
+
+        const SRes result = LzmaDecode(
+            rgba,
+            &decoded_size,
+            encoded + LZMA_PROPS_SIZE,
+            &compressed_size,
+            encoded,
+            LZMA_PROPS_SIZE,
+            LZMA_FINISH_END,
+            &status,
+            &dat_lzma_allocator);
+
+        if (result != SZ_OK ||
+            decoded_size != bgra_size ||
+            (status != LZMA_STATUS_FINISHED_WITH_MARK &&
+             status != LZMA_STATUS_MAYBE_FINISHED_WITHOUT_MARK)) {
+            free(rgba);
+            return xwa2d_fail(error, error_size, "invalid DAT LZMA payload");
+        }
+
+        for (size_t i = 0; i < pixel_count; i++) {
+            const uint8_t blue = rgba[4 * i];
+            rgba[4 * i] = rgba[4 * i + 2];
+            rgba[4 * i + 2] = blue;
         }
 
         out->rgba = rgba;
