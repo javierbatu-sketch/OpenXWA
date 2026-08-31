@@ -73,6 +73,22 @@ static void original_cbm_path(const char* source, char out[ORIGINAL_2D_PATH_MAX]
 		strcat(out, ".cbm");
 }
 
+static int original_hd_dat_path(const char* source, char out[ORIGINAL_2D_PATH_MAX]) {
+	snprintf(out, ORIGINAL_2D_PATH_MAX, "%s", source ? source : "");
+	char* slash = strrchr(out, '/');
+	char* backslash = strrchr(out, '\\');
+	char* base = slash;
+	if (!base || (backslash && backslash > base))
+		base = backslash;
+	base = base ? base + 1 : out;
+	char* dot = strrchr(base, '.');
+	if (!dot)
+		dot = out + strlen(out);
+	if ((size_t)(out + ORIGINAL_2D_PATH_MAX - dot) <= sizeof "_HD.dat")
+		return 0;
+	snprintf(dot, (size_t)(out + ORIGINAL_2D_PATH_MAX - dot), "_HD.dat");
+	return 1;
+}
 static int original_extension_is(const char* path, const char* extension) {
 	const char* actual = strrchr(path, '.');
 	if (!actual)
@@ -162,26 +178,40 @@ original_load_dat_paths(XwaRemasterOriginal2d* reader, char* error, size_t error
 			continue;
 		OriginalDatFile* dat_file = &reader->dat_files[reader->dat_file_count];
 		memset(dat_file, 0, sizeof *dat_file);
-		char* path = dat_file->path;
-		memcpy(path, bytes + start, length);
-		path[length] = '\0';
-		uint8_t* dat_bytes = NULL;
-		size_t dat_size = 0;
-		status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, path, &dat_bytes, &dat_size);
-		if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+		char listed_path[ORIGINAL_2D_PATH_MAX];
+		memcpy(listed_path, bytes + start, length);
+		listed_path[length] = '\0';
+		char hd_dat[ORIGINAL_2D_PATH_MAX];
+		if (!original_hd_dat_path(listed_path, hd_dat)) {
 			if (error && error_size)
-				snprintf(error, error_size, "listed DAT unavailable: %s", path);
+				snprintf(error, error_size, "DAT path too long: %s", listed_path);
 			free(bytes);
 			return XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
 		}
+		uint8_t* dat_bytes = NULL;
+		size_t dat_size = 0;
+		status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, hd_dat, &dat_bytes, &dat_size);
+		const char* selected_path = hd_dat;
+		if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING) {
+			status =
+				original_read_asset(reader, AERON_VFS_ROOT_ASSET, listed_path, &dat_bytes, &dat_size);
+			selected_path = listed_path;
+		}
+		if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+			if (error && error_size)
+				snprintf(error, error_size, "listed DAT unavailable: %s", listed_path);
+			free(bytes);
+			return XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
+		}
+		snprintf(dat_file->path, sizeof dat_file->path, "%s", selected_path);
 		char dat_error[128] = { 0 };
 		const int listed = Xwa2d_DatListGroups(dat_bytes, dat_size, dat_file->groups,
-											ORIGINAL_2D_MAX_DAT_GROUPS, &dat_file->group_count,
-											dat_error, sizeof dat_error);
+												ORIGINAL_2D_MAX_DAT_GROUPS, &dat_file->group_count,
+												dat_error, sizeof dat_error);
 		free(dat_bytes);
 		if (!listed) {
 			if (error && error_size)
-				snprintf(error, error_size, "%s: %s", path, dat_error);
+				snprintf(error, error_size, "%s: %s", selected_path, dat_error);
 			free(bytes);
 			return XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
 		}
