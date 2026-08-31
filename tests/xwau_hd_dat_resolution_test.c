@@ -489,6 +489,54 @@ done:
     clean_test_root();
     return ok;
 }
+static int test_frontend_asset_hd_preferred(void) {
+    static const uint8_t red_rgb[3] = { 255, 0, 0 };
+    static const uint8_t green_bgra[4] = { 0, 255, 0, 255 };
+    uint8_t original_bmp[66];
+    uint8_t asset_hd_dat[124];
+    Xwa2dFrameSet frames = { 0 };
+    char error[256] = { 0 };
+    int ok = 0;
+
+    if (!prepare_frontend_roots())
+        goto done;
+
+    build_bmp(original_bmp, red_rgb);
+    build_dat(asset_hd_dat, green_bgra);
+
+    if (!write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT.BMP",
+            original_bmp,
+            sizeof original_bmp) ||
+        !write_bytes(
+            TEST_ASSET_ROOT,
+            "FRONT_HD.dat",
+            asset_hd_dat,
+            sizeof asset_hd_dat))
+        goto done;
+
+    if (load_frontend(&frames, error, sizeof error) !=
+        XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+        fprintf(stderr, "FAIL frontend-asset-hd: load failed: %s\n", error);
+        goto done;
+    }
+
+    if (!frame_is_rgba(&frames, 0, 255, 0, 255)) {
+        fprintf(
+            stderr,
+            "FAIL frontend-asset-hd: expected ASSET FRONT_HD.dat (green), "
+            "but lower-priority frontend resource won\n");
+        goto done;
+    }
+
+    ok = 1;
+
+done:
+    Xwa2dFrameSet_Free(&frames);
+    clean_test_root();
+    return ok;
+}
 int main(void) {
     int failures = 0;
 
@@ -496,6 +544,10 @@ int main(void) {
         ++failures;
     else
         printf("PASS: frontend USER *_HD.dat preferred over original resource\n");
+    if (!test_frontend_asset_hd_preferred())
+        ++failures;
+    else
+        printf("PASS: frontend ASSET *_HD.dat preferred over lower-priority resources\n");
 
     if (!test_hd_preferred())
         ++failures;
