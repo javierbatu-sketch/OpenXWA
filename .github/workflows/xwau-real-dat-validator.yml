@@ -1,0 +1,43 @@
+name: XWAU Real DAT Validator
+
+on:
+  push:
+    branches:
+      - xwau-003-real-dat-validation
+  workflow_dispatch:
+
+jobs:
+  windows-validator:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MinGW-w64
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64-posix
+
+      - name: Build Windows DAT validator
+        run: |
+          x86_64-w64-mingw32-gcc \
+            -std=c99 -O2 -Wall -Wextra -Werror \
+            -static -static-libgcc \
+            -Isrc/xwa_formats/xwa_2d \
+            -Ithird_party/lzma_sdk \
+            -Ithird_party/bcdec \
+            tools/xwau_dat_validator.c \
+            src/xwa_formats/xwa_2d/xwa_dat.c \
+            third_party/lzma_sdk/LzmaDec.c \
+            -o xwau_dat_validator.exe
+
+      - name: Verify PE executable
+        run: |
+          file xwau_dat_validator.exe
+          x86_64-w64-mingw32-objdump -p xwau_dat_validator.exe | grep -q 'pei-x86-64'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xwau-dat-validator-windows
+          path: xwau_dat_validator.exe
+          if-no-files-found: error
