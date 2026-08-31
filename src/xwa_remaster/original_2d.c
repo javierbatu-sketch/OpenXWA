@@ -89,6 +89,25 @@ static int original_hd_dat_path(const char* source, char out[ORIGINAL_2D_PATH_MA
 	snprintf(dot, (size_t)(out + ORIGINAL_2D_PATH_MAX - dot), "_HD.dat");
 	return 1;
 }
+static int original_decode_dat_frames(const uint8_t* bytes, size_t size, Xwa2dFrameSet* out,
+                                      char* error, size_t error_size) {
+	uint16_t groups[ORIGINAL_2D_MAX_DAT_GROUPS];
+	int group_count = 0;
+	if (!Xwa2d_DatListGroups(bytes, size, groups, ORIGINAL_2D_MAX_DAT_GROUPS, &group_count,
+							 error, error_size))
+		return 0;
+	for (int i = 0; i < group_count; i++) {
+		if (!Xwa2d_DatAppendGroup(bytes, size, groups[i], out, error, error_size)) {
+			Xwa2dFrameSet_Free(out);
+			return 0;
+		}
+	}
+	if (out->count)
+		return 1;
+	if (error && error_size)
+		snprintf(error, error_size, "HD DAT contains no sprites");
+	return 0;
+}
 static int original_extension_is(const char* path, const char* extension) {
 	const char* actual = strrchr(path, '.');
 	if (!actual)
@@ -121,10 +140,22 @@ XwaRemasterOriginal2d_LoadFrontend(XwaRemasterOriginal2d* reader, const char* so
 	memset(out, 0, sizeof *out);
 	uint8_t* bytes = NULL;
 	size_t size = 0;
+	char hd_dat[ORIGINAL_2D_PATH_MAX];
 	char cbm[ORIGINAL_2D_PATH_MAX];
-	original_cbm_path(source_path, cbm);
+	if (!original_hd_dat_path(source_path, hd_dat))
+		return XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
 	XwaRemasterOriginal2dLoadStatus status =
-		original_read_asset(reader, AERON_VFS_ROOT_USER, cbm, &bytes, &size);
+		original_read_asset(reader, AERON_VFS_ROOT_USER, hd_dat, &bytes, &size);
+	if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+		int ok = original_decode_dat_frames(bytes, size, out, error, error_size);
+		free(bytes);
+		return ok ? XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS
+				  : XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
+	}
+	if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING)
+		return status;
+	original_cbm_path(source_path, cbm);
+	status = original_read_asset(reader, AERON_VFS_ROOT_USER, cbm, &bytes, &size);
 	if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING) {
 		status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, cbm, &bytes, &size);
 	}
