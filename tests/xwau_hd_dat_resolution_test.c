@@ -19,6 +19,8 @@ struct AeronVfs {
     const char* user_root;
 };
 
+static size_t g_frontend_hd_dat_max_size;
+
 static const char* fake_root(AeronVfs* vfs, AeronVfsRoot root) {
     if (root == AERON_VFS_ROOT_USER)
         return vfs->user_root;
@@ -82,6 +84,9 @@ int AeronVfs_ReadAll(
 
     *out_data = NULL;
     *out_size = 0;
+
+    if (strcmp(path, "FRONT_HD.dat") == 0)
+        g_frontend_hd_dat_max_size = max_size;
 
     stream = fopen(full, "rb");
     if (!stream)
@@ -537,6 +542,47 @@ done:
     clean_test_root();
     return ok;
 }
+static int test_frontend_hd_dat_uses_dat_read_limit(void) {
+    static const uint8_t green_bgra[4] = { 0, 255, 0, 255 };
+    uint8_t user_hd_dat[124];
+    Xwa2dFrameSet frames = { 0 };
+    char error[256] = { 0 };
+    int ok = 0;
+
+    if (!prepare_frontend_roots())
+        goto done;
+
+    build_dat(user_hd_dat, green_bgra);
+    if (!write_bytes(
+            TEST_USER_ROOT,
+            "FRONT_HD.dat",
+            user_hd_dat,
+            sizeof user_hd_dat))
+        goto done;
+
+    g_frontend_hd_dat_max_size = 0;
+    if (load_frontend(&frames, error, sizeof error) !=
+        XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
+        fprintf(stderr, "FAIL frontend-hd-limit: load failed: %s\n", error);
+        goto done;
+    }
+
+    if (g_frontend_hd_dat_max_size != (size_t)UINT32_MAX) {
+        fprintf(
+            stderr,
+            "FAIL frontend-hd-limit: expected DAT read limit UINT32_MAX, "
+            "got %zu\n",
+            g_frontend_hd_dat_max_size);
+        goto done;
+    }
+
+    ok = 1;
+
+done:
+    Xwa2dFrameSet_Free(&frames);
+    clean_test_root();
+    return ok;
+}
 int main(void) {
     int failures = 0;
 
@@ -548,6 +594,10 @@ int main(void) {
         ++failures;
     else
         printf("PASS: frontend ASSET *_HD.dat preferred over lower-priority resources\n");
+    if (!test_frontend_hd_dat_uses_dat_read_limit())
+        ++failures;
+    else
+        printf("PASS: frontend HD DAT uses DAT-specific read limit\n");
 
     if (!test_hd_preferred())
         ++failures;
