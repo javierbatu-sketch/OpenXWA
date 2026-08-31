@@ -1,4 +1,4 @@
-name: XWAU-004 static material parser RED
+name: XWAU-004 static material contracts
 
 on:
   push:
@@ -8,19 +8,22 @@ on:
     paths:
       - 'src/xwa_remaster/xwau_material.c'
       - 'src/xwa_remaster/xwau_material.h'
+      - 'src/xwa_remaster/xwau_material_asset.c'
+      - 'src/xwa_remaster/xwau_material_asset.h'
       - 'tests/xwau_static_material_test.c'
+      - 'tests/xwau_material_asset_test.c'
       - '.github/workflows/xwau-static-material-test.yml'
 
 jobs:
   focused:
-    name: focused static material parser
+    name: focused static material contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build focused RED test
+      - name: Build parser contract
         shell: bash
         run: |
           cc -std=c99 -Wall -Wextra -Wpedantic \
@@ -30,6 +33,21 @@ jobs:
             -lm \
             -o xwau_static_material_test
 
-      - name: Run focused test
+      - name: Run parser contract
         shell: bash
         run: ./xwau_static_material_test
+
+      - name: Build asset lookup RED contract
+        shell: bash
+        run: |
+          cc -std=c99 -Wall -Wextra -Wpedantic \
+            -Isrc -Iaeron/include \
+            tests/xwau_material_asset_test.c \
+            src/xwa_remaster/xwau_material.c \
+            src/xwa_remaster/xwau_material_asset.c \
+            -lm \
+            -o xwau_material_asset_test
+
+      - name: Run asset lookup contract
+        shell: bash
+        run: ./xwau_material_asset_test
