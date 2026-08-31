@@ -106,11 +106,66 @@ static int test_multiline_group_section(void) {
     return 1;
 }
 
+static int test_preserves_extended_static_properties(void) {
+    static const char material_text[] =
+        "[Default]\n"
+        "SpecularVal = 0.35\n"
+        "AlphaIsntGlass = 1\n"
+        "Glossiness = 10.03\n"
+        "Intensity = 25.0\n"
+        "Metallic = 10.5\n"
+        "NMIntensity = 10.2\n"
+        "\n"
+        "[TEX00012]\n"
+        "SpecularVal = 0.80\n";
+
+    XwaXwauMaterialFile parsed;
+    XwaXwauMaterialResolved resolved;
+    char error[256] = {0};
+
+    memset(&parsed, 0, sizeof parsed);
+    memset(&resolved, 0, sizeof resolved);
+
+    if (!XwaXwauMaterial_ParseText(material_text, strlen(material_text),
+                                   &parsed, error, sizeof error)) {
+        fprintf(stderr, "FAIL extended parse: %s\n", error);
+        return 0;
+    }
+    if (!XwaXwauMaterial_Resolve(&parsed, "TEX00012", &resolved,
+                                 error, sizeof error)) {
+        fprintf(stderr, "FAIL extended resolve: %s\n", error);
+        XwaXwauMaterial_Free(&parsed);
+        return 0;
+    }
+
+    if (!resolved.has_specular_val || !nearf(resolved.specular_val, 0.80f) ||
+        !resolved.has_alpha_isnt_glass || !resolved.alpha_isnt_glass) {
+        fprintf(stderr, "FAIL SpecularVal/AlphaIsntGlass preservation\n");
+        XwaXwauMaterial_Free(&parsed);
+        return 0;
+    }
+
+    if (!resolved.has_glossiness || !nearf(resolved.glossiness, 10.03f) ||
+        !resolved.has_intensity || !nearf(resolved.intensity, 25.0f) ||
+        !resolved.has_metallic || !nearf(resolved.metallic, 10.5f) ||
+        !resolved.has_nm_intensity || !nearf(resolved.nm_intensity, 10.2f)) {
+        fprintf(stderr, "FAIL authored values were clamped or altered\n");
+        XwaXwauMaterial_Free(&parsed);
+        return 0;
+    }
+
+    XwaXwauMaterial_Free(&parsed);
+    return 1;
+}
+
 int main(void) {
     if (!test_default_inheritance_and_group_override()) {
         return 1;
     }
     if (!test_multiline_group_section()) {
+        return 1;
+    }
+    if (!test_preserves_extended_static_properties()) {
         return 1;
     }
 
