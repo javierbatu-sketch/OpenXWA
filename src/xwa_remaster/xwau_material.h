@@ -21,12 +21,16 @@ typedef struct XwaXwauMaterialResolved {
     float nm_intensity;
     int has_ambient;
     float ambient;
+    int has_specular_val;
+    float specular_val;
     int has_normal_map;
     char normal_map[XWA_XWAU_MATERIAL_NORMAL_MAP_MAX];
     int has_no_bloom;
     int no_bloom;
     int has_shadeless;
     int shadeless;
+    int has_alpha_isnt_glass;
+    int alpha_isnt_glass;
 } XwaXwauMaterialResolved;
 
 typedef struct XwaXwauMaterialSection {

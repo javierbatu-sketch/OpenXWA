@@ -100,6 +100,7 @@ static int xwau_set_float(const char* key, const char* value,
     XWAU_FLOAT_PROPERTY("Metallic", has_metallic, metallic)
     XWAU_FLOAT_PROPERTY("NMIntensity", has_nm_intensity, nm_intensity)
     XWAU_FLOAT_PROPERTY("Ambient", has_ambient, ambient)
+    XWAU_FLOAT_PROPERTY("SpecularVal", has_specular_val, specular_val)
 
 #undef XWAU_FLOAT_PROPERTY
 
@@ -139,6 +140,15 @@ static int xwau_set_property(const char* key, const char* value,
             return -1;
         }
         values->has_shadeless = 1;
+        return 1;
+    }
+
+    if (xwau_ascii_equal(key, "AlphaIsntGlass")) {
+        if (!xwau_parse_bool(value, &values->alpha_isnt_glass)) {
+            xwau_material_error(error, error_size, "invalid XWAU material AlphaIsntGlass");
+            return -1;
+        }
+        values->has_alpha_isnt_glass = 1;
         return 1;
     }
 
@@ -244,8 +254,10 @@ static void xwau_overlay(XwaXwauMaterialResolved* destination,
     XWAU_OVERLAY(has_metallic, metallic)
     XWAU_OVERLAY(has_nm_intensity, nm_intensity)
     XWAU_OVERLAY(has_ambient, ambient)
+    XWAU_OVERLAY(has_specular_val, specular_val)
     XWAU_OVERLAY(has_no_bloom, no_bloom)
     XWAU_OVERLAY(has_shadeless, shadeless)
+    XWAU_OVERLAY(has_alpha_isnt_glass, alpha_isnt_glass)
 
 #undef XWAU_OVERLAY
 
