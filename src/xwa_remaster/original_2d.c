@@ -6,6 +6,7 @@
 #include <string.h>
 
 #define ORIGINAL_2D_MAX_FILE_BYTES (64u * 1024u * 1024u)
+#define ORIGINAL_2D_MAX_DAT_BYTES ((size_t)UINT32_MAX)
 #define ORIGINAL_2D_MAX_DAT_FILES 64
 #define ORIGINAL_2D_MAX_DAT_GROUPS 512
 #define ORIGINAL_2D_PATH_MAX 512
@@ -38,25 +39,39 @@ static void original_normalize_path(const char* source, char* out, size_t capaci
 
 static XwaRemasterOriginal2dLoadStatus
 original_read_candidate(XwaRemasterOriginal2d* reader, AeronVfsRoot root, const char* path,
-						uint8_t** out_bytes, size_t* out_size) {
+						size_t max_size, uint8_t** out_bytes, size_t* out_size) {
 	if (!AeronVfs_Exists(reader->vfs, root, path))
 		return XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING;
-	return AeronVfs_ReadAll(reader->vfs, root, path, ORIGINAL_2D_MAX_FILE_BYTES, out_bytes, out_size)
+	return AeronVfs_ReadAll(reader->vfs, root, path, max_size, out_bytes, out_size)
 			   ? XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS
 			   : XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
 }
 
 static XwaRemasterOriginal2dLoadStatus
-original_read_asset(XwaRemasterOriginal2d* reader, AeronVfsRoot root, const char* path,
-					uint8_t** out_bytes, size_t* out_size) {
+original_read_asset_with_limit(XwaRemasterOriginal2d* reader, AeronVfsRoot root, const char* path,
+							   size_t max_size, uint8_t** out_bytes, size_t* out_size) {
 	char normalized[ORIGINAL_2D_PATH_MAX];
 	XwaRemasterOriginal2dLoadStatus status;
 	original_normalize_path(path, normalized, sizeof normalized, 0);
-	status = original_read_candidate(reader, root, normalized, out_bytes, out_size);
+	status = original_read_candidate(reader, root, normalized, max_size, out_bytes, out_size);
 	if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING)
 		return status;
 	original_normalize_path(path, normalized, sizeof normalized, 1);
-	return original_read_candidate(reader, root, normalized, out_bytes, out_size);
+	return original_read_candidate(reader, root, normalized, max_size, out_bytes, out_size);
+}
+
+static XwaRemasterOriginal2dLoadStatus
+original_read_asset(XwaRemasterOriginal2d* reader, AeronVfsRoot root, const char* path,
+					uint8_t** out_bytes, size_t* out_size) {
+	return original_read_asset_with_limit(reader, root, path, ORIGINAL_2D_MAX_FILE_BYTES, out_bytes,
+									  out_size);
+}
+
+static XwaRemasterOriginal2dLoadStatus
+original_read_dat(XwaRemasterOriginal2d* reader, AeronVfsRoot root, const char* path,
+				  uint8_t** out_bytes, size_t* out_size) {
+	return original_read_asset_with_limit(reader, root, path, ORIGINAL_2D_MAX_DAT_BYTES, out_bytes,
+									  out_size);
 }
 
 static void original_cbm_path(const char* source, char out[ORIGINAL_2D_PATH_MAX]) {
@@ -145,7 +160,7 @@ XwaRemasterOriginal2d_LoadFrontend(XwaRemasterOriginal2d* reader, const char* so
 	if (!original_hd_dat_path(source_path, hd_dat))
 		return XWA_REMASTER_ORIGINAL_2D_LOAD_FAILED;
 	XwaRemasterOriginal2dLoadStatus status =
-		original_read_asset(reader, AERON_VFS_ROOT_USER, hd_dat, &bytes, &size);
+		original_read_dat(reader, AERON_VFS_ROOT_USER, hd_dat, &bytes, &size);
 	if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
 		int ok = original_decode_dat_frames(bytes, size, out, error, error_size);
 		free(bytes);
@@ -154,7 +169,7 @@ XwaRemasterOriginal2d_LoadFrontend(XwaRemasterOriginal2d* reader, const char* so
 	}
 	if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING)
 		return status;
-	status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, hd_dat, &bytes, &size);
+	status = original_read_dat(reader, AERON_VFS_ROOT_ASSET, hd_dat, &bytes, &size);
 	if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
 		int ok = original_decode_dat_frames(bytes, size, out, error, error_size);
 		free(bytes);
@@ -230,11 +245,11 @@ original_load_dat_paths(XwaRemasterOriginal2d* reader, char* error, size_t error
 		}
 		uint8_t* dat_bytes = NULL;
 		size_t dat_size = 0;
-		status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, hd_dat, &dat_bytes, &dat_size);
+		status = original_read_dat(reader, AERON_VFS_ROOT_ASSET, hd_dat, &dat_bytes, &dat_size);
 		const char* selected_path = hd_dat;
 		if (status == XWA_REMASTER_ORIGINAL_2D_LOAD_MISSING) {
 			status =
-				original_read_asset(reader, AERON_VFS_ROOT_ASSET, listed_path, &dat_bytes, &dat_size);
+				original_read_dat(reader, AERON_VFS_ROOT_ASSET, listed_path, &dat_bytes, &dat_size);
 			selected_path = listed_path;
 		}
 		if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
@@ -296,7 +311,7 @@ XwaRemasterOriginal2d_LoadDatGroup(XwaRemasterOriginal2d* reader, int group, Xwa
 			continue;
 		uint8_t* bytes = NULL;
 		size_t size = 0;
-		status = original_read_asset(reader, AERON_VFS_ROOT_ASSET, file->path, &bytes, &size);
+		status = original_read_dat(reader, AERON_VFS_ROOT_ASSET, file->path, &bytes, &size);
 		if (status != XWA_REMASTER_ORIGINAL_2D_LOAD_SUCCESS) {
 			if (error && error_size)
 				snprintf(error, error_size, "DAT group %d source unavailable: %s", group, file->path);
