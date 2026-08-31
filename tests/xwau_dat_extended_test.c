@@ -227,5 +227,83 @@ int main(void) {
         printf("PASS: DAT type-25 BC3 decodificado correctamente\n");
     }
 
+    {
+        /*
+         * XWAU BC5:
+         * primer bloque BC4 -> rojo = 64
+         * segundo bloque BC4 -> verde = 192
+         * salida esperada = (64, 192, 0, 255)
+         */
+        static const uint8_t bc5_data[16] = {
+            64, 64, 0, 0, 0, 0, 0, 0,
+            192, 192, 0, 0, 0, 0, 0, 0
+        };
+
+        enum {
+            bc5_header_size = 44,
+            bc5_payload_size = bc5_header_size + sizeof bc5_data,
+            bc5_record_size = 18 + bc5_payload_size
+        };
+
+        uint8_t bc5_record[bc5_record_size];
+        memset(bc5_record, 0, sizeof bc5_record);
+
+        put_u16(bc5_record + 0, 25);
+        put_u16(bc5_record + 2, 4);
+        put_u16(bc5_record + 4, 4);
+        put_u16(bc5_record + 12, 10);
+        put_u32(bc5_record + 14, bc5_payload_size);
+
+        uint8_t* bc5_payload = bc5_record + 18;
+
+        put_u32(bc5_payload + 8, bc5_header_size);
+
+        /* XWAU: color_count = 3 significa BC5. */
+        put_u32(bc5_payload + 40, 3);
+
+        memcpy(
+            bc5_payload + bc5_header_size,
+            bc5_data,
+            sizeof bc5_data);
+
+        Xwa2dFrame bc5_frame;
+        char bc5_error[256] = { 0 };
+
+        if (!Xwa2d_DecodeDatSprite(
+                bc5_record,
+                sizeof bc5_record,
+                &bc5_frame,
+                bc5_error,
+                sizeof bc5_error)) {
+            fprintf(
+                stderr,
+                "FAIL: OpenXWA rechaza DAT type-25 BC5: %s\n",
+                bc5_error);
+            return 1;
+        }
+
+        if (!bc5_frame.rgba) {
+            fprintf(stderr, "FAIL: BC5 no produjo pixels RGBA\n");
+            return 1;
+        }
+
+        for (int i = 0; i < 16; i++) {
+            const uint8_t* pixel = bc5_frame.rgba + i * 4;
+
+            if (pixel[0] != 64 ||
+                pixel[1] != 192 ||
+                pixel[2] != 0 ||
+                pixel[3] != 255) {
+                fprintf(stderr, "FAIL: salida BC5 RGBA incorrecta\n");
+                free(bc5_frame.rgba);
+                return 1;
+            }
+        }
+
+        free(bc5_frame.rgba);
+
+        printf("PASS: DAT type-25 BC5 decodificado correctamente\n");
+    }
+
     return 0;
 }
