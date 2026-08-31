@@ -305,5 +305,93 @@ int main(void) {
         printf("PASS: DAT type-25 BC5 decodificado correctamente\n");
     }
 
+    {
+        /*
+         * BC7 Mode 6, bloque 4x4 blanco opaco.
+         *
+         * Mode prefix = 0000001.
+         * Ambos endpoints RGBA = 255,255,255,255.
+         * Todos los indices seleccionan el mismo color.
+         *
+         * XWAU: type 25 + color_count 0 usa BC7 cuando
+         * el payload no tiene tama?o BGRA32 completo.
+         */
+        static const uint8_t bc7_data[16] = {
+            0xc0, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff,
+            0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        };
+
+        enum {
+            bc7_header_size = 44,
+            bc7_payload_size = bc7_header_size + sizeof bc7_data,
+            bc7_record_size = 18 + bc7_payload_size
+        };
+
+        uint8_t bc7_record[bc7_record_size];
+        memset(bc7_record, 0, sizeof bc7_record);
+
+        put_u16(bc7_record + 0, 25);
+        put_u16(bc7_record + 2, 4);
+        put_u16(bc7_record + 4, 4);
+        put_u16(bc7_record + 12, 11);
+        put_u32(bc7_record + 14, bc7_payload_size);
+
+        uint8_t* bc7_payload = bc7_record + 18;
+
+        put_u32(bc7_payload + 8, bc7_header_size);
+
+        /*
+         * color_count = 0:
+         * raw BGRA si el tama?o es width*height*4;
+         * en este caso son solo 16 bytes, por tanto BC7.
+         */
+        put_u32(bc7_payload + 40, 0);
+
+        memcpy(
+            bc7_payload + bc7_header_size,
+            bc7_data,
+            sizeof bc7_data);
+
+        Xwa2dFrame bc7_frame;
+        char bc7_error[256] = { 0 };
+
+        if (!Xwa2d_DecodeDatSprite(
+                bc7_record,
+                sizeof bc7_record,
+                &bc7_frame,
+                bc7_error,
+                sizeof bc7_error)) {
+            fprintf(
+                stderr,
+                "FAIL: OpenXWA rechaza DAT type-25 BC7: %s\n",
+                bc7_error);
+            return 1;
+        }
+
+        if (!bc7_frame.rgba) {
+            fprintf(stderr, "FAIL: BC7 no produjo pixels RGBA\n");
+            return 1;
+        }
+
+        for (int i = 0; i < 16; i++) {
+            const uint8_t* pixel = bc7_frame.rgba + i * 4;
+
+            if (pixel[0] != 255 ||
+                pixel[1] != 255 ||
+                pixel[2] != 255 ||
+                pixel[3] != 255) {
+                fprintf(stderr, "FAIL: salida BC7 RGBA incorrecta\n");
+                free(bc7_frame.rgba);
+                return 1;
+            }
+        }
+
+        free(bc7_frame.rgba);
+
+        printf("PASS: DAT type-25 BC7 decodificado correctamente\n");
+    }
+
     return 0;
 }
