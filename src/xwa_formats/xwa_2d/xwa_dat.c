@@ -2,6 +2,9 @@
 
 #include "LzmaDec.h"
 
+#define BCDEC_IMPLEMENTATION
+#include "bcdec.h"
+
 static void* dat_lzma_alloc(ISzAllocPtr allocator, size_t size) {
     (void)allocator;
     return malloc(size);
@@ -255,6 +258,77 @@ static int dat_decode_bc5(
     return 1;
 }
 
+static int dat_decode_bc7(
+    const uint8_t* blocks,
+    size_t encoded_size,
+    int width,
+    int height,
+    uint8_t* rgba) {
+
+    const size_t block_width =
+        ((size_t)width + 3u) / 4u;
+
+    const size_t block_height =
+        ((size_t)height + 3u) / 4u;
+
+    if (block_width > SIZE_MAX / block_height)
+        return 0;
+
+    const size_t block_count =
+        block_width * block_height;
+
+    if (block_count > encoded_size / BCDEC_BC7_BLOCK_SIZE ||
+        encoded_size !=
+            block_count * BCDEC_BC7_BLOCK_SIZE)
+        return 0;
+
+    for (size_t block_y = 0;
+         block_y < block_height;
+         block_y++) {
+
+        for (size_t block_x = 0;
+             block_x < block_width;
+             block_x++) {
+
+            uint8_t decoded[64];
+
+            const uint8_t* block =
+                blocks +
+                (block_y * block_width + block_x) *
+                    BCDEC_BC7_BLOCK_SIZE;
+
+            bcdec_bc7(
+                block,
+                decoded,
+                4 * 4);
+
+            for (size_t y = 0;
+                 y < 4 &&
+                 block_y * 4u + y < (size_t)height;
+                 y++) {
+
+                for (size_t x = 0;
+                     x < 4 &&
+                     block_x * 4u + x < (size_t)width;
+                     x++) {
+
+                    memcpy(
+                        rgba +
+                            ((block_y * 4u + y) *
+                                 (size_t)width +
+                             block_x * 4u + x) *
+                                4u,
+                        decoded +
+                            (y * 4u + x) * 4u,
+                        4u);
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
 typedef struct DatEntry {
 	uint16_t group;
 	uint16_t sprite_count;
@@ -344,33 +418,85 @@ int Xwa2d_DecodeDatSprite(const uint8_t* record, size_t record_size, Xwa2dFrame*
 
     if (type == 25 && color_count == 0) {
         if (rows_offset >= payload_size)
-            return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT sprite payload");
 
-        const size_t pixel_count = (size_t)width * (size_t)height;
+        const size_t pixel_count =
+            (size_t)width * (size_t)height;
 
-        if (pixel_count > SIZE_MAX / 4u ||
-            (size_t)(payload_size - rows_offset) != pixel_count * 4u)
-            return xwa2d_fail(error, error_size, "invalid DAT sprite payload");
+        if (pixel_count > SIZE_MAX / 4u)
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite dimensions are too large");
 
-        const uint8_t* bgra = payload + rows_offset;
-        uint8_t* rgba = (uint8_t*)malloc(pixel_count * 4u);
+        const size_t rgba_size =
+            pixel_count * 4u;
+
+        const uint8_t* encoded =
+            payload + rows_offset;
+
+        const size_t encoded_size =
+            payload_size - rows_offset;
+
+        uint8_t* rgba =
+            (uint8_t*)malloc(rgba_size);
 
         if (!rgba)
-            return xwa2d_fail(error, error_size, "DAT sprite allocation failed");
+            return xwa2d_fail(
+                error,
+                error_size,
+                "DAT sprite allocation failed");
 
-        for (size_t i = 0; i < pixel_count; i++) {
-            rgba[4 * i] = bgra[4 * i + 2];
-            rgba[4 * i + 1] = bgra[4 * i + 1];
-            rgba[4 * i + 2] = bgra[4 * i];
-            rgba[4 * i + 3] = bgra[4 * i + 3];
+        /*
+         * XWAU type-25 / color_count 0:
+         *
+         * - tama?o completo RGBA -> BGRA32 sin comprimir
+         * - cualquier otro tama?o v?lido de bloques -> BC7
+         *
+         * La comprobaci?n BGRA tiene prioridad, igual que
+         * en la sem?ntica XWAU de referencia.
+         */
+        if (encoded_size == rgba_size) {
+            for (size_t i = 0; i < pixel_count; i++) {
+                rgba[4 * i] =
+                    encoded[4 * i + 2];
+
+                rgba[4 * i + 1] =
+                    encoded[4 * i + 1];
+
+                rgba[4 * i + 2] =
+                    encoded[4 * i];
+
+                rgba[4 * i + 3] =
+                    encoded[4 * i + 3];
+            }
+        } else if (!dat_decode_bc7(
+                       encoded,
+                       encoded_size,
+                       width,
+                       height,
+                       rgba)) {
+
+            free(rgba);
+
+            return xwa2d_fail(
+                error,
+                error_size,
+                "invalid DAT BC7 payload");
         }
 
         out->rgba = rgba;
         out->width = width;
         out->height = height;
-        out->sprite_id = xwa2d_u16(record + 12);
-        out->anchor_x = xwa2d_i32(payload + 24);
-        out->anchor_y = xwa2d_i32(payload + 28);
+        out->sprite_id =
+            xwa2d_u16(record + 12);
+        out->anchor_x =
+            xwa2d_i32(payload + 24);
+        out->anchor_y =
+            xwa2d_i32(payload + 28);
 
         return 1;
     }

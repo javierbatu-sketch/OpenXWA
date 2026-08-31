@@ -18,6 +18,7 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror \
             -Isrc/xwa_formats/xwa_2d \
             -Ithird_party/lzma_sdk \
+            -Ithird_party/bcdec \
             tests/xwau_dat_extended_test.c \
             src/xwa_formats/xwa_2d/xwa_dat.c \
             third_party/lzma_sdk/LzmaDec.c \
