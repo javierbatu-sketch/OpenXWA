@@ -1,0 +1,35 @@
+name: XWAU-004 static material parser RED
+
+on:
+  push:
+    branches:
+      - xwau-004-static-materials
+  pull_request:
+    paths:
+      - 'src/xwa_remaster/xwau_material.c'
+      - 'src/xwa_remaster/xwau_material.h'
+      - 'tests/xwau_static_material_test.c'
+      - '.github/workflows/xwau-static-material-test.yml'
+
+jobs:
+  focused:
+    name: focused static material parser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build focused RED test
+        shell: bash
+        run: |
+          cc -std=c99 -Wall -Wextra -Wpedantic \
+            -Isrc \
+            tests/xwau_static_material_test.c \
+            src/xwa_remaster/xwau_material.c \
+            -lm \
+            -o xwau_static_material_test
+
+      - name: Run focused test
+        shell: bash
+        run: ./xwau_static_material_test
