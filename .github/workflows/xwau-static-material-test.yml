@@ -16,6 +16,8 @@ on:
       - 'src/xwa_remaster/xwau_material_render.h'
       - 'src/xwa_remaster/xwau_normal_map.c'
       - 'src/xwa_remaster/xwau_normal_map.h'
+      - 'src/xwa_remaster/xwau_opt_materials.c'
+      - 'src/xwa_remaster/xwau_opt_materials.h'
       - 'tests/xwau_static_material_test.c'
       - 'tests/xwau_material_asset_test.c'
       - 'tests/xwau_material_render_test.c'
@@ -99,6 +101,7 @@ jobs:
             -Isrc -Iaeron/include \
             tests/xwau_opt_material_integration_test.c \
             src/xwa_remaster/opt_mesh.c \
+            src/xwa_remaster/xwau_opt_materials.c \
             -lm \
             -o xwau_opt_material_integration_test
 

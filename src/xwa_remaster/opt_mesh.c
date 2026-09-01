@@ -1,4 +1,5 @@
 #include "xwa_remaster/opt_mesh.h"
+#include "xwa_remaster/xwau_opt_materials.h"
 
 #include "aeron/aeron.h"
 #include "aeron/asset/opt_model.h"
@@ -209,6 +210,16 @@ bool XwaRemasterOptMesh_Build(AeronVfs* vfs, const char* basename,
 		opt_mesh_error(error, error_size, "original OPT not found or unreadable");
 		return false;
 	}
+
+	XwaXwauOptMaterialState material_state;
+	if (!XwaXwauOptMaterial_Prepare(
+			vfs, basename, &material_state, error, error_size)) {
+		free(bytes);
+		if (!error || !error_size || error[0] == '\0')
+			opt_mesh_error(error, error_size, "XWAU material integration failed");
+		return false;
+	}
+
 	AeronOptModelError build_error = { 0 };
 	AeronOptAlphaOverride alpha_overrides[OPT_ALPHA_OVERRIDE_MAX];
 	const size_t alpha_override_count = opt_resolve_alpha_overrides(
@@ -221,9 +232,12 @@ bool XwaRemasterOptMesh_Build(AeronVfs* vfs, const char* basename,
 				.emissive = true,
 				.alpha_overrides = alpha_overrides,
 				.alpha_override_count = alpha_override_count,
+				.material_overrides = material_state.overrides,
+				.material_override_count = material_state.override_count,
 				.max_atlas_size = 8192,
 			},
 			out, &build_error);
+	XwaXwauOptMaterial_Free(&material_state);
 	free(bytes);
 	if (!built)
 		opt_mesh_error(error, error_size,
