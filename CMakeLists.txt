@@ -33,7 +33,7 @@ if(XWA_ENABLE_ASAN)
     message(STATUS "AddressSanitizer enabled (XWA_ENABLE_ASAN=ON)")
 endif()
 
-# Aeron engine (window, GPU HAL, input, audio, VFS) — shared git submodule.
+# Aeron engine (window, GPU HAL, input, audio, VFS) â€” shared git submodule.
 option(XWA_BUILD_TOOLS "Build OpenXWA and Aeron asset/developer tools" ON)
 set(AERON_BUILD_TOOLS ${XWA_BUILD_TOOLS})
 set(AERON_ENABLE_VIDEO ON)
@@ -236,7 +236,7 @@ if(NOT MSVC)
         PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing")
 endif()
 
-# Remaster driver — snapshot -> aeron_scene translation.
+# Remaster driver â€” snapshot -> aeron_scene translation.
 # Snapshot data is its semantic render input; narrow modern-adapter controls
 # coordinate ownership of classic presentation layers.
 add_library(xwa_remaster STATIC
@@ -258,6 +258,7 @@ add_library(xwa_remaster STATIC
     src/xwa_remaster/preview.c
     src/xwa_remaster/ship.c
     src/xwa_remaster/opt_mesh.c
+    src/xwa_remaster/xwau_normal_map.c
     src/xwa_remaster/original_2d.c
     src/xwa_remaster/sky_stars.c
     src/xwa_remaster/assets.c
