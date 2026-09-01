@@ -12,9 +12,12 @@ on:
       - 'src/xwa_remaster/xwau_material_asset.h'
       - 'src/xwa_remaster/xwau_material_render.c'
       - 'src/xwa_remaster/xwau_material_render.h'
+      - 'src/xwa_remaster/xwau_normal_map.c'
+      - 'src/xwa_remaster/xwau_normal_map.h'
       - 'tests/xwau_static_material_test.c'
       - 'tests/xwau_material_asset_test.c'
       - 'tests/xwau_material_render_test.c'
+      - 'tests/xwau_normal_map_test.c'
       - '.github/workflows/xwau-static-material-test.yml'
 
 jobs:
@@ -68,3 +71,20 @@ jobs:
       - name: Run material render contract
         shell: bash
         run: ./xwau_material_render_test
+
+      - name: Build DAT normal-map RED contract
+        shell: bash
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror \
+            -Isrc -Isrc/xwa_formats/xwa_2d -Iaeron/include \
+            -Ithird_party/lzma_sdk -Ithird_party/bcdec \
+            tests/xwau_normal_map_test.c \
+            src/xwa_remaster/xwau_normal_map.c \
+            src/xwa_formats/xwa_2d/xwa_2d.c \
+            src/xwa_formats/xwa_2d/xwa_dat.c \
+            third_party/lzma_sdk/LzmaDec.c \
+            -o xwau_normal_map_test
+
+      - name: Run DAT normal-map contract
+        shell: bash
+        run: ./xwau_normal_map_test
