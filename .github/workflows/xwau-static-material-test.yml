@@ -6,6 +6,8 @@ on:
       - xwau-004-static-materials
   pull_request:
     paths:
+      - 'CMakeLists.txt'
+      - 'src/xwa_remaster/opt_mesh.c'
       - 'src/xwa_remaster/xwau_material.c'
       - 'src/xwa_remaster/xwau_material.h'
       - 'src/xwa_remaster/xwau_material_asset.c'
@@ -18,6 +20,7 @@ on:
       - 'tests/xwau_material_asset_test.c'
       - 'tests/xwau_material_render_test.c'
       - 'tests/xwau_normal_map_test.c'
+      - 'tests/xwau_opt_material_integration_test.c'
       - '.github/workflows/xwau-static-material-test.yml'
 
 jobs:
@@ -88,3 +91,17 @@ jobs:
       - name: Run DAT normal-map contract
         shell: bash
         run: ./xwau_normal_map_test
+
+      - name: Build OPT material integration RED contract
+        shell: bash
+        run: |
+          cc -std=c99 -Wall -Wextra -Wpedantic -Werror -DNDEBUG \
+            -Isrc -Iaeron/include \
+            tests/xwau_opt_material_integration_test.c \
+            src/xwa_remaster/opt_mesh.c \
+            -lm \
+            -o xwau_opt_material_integration_test
+
+      - name: Run OPT material integration contract
+        shell: bash
+        run: ./xwau_opt_material_integration_test
