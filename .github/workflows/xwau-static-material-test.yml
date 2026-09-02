@@ -19,6 +19,7 @@ on:
       - 'src/xwa_remaster/xwau_opt_materials.c'
       - 'src/xwa_remaster/xwau_opt_materials.h'
       - 'tests/xwau_static_material_test.c'
+      - 'tests/xwau_material_locale_test.c'
       - 'tests/xwau_material_asset_test.c'
       - 'tests/xwau_material_render_test.c'
       - 'tests/xwau_normal_map_test.c'
@@ -47,6 +48,20 @@ jobs:
       - name: Run parser contract
         shell: bash
         run: ./xwau_static_material_test
+
+      - name: Build locale-independent parser regression
+        shell: bash
+        run: |
+          cc -std=c99 -Wall -Wextra -Wpedantic \
+            -Isrc \
+            tests/xwau_material_locale_test.c \
+            src/xwa_remaster/xwau_material.c \
+            -Wl,--wrap=strtof -lm \
+            -o xwau_material_locale_test
+
+      - name: Run locale-independent parser regression
+        shell: bash
+        run: ./xwau_material_locale_test
 
       - name: Build asset lookup RED contract
         shell: bash

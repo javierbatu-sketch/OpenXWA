@@ -46,20 +46,80 @@ static int xwau_parse_float(const char* value, float* out) {
         return 0;
     }
 
-    char* end = NULL;
-    const float parsed = strtof(value, &end);
-    if (end == value || !isfinite(parsed)) {
+    const unsigned char* cursor = (const unsigned char*)value;
+    int negative = 0;
+    if (*cursor == '+' || *cursor == '-') {
+        negative = *cursor == '-';
+        ++cursor;
+    }
+
+    long double parsed = 0.0L;
+    int digit_count = 0;
+
+    while (isdigit(*cursor)) {
+        parsed = parsed * 10.0L + (long double)(*cursor - '0');
+        if (!isfinite(parsed)) {
+            return 0;
+        }
+        ++digit_count;
+        ++cursor;
+    }
+
+    if (*cursor == '.') {
+        ++cursor;
+        long double place = 0.1L;
+        while (isdigit(*cursor)) {
+            parsed += (long double)(*cursor - '0') * place;
+            place *= 0.1L;
+            ++digit_count;
+            ++cursor;
+        }
+    }
+
+    if (digit_count == 0) {
         return 0;
     }
 
-    while (*end && isspace((unsigned char)*end)) {
-        ++end;
+    int exponent = 0;
+    int exponent_negative = 0;
+    if (*cursor == 'e' || *cursor == 'E') {
+        ++cursor;
+        if (*cursor == '+' || *cursor == '-') {
+            exponent_negative = *cursor == '-';
+            ++cursor;
+        }
+
+        int exponent_digits = 0;
+        while (isdigit(*cursor)) {
+            if (exponent < 100000) {
+                exponent = exponent * 10 + (*cursor - '0');
+            }
+            ++exponent_digits;
+            ++cursor;
+        }
+        if (exponent_digits == 0) {
+            return 0;
+        }
     }
-    if (*end != '\0') {
+
+    if (*cursor != '\0') {
         return 0;
     }
 
-    *out = parsed;
+    if (exponent != 0 && parsed != 0.0L) {
+        const int signed_exponent = exponent_negative ? -exponent : exponent;
+        parsed *= powl(10.0L, (long double)signed_exponent);
+    }
+    if (negative) {
+        parsed = -parsed;
+    }
+
+    const float narrowed = (float)parsed;
+    if (!isfinite(narrowed)) {
+        return 0;
+    }
+
+    *out = narrowed;
     return 1;
 }
 
