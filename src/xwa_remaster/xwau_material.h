@@ -46,6 +46,11 @@ typedef struct XwaXwauMaterialFile {
     size_t section_capacity;
 } XwaXwauMaterialFile;
 
+/* Parses one complete, already-trimmed XWAU numeric token. XWAU assets
+ * always use ASCII '.' as the decimal separator, independently of the
+ * process locale. */
+int XwaXwauMaterial_ParseAsciiFloat(const char* value, float* out);
+
 int XwaXwauMaterial_ParseText(const char* text, size_t size,
                               XwaXwauMaterialFile* out,
                               char* error, size_t error_size);

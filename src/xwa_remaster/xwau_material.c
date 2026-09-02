@@ -41,7 +41,7 @@ static int xwau_ascii_equal(const char* left, const char* right) {
     return *left == '\0' && *right == '\0';
 }
 
-static int xwau_parse_float(const char* value, float* out) {
+int XwaXwauMaterial_ParseAsciiFloat(const char* value, float* out) {
     if (!value || !out) {
         return 0;
     }
@@ -125,7 +125,7 @@ static int xwau_parse_float(const char* value, float* out) {
 
 static int xwau_parse_bool(const char* value, int* out) {
     float parsed = 0.0f;
-    if (!xwau_parse_float(value, &parsed)) {
+    if (!XwaXwauMaterial_ParseAsciiFloat(value, &parsed)) {
         return 0;
     }
     if (parsed == 0.0f) {
@@ -146,7 +146,7 @@ static int xwau_set_float(const char* key, const char* value,
 
 #define XWAU_FLOAT_PROPERTY(KEY, HAS_FIELD, VALUE_FIELD) \
     if (xwau_ascii_equal(key, KEY)) { \
-        if (!xwau_parse_float(value, &parsed)) { \
+        if (!XwaXwauMaterial_ParseAsciiFloat(value, &parsed)) { \
             xwau_material_error(error, error_size, "invalid XWAU material numeric value"); \
             return -1; \
         } \

@@ -47,28 +47,6 @@ static int xwau_material_render_ascii_equal(const char* left,
     return *left == '\0' && *right == '\0';
 }
 
-static int xwau_material_render_parse_float(const char* value, float* out) {
-    if (!value || !out) {
-        return 0;
-    }
-
-    char* end = NULL;
-    const float parsed = strtof(value, &end);
-    if (end == value || !isfinite(parsed)) {
-        return 0;
-    }
-
-    while (*end && isspace((unsigned char)*end)) {
-        ++end;
-    }
-    if (*end != '\0') {
-        return 0;
-    }
-
-    *out = parsed;
-    return 1;
-}
-
 void XwaXwauMaterialRenderConfig_InitDefaults(
     XwaXwauMaterialRenderConfig* config) {
     if (!config) {
@@ -160,7 +138,7 @@ int XwaXwauMaterialRenderConfig_ParseText(
         }
 
         float parsed = 0.0f;
-        if (!xwau_material_render_parse_float(value, &parsed)) {
+        if (!XwaXwauMaterial_ParseAsciiFloat(value, &parsed)) {
             free(copy);
             xwau_material_render_error(
                 error, error_size,

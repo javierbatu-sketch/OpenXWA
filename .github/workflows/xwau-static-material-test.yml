@@ -22,6 +22,7 @@ on:
       - 'tests/xwau_material_locale_test.c'
       - 'tests/xwau_material_asset_test.c'
       - 'tests/xwau_material_render_test.c'
+      - 'tests/xwau_material_render_locale_test.c'
       - 'tests/xwau_normal_map_test.c'
       - 'tests/xwau_opt_material_integration_test.c'
       - '.github/workflows/xwau-static-material-test.yml'
@@ -84,6 +85,7 @@ jobs:
           cc -std=c99 -Wall -Wextra -Wpedantic \
             -Isrc -Iaeron/include \
             tests/xwau_material_render_test.c \
+            src/xwa_remaster/xwau_material.c \
             src/xwa_remaster/xwau_material_render.c \
             -lm \
             -o xwau_material_render_test
@@ -91,6 +93,21 @@ jobs:
       - name: Run material render contract
         shell: bash
         run: ./xwau_material_render_test
+
+      - name: Build material render locale regression
+        shell: bash
+        run: |
+          cc -std=c99 -Wall -Wextra -Wpedantic \
+            -Isrc -Iaeron/include \
+            tests/xwau_material_render_locale_test.c \
+            src/xwa_remaster/xwau_material.c \
+            src/xwa_remaster/xwau_material_render.c \
+            -Wl,--wrap=strtof -lm \
+            -o xwau_material_render_locale_test
+
+      - name: Run material render locale regression
+        shell: bash
+        run: ./xwau_material_render_locale_test
 
       - name: Build DAT normal-map RED contract
         shell: bash
