@@ -231,7 +231,8 @@ RUN case "${XWA_BUILD_TYPE}" in \
         -DCMAKE_TOOLCHAIN_FILE=/opt/xwa-toolchain.cmake \
         -DAERON_FSR3_SHADERGEN_EXECUTABLE=/opt/xwa-host/bin/aeron_fsr3_shadergen \
         -DAERON_SHADERCROSS_EXECUTABLE=/opt/xwa-host/bin/shadercross \
-        -DXWA_BUILD_TOOLS=ON \
+        -DXWA_BUILD_TOOLS=OFF \
+        -DAERON_BUILD_OPT2GLTF=ON \
         -DXWA_ENABLE_DEBUG_UI="${xwa_debug_ui}" \
         -DXWA_VERSION="${XWA_VERSION}" \
     && cmake --build /build/xwa --target xwa opt2gltf --parallel
