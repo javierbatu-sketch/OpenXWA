@@ -22,6 +22,7 @@
 #include "xwa/flight/hangar.h"
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/object/object.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/player/player.h"
 #include "xwa/flight/starfield.h"
 #include "xwa/frontend/frontend_cursor.h"
@@ -1195,9 +1196,12 @@ void XwaSnapshot_CaptureFlight(void) {
 				}
 				f->system_flags = cd->systemFlags;
 				f->subsystem_damage = cd->subsystemDamage;
-				memcpy(f->component_state, cd->componentState, sizeof f->component_state);
-				memcpy(f->mesh_rotation, cd->meshRotation, sizeof f->mesh_rotation);
-				memcpy(f->component_hp, cd->componentHp, sizeof f->component_hp);
+				for (uint16_t meshIndex = 0; meshIndex < XWA_SNAP_MAX_MESH_SLOTS; meshIndex++) {
+					f->component_state[meshIndex] = CraftExtended_GetMeshComponentState(cd, meshIndex);
+					f->mesh_rotation[meshIndex] = CraftExtended_GetMeshRotation(cd, meshIndex);
+					f->component_hp[meshIndex] = CraftExtended_GetComponentHp(cd, meshIndex);
+				}
+				f->damage_flame_frame = CraftExtended_GetSpecialComponentState(cd);
 				/* Engine-glow scale inputs (EngineGlow_RenderObjectGlows). */
 				f->object_kind = cd->objectKind;
 				f->eg_working = (uint8_t)(cd->workingSubsystems != 0);
@@ -1207,17 +1211,14 @@ void XwaSnapshot_CaptureFlight(void) {
 				f->eg_throttle = cd->throttleSpeed;
 				f->eg_output_scale = cd->engineOutputScale;
 				f->eg_max_speed = (uint16_t)cd->aiFlight.maxSpeedCache;
-				/* Per-emitter damage knockouts -> bitmask (read-only walk
-				 * of the render-state list; emitters >= 32 keep drawing).
-				 * g_objRenderState is allocated with the flight scene —
-				 * NULL during mission loading. */
-				f->eg_knockout_mask = 0;
+				/* Per-emitter damage knockouts -> 256-bit presentation mask
+				 * (read-only walk of the render-state list). g_objRenderState
+				 * is allocated with the flight scene — NULL during mission loading. */
+				XwaSnapshot_EngineKnockoutClear(f->eg_knockout_mask);
 				if (i < render_state_slot_count) {
 					for (const EngineGlowKnockoutMark* k = g_objRenderState[i].engineGlowKnockouts; k != NULL;
 						 k = k->next) {
-						if (k->emitterIndex < 32) {
-							f->eg_knockout_mask |= 1u << k->emitterIndex;
-						}
+						XwaSnapshot_EngineKnockoutSet(f->eg_knockout_mask, k->emitterIndex);
 					}
 				}
 			}

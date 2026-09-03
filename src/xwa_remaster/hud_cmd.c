@@ -324,7 +324,7 @@ static void cmd_add_object_billboard(const XwaFlightObject* object, const XwaHud
 
 static void cmd_add_wreck_flames(const XwaFlightObject* object, const XwaHudCrt* crt, const float rows[9],
 								 const XwaFlightObject* target, XwaRemasterAssets* assets) {
-	if (!object->has_craft || !object->component_state[49])
+	if (!object->has_craft || !object->damage_flame_frame)
 		return;
 	uint8_t mesh_types[XWA_SNAP_MAX_MESH_SLOTS];
 	const int mesh_count = XwaSnapshotExport_ModelMeshTypes(object->object_type, mesh_types);
@@ -337,7 +337,7 @@ static void cmd_add_wreck_flames(const XwaFlightObject* object, const XwaHudCrt*
 	for (int i = 0; i < mesh_count; i++) {
 		if (mesh_types[i] == XWA_SNAP_MESH_FUSELAGE && object->component_state[i] == 0) {
 			rotation += roll;
-			cmd_add_billboard(object, center, rotation, object->component_state[49], XWA_SNAP_TYPE_FLAME_2008,
+			cmd_add_billboard(object, center, rotation, object->damage_flame_frame, XWA_SNAP_TYPE_FLAME_2008,
 							  256, assets, crt);
 		}
 	}

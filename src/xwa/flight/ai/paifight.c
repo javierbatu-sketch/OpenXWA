@@ -1,4 +1,5 @@
 #include "xwa/flight/ai/ai_internal.h"
+#include "xwa/flight/object/craft_extended_state.h"
 
 // GLOBAL: XWA 0x917E60
 int g_paifightSearchOriginX;
@@ -733,7 +734,7 @@ int16_t paifight_FindNearestAttackerOfMatchingTarget(uint16_t target1Type, uint1
 
 								turretTargetCount = 0;
 								laserSlotCount = g_curCraft->laserSlotCount;
-								weaponSlot = g_curCraft->warheadData;
+								weaponSlot = CraftExtended_GetWeaponEntry(g_curCraft, 0u);
 								while (laserSlotCount > 0) {
 									if (weaponSlot->turretTargetObjIdx == (int16_t)projectileObjIdx) {
 										++turretTargetCount;
@@ -1873,12 +1874,12 @@ char paifight_followleadatkorder(void) {
 static __inline CraftData* paifight_AssignGunnerTurretTarget(unsigned int laserSlot, int16_t targetObjIdx) {
 	CraftData* craft;
 
-	g_curCraft->warheadData[laserSlot].turretTargetObjIdx = targetObjIdx;
-	g_curCraft->warheadData[laserSlot].turretRetargetCooldownTimer =
-		(int16_t)(g_curCraft->warheadData[laserSlot].turretRetargetCooldownTimer + 472);
+	CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->turretTargetObjIdx = targetObjIdx;
+	CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->turretRetargetCooldownTimer =
+		(int16_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->turretRetargetCooldownTimer + 472);
 	craft = g_curCraft;
-	if (g_curCraft->warheadData[laserSlot].turretRotBucket <= 0) {
-		g_curCraft->warheadData[laserSlot].turretRotBucket = (int16_t)(11 * (laserSlot & 7u));
+	if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->turretRotBucket <= 0) {
+		CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->turretRotBucket = (int16_t)(11 * (laserSlot & 7u));
 		craft = g_curCraft;
 	}
 	return craft;
@@ -1928,23 +1929,23 @@ char paifight_gunneroffenseorder(void) {
 	state.laserSlot = 0;
 	if ((uint8_t)craft->laserSlotCount > 0) {
 		do {
-			if (craft->warheadData[state.laserSlot].weaponType >= 4u &&
-				craft->warheadData[state.laserSlot].turretTargetObjIdx == -1 &&
-				craft->warheadData[state.laserSlot].turretRetargetCooldownTimer <= 0) {
+			if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->weaponType >= 4u &&
+				CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->turretTargetObjIdx == -1 &&
+				CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->turretRetargetCooldownTimer <= 0) {
 				CraftData* currentCraft;
 				int originX;
 				int originY;
 				int originZ;
 				unsigned int searchFlags;
 
-				craft->warheadData[state.laserSlot].turretRetargetCooldownTimer =
-					(int16_t)(craft->warheadData[state.laserSlot].turretRetargetCooldownTimer + 236);
+				CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->turretRetargetCooldownTimer =
+					(int16_t)(CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->turretRetargetCooldownTimer + 236);
 				currentCraft = g_curCraft;
-				searchFlags = currentCraft->warheadData[state.laserSlot].weaponType != 4u ? 0x50u : 0x30u;
+				searchFlags = CraftExtended_GetWeaponEntry(currentCraft, (uint16_t)(state.laserSlot))->weaponType != 4u ? 0x50u : 0x30u;
 				g_paiContext.aiTargetSearchFlags = (uint8_t)searchFlags;
 				g_paiContext.aiTargetSearchRangeLimit =
 					(uint32_t)g_modelDefs[currentCraft->modelIndex]
-						.laserGroupFireRange[currentCraft->warheadData[state.laserSlot].weaponGroupIdx];
+						.laserGroupFireRange[CraftExtended_GetWeaponEntry(currentCraft, (uint16_t)(state.laserSlot))->weaponGroupIdx];
 				if (g_paiContext.aiTargetSearchRangeLimit == 0) {
 					g_paiContext.aiTargetSearchRangeLimit = 0x10000u;
 				}
@@ -2045,7 +2046,7 @@ char paifight_gunneroffenseorder(void) {
 				g_collisionSegmentStartWorldY = originY;
 				g_collisionSegmentStartWorldX = originX;
 				g_collisionSegmentStartWorldZ = originZ;
-				currentCraft->warheadData[state.laserSlot].count = 0;
+				CraftExtended_GetWeaponEntry(currentCraft, (uint16_t)(state.laserSlot))->count = 0;
 
 				if (strcmp(g_planTable[g_paiContext.aiController->currentPlanId].name,
 						   "starshipprotectpln") != 0 &&
@@ -2086,7 +2087,7 @@ char paifight_gunneroffenseorder(void) {
 								   "starshipdisablepln") == 0 ||
 							strcmp(g_planTable[g_paiContext.aiController->currentPlanId].name,
 								   "disableldr1pln") == 0) {
-							craft->warheadData[state.laserSlot].count = 1;
+							CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->count = 1;
 						}
 					} else {
 						targetObjIdx = paifight_FindNearestGunnerTargetInCandidateSet(
@@ -2122,7 +2123,7 @@ char paifight_gunneroffenseorder(void) {
 									   "starshipdisablepln") == 0 ||
 								strcmp(g_planTable[g_paiContext.aiController->currentPlanId].name,
 									   "disableldr1pln") == 0) {
-								craft->warheadData[state.laserSlot].count = 1;
+								CraftExtended_GetWeaponEntry(craft, (uint16_t)(state.laserSlot))->count = 1;
 							}
 						}
 					}
@@ -2174,14 +2175,14 @@ char paifight_missiledefenseorder(void) {
 				uint32_t bestRangeScore;
 				uint16_t objectIdx;
 
-				if (craft->componentState
-						[g_modelDefs[craft->modelIndex].weaponHardpoints[warheadSlot].meshIdx] == 0) {
-					if ((craft->warheadData[warheadSlot].projectileTypeId == OBJ_WarheadMissile ||
-						 craft->warheadData[warheadSlot].projectileTypeId == OBJ_WarheadAdvancedMissile) &&
-						craft->warheadData[warheadSlot].count != 0 &&
-						craft->warheadData[warheadSlot].turretRotBucket <= 0) {
+				if (CraftExtended_GetMeshComponentState(
+						craft, g_modelDefs[craft->modelIndex].weaponHardpoints[warheadSlot].meshIdx) == 0u) {
+					if ((CraftExtended_GetWeaponEntry(craft, (uint16_t)(warheadSlot))->projectileTypeId == OBJ_WarheadMissile ||
+						 CraftExtended_GetWeaponEntry(craft, (uint16_t)(warheadSlot))->projectileTypeId == OBJ_WarheadAdvancedMissile) &&
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(warheadSlot))->count != 0 &&
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(warheadSlot))->turretRotBucket <= 0) {
 
-						craft->warheadData[warheadSlot].turretTargetObjIdx = -1;
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(warheadSlot))->turretTargetObjIdx = -1;
 						g_paifightSearchOriginX = g_paiContext.aiCurrentPointX;
 						g_paifightSearchOriginY = g_paiContext.aiCurrentPointY;
 						g_paifightSearchOriginZ = g_paiContext.aiCurrentPointZ;
@@ -2283,26 +2284,26 @@ char paifight_missiledefenseorder(void) {
 						}
 
 						if (bestTargetObjIdx != 0xffffu) {
-							g_curCraft->warheadData[warheadSlot].turretTargetObjIdx = bestTargetObjIdx;
+							CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->turretTargetObjIdx = bestTargetObjIdx;
 						}
 
 						craft = g_curCraft;
-						if (g_curCraft->warheadData[warheadSlot].turretTargetObjIdx != -1) {
+						if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->turretTargetObjIdx != -1) {
 							uint16_t savedTargetObjIdx;
 							int projectileObjIdx;
 
 							savedTargetObjIdx = g_paiContext.aiController->targetObjIdx;
 							g_paiContext.aiController->targetObjIdx =
-								(uint16_t)g_curCraft->warheadData[warheadSlot].turretTargetObjIdx;
+								(uint16_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->turretTargetObjIdx;
 							g_paiContext.aiController->targetComponent =
 								paifight_SelectTargetComponentMesh(g_paiContext.aiController->targetObjIdx);
 							projectileObjIdx = laser_firemissile(
 								g_paiContext.aiObjIdx, warheadSlot,
-								g_curCraft->warheadData[warheadSlot].projectileTypeId, 0xffffu);
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->projectileTypeId, 0xffffu);
 							if (projectileObjIdx != 0xffff) {
 								g_objectTable[projectileObjIdx].mobj->pWarheadGuidance->homingTier =
 									(uint8_t)((GameRand() & 3u) + 3u);
-								g_curCraft->warheadData[warheadSlot].turretRotBucket = 4720;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->turretRotBucket = 4720;
 							}
 							g_paiContext.aiController->targetObjIdx = savedTargetObjIdx;
 							craft = g_curCraft;
@@ -2358,7 +2359,7 @@ static __inline uint32_t paifight_ApplyTurretTargetRangePenalty(uint16_t targetO
 
 	laserSlot = 0;
 	while (laserSlot < g_curCraft->laserSlotCount) {
-		if (g_curCraft->warheadData[laserSlot].turretTargetObjIdx == (int16_t)targetObjIdx) {
+		if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->turretTargetObjIdx == (int16_t)targetObjIdx) {
 			rangeScore += 0x8000u;
 			g_targetRangeScore = (int)rangeScore;
 		}
@@ -2462,7 +2463,7 @@ static __inline int paifight_GunnerSelfDefenseTargetIsAlreadyCovered(uint16_t ta
 	coveredCount = 0;
 	slotsRemaining = g_curCraft->laserSlotCount;
 	if (slotsRemaining > 0) {
-		weapon = g_curCraft->warheadData;
+		weapon = CraftExtended_GetWeaponEntry(g_curCraft, 0u);
 		do {
 			if (weapon->turretTargetObjIdx == (int16_t)targetObjIdx) {
 				++coveredCount;
@@ -2494,7 +2495,7 @@ static __inline int paifight_IsCraftAttackingSelf(uint16_t candidateObjIdx, Craf
 		for (laserSlot = 0; laserSlot < candidateCraft->laserSlotCount; ++laserSlot) {
 			WarheadInventoryEntry* weapon;
 
-			weapon = &candidateCraft->warheadData[laserSlot];
+			weapon = CraftExtended_GetWeaponEntry(candidateCraft, (uint16_t)(laserSlot));
 			if ((uint16_t)weapon->turretTargetObjIdx == g_paiContext.aiObjIdx && weapon->weaponType >= 4u) {
 				isAttackingSelf = 1;
 				break;
@@ -2764,7 +2765,7 @@ char paifight_fightershootorder(void) {
 			firstSlot = g_modelDefs[g_curCraft->modelIndex].warheadLauncherFirstSlot[launcherIdx];
 			lastSlot = g_modelDefs[g_curCraft->modelIndex].warheadLauncherLastSlot[launcherIdx];
 			for (warheadSlot = firstSlot; warheadSlot <= lastSlot; ++warheadSlot) {
-				if (g_curCraft->warheadData[warheadSlot].count != 0) {
+				if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->count != 0) {
 					hasUsableWarhead = 1;
 					break;
 				}
@@ -2847,7 +2848,7 @@ char paifight_fightershootorder(void) {
 						pendingIonPulseScore = (int16_t)(pendingIonPulseScore + 30);
 					}
 					if (guidance->targetComponentIdx == targetComponent && targetComponent != 0xffffu &&
-						targetCraft->componentHp[targetComponent] != 0xffu) {
+						(*CraftExtended_ComponentHpRef(targetCraft, (uint16_t)(targetComponent))) != 0xffu) {
 						++componentHitCount;
 					}
 				}
@@ -2965,8 +2966,8 @@ char paifight_fightershootorder(void) {
 					} else {
 						firstSlot =
 							g_modelDefs[firingCraft->modelIndex].warheadLauncherFirstSlot[launcherIdx];
-						if (firingCraft->warheadData[firstSlot].count >=
-							firingCraft->warheadData[firstSlot + 1].count) {
+						if (CraftExtended_GetWeaponEntry(firingCraft, (uint16_t)(firstSlot))->count >=
+							CraftExtended_GetWeaponEntry(firingCraft, (uint16_t)(firstSlot + 1))->count) {
 							firingCraft->warheadLauncherFlags[launcherIdx] = 1;
 						} else {
 							firingCraft->warheadLauncherFlags[launcherIdx] = 0x81u;
@@ -3022,15 +3023,15 @@ char paifight_gunnerselfdefenseorder(void) {
 		for (laserSlot = 0; laserSlot < craft->laserSlotCount; ++laserSlot) {
 			unsigned char weaponType;
 
-			weaponType = craft->warheadData[laserSlot].weaponType;
-			if (weaponType < 4u || craft->warheadData[laserSlot].turretRetargetCooldownTimer > 0) {
+			weaponType = CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->weaponType;
+			if (weaponType < 4u || CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->turretRetargetCooldownTimer > 0) {
 				continue;
 			}
 
-			craft->warheadData[laserSlot].turretTargetObjIdx = -1;
-			g_curCraft->warheadData[laserSlot].count = 0;
-			g_curCraft->warheadData[laserSlot].lastFireMeshIdx = 0xffu;
-			g_curCraft->warheadData[laserSlot].lastFireHardpointIdx = 0xffu;
+			CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->turretTargetObjIdx = -1;
+			CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->count = 0;
+			CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->lastFireMeshIdx = 0xffu;
+			CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(laserSlot))->lastFireHardpointIdx = 0xffu;
 			craft = g_curCraft;
 			if (craft->objectKind == 3 || craft->workingSubsystems == 0 ||
 				craft->weaponFireInhibitTimer != 0) {
@@ -3053,7 +3054,7 @@ char paifight_gunnerselfdefenseorder(void) {
 					g_targetRangeScore = (int)rangeScore;
 					defenseRangeLimit =
 						(uint32_t)g_modelDefs[craft->modelIndex]
-							.laserGroupFireRange[craft->warheadData[laserSlot].weaponGroupIdx];
+							.laserGroupFireRange[CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->weaponGroupIdx];
 					if (defenseRangeLimit == 0) {
 						defenseRangeLimit = weaponType != 4u ? 0x20000u : 0x10000u;
 					}
@@ -3095,7 +3096,7 @@ char paifight_gunnerselfdefenseorder(void) {
 
 				bestProjectileObjIdx = -1;
 				defenseRangeLimit = (uint32_t)g_modelDefs[craft->modelIndex]
-										.laserGroupFireRange[craft->warheadData[laserSlot].weaponGroupIdx];
+										.laserGroupFireRange[CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->weaponGroupIdx];
 				if (defenseRangeLimit == 0) {
 					defenseRangeLimit = 0x10000u;
 				}
@@ -3151,12 +3152,12 @@ char paifight_gunnerselfdefenseorder(void) {
 				bestLargeObjIdx = 0xffffu;
 				bestOtherObjIdx = 0xffffu;
 				bestLargeRange = (uint32_t)g_modelDefs[craft->modelIndex]
-									 .laserGroupFireRange[craft->warheadData[laserSlot].weaponGroupIdx];
+									 .laserGroupFireRange[CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->weaponGroupIdx];
 				if (bestLargeRange == 0) {
 					bestLargeRange = 0x10000u;
 				}
 				bestOtherRange = (uint32_t)g_modelDefs[craft->modelIndex]
-									 .laserGroupFireRange[craft->warheadData[laserSlot].weaponGroupIdx];
+									 .laserGroupFireRange[CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->weaponGroupIdx];
 				if (bestOtherRange == 0) {
 					bestOtherRange = 0x10000u;
 				}
@@ -3376,7 +3377,7 @@ int16_t paifight_FindNearestGunnerTargetInCandidateSet(uint16_t target1Type, uin
 					int laserSlot;
 
 					laserSlot = 0;
-					weapon = g_curCraft->warheadData;
+					weapon = CraftExtended_GetWeaponEntry(g_curCraft, 0u);
 					while (laserSlot < g_curCraft->laserSlotCount) {
 						if (weapon->turretTargetObjIdx == (int16_t)objectIdx) {
 							rangeScore += 0x8000u;
@@ -3446,7 +3447,7 @@ int16_t paifight_FindNearestGunnerTargetInCandidateSet(uint16_t target1Type, uin
 					int laserSlot;
 
 					laserSlot = 0;
-					weapon = g_curCraft->warheadData;
+					weapon = CraftExtended_GetWeaponEntry(g_curCraft, 0u);
 					while (laserSlot < g_curCraft->laserSlotCount) {
 						if (weapon->turretTargetObjIdx == (int16_t)objectIdx) {
 							rangeScore += 0x8000u;

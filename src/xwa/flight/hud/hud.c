@@ -24,6 +24,7 @@
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/net_session.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/damage.h"
 #include "xwa/flight/player/player.h"
 #include "xwa/flight/yard.h"
@@ -3354,7 +3355,7 @@ void Hud_SetupReticle(void) {
 
 			laserIndexOut = g_reticleLaserHardpointIndices;
 			warheadIndexOut = g_reticleWarheadHardpointIndices;
-			weaponTypePtr = &craft->warheadData[0].weaponType;
+			weaponTypePtr = &CraftExtended_GetWeaponEntry(craft, (uint16_t)(0))->weaponType;
 			hardpointSlot = 0;
 			do {
 				uint8_t weaponType;
@@ -5781,9 +5782,9 @@ void Hud_SetupLaserChargePositions3D(void) {
 		i = (uint16_t)g_reticleLaserHardpointCount;
 		scan = 0;
 		do {
-			if (craft->warheadData[scan].weaponType == 1) {
+			if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(scan))->weaponType == 1) {
 				++laserCount;
-			} else if (craft->warheadData[scan].weaponType == 2) {
+			} else if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(scan))->weaponType == 2) {
 				++ionCount;
 			}
 			++scan;
@@ -6060,7 +6061,7 @@ void Hud_DrawLaserCharge3D(void) {
 	for (weaponSlot = 0; (uint16_t)weaponSlot < g_reticleLaserHardpointCount; ++weaponSlot) {
 		uint8_t weaponType;
 
-		weaponType = craft->warheadData[(uint16_t)weaponSlot].weaponType;
+		weaponType = CraftExtended_GetWeaponEntry(craft, (uint16_t)((uint16_t)weaponSlot))->weaponType;
 		if (weaponType == 1) {
 			++laserCount;
 		} else if (weaponType == 2) {
@@ -6200,7 +6201,7 @@ void Hud_DrawEnergyBar3D(int isIonBank, int bankWeaponCount) {
 	}
 
 	anchorY = &chargeQuads[1].screenY;
-	chargePtr = &craft->warheadData[startWeapon].laserCharge;
+	chargePtr = &CraftExtended_GetWeaponEntry(craft, (uint16_t)(startWeapon))->laserCharge;
 	weaponCount = endWeapon - startWeapon;
 	do {
 		uint32_t emptySegments;
@@ -6267,7 +6268,7 @@ void Hud_DrawEnergyBar3D(int isIonBank, int bankWeaponCount) {
 				}
 			}
 		}
-		chargePtr += sizeof(*craft->warheadData);
+		chargePtr += sizeof(WarheadInventoryEntry);
 		anchorY += sizeof(*chargeQuads) / sizeof(*anchorY);
 		--weaponCount;
 	} while (weaponCount != 0);
@@ -6941,7 +6942,7 @@ void Hud_DrawReticle3D(void) {
 
 				laserReadyState = 10;
 				linkGroup = laserSlot > g_modelDefs[craft->modelIndex].laserGroupLastSlot[0];
-				if ((int8_t)craft->warheadData[laserSlot].laserCharge <= 0) {
+				if ((int8_t)CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->laserCharge <= 0) {
 					laserReadyState = 10;
 				} else if ((g_players[g_localPlayer].selectedWeaponMode == 0 &&
 							g_players[g_localPlayer].selectedWarhead == linkGroup) ||
@@ -7629,7 +7630,7 @@ void Hud_DetermineLockStatus(void) {
 
 					laserReadyState = 10;
 					linkGroup = laserSlot > g_modelDefs[craft->modelIndex].laserGroupLastSlot[0];
-					if ((int8_t)craft->warheadData[laserSlot].laserCharge > 0) {
+					if ((int8_t)CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->laserCharge > 0) {
 						if (g_players[g_localPlayer].selectedWarhead == linkGroup) {
 							switch (craft->laserLinkMode[linkGroup]) {
 								case 1:
@@ -8013,9 +8014,9 @@ void Hud_DrawLaserCharge2D(void) {
 	laserCount = 0;
 	ionCount = 0;
 	for (weaponSlot = 0; (uint16_t)weaponSlot < (uint16_t)g_reticleLaserHardpointCount; ++weaponSlot) {
-		if (craft->warheadData[weaponSlot].weaponType == 1) {
+		if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponSlot))->weaponType == 1) {
 			++laserCount;
-		} else if (craft->warheadData[weaponSlot].weaponType == 2) {
+		} else if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponSlot))->weaponType == 2) {
 			++ionCount;
 		}
 	}
@@ -8143,7 +8144,7 @@ void Hud_DrawEnergyBar2D(int isIonBank, int bankWeaponCount) {
 		int drawX;
 		int drawY;
 
-		rawCharge = (int8_t)craft->warheadData[weaponSlot].laserCharge;
+		rawCharge = (int8_t)CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponSlot))->laserCharge;
 		if ((craft->activeHudFeatureMask & HUD_ENERGY_BAR_REQUIRED_FEATURES) !=
 				HUD_ENERGY_BAR_REQUIRED_FEATURES ||
 			rawCharge <= 0 || (craft->workingSubsystems & HUD_ENERGY_BAR_REQUIRED_SUBSYSTEM) == 0) {
@@ -8290,7 +8291,7 @@ void Hud_DrawReticle2D(void) {
 
 				laserReadyState = 10;
 				linkGroup = laserSlot > g_modelDefs[craft->modelIndex].laserGroupLastSlot[0];
-				if ((int8_t)craft->warheadData[laserSlot].laserCharge > 0 &&
+				if ((int8_t)CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlot))->laserCharge > 0 &&
 					player->selectedWarhead == linkGroup) {
 					switch (craft->laserLinkMode[linkGroup]) {
 						case 0:
@@ -9994,7 +9995,7 @@ void Hud_OutputWarheadCount(uint16_t warheadSlotIdx, int16_t displaySlot, int16_
 	}
 
 	craft = g_objectTable[g_players[g_localPlayer].objectIndex].mobj->pCraft;
-	count = craft->warheadData[warheadSlotIdx].count;
+	count = CraftExtended_GetWeaponEntry(craft, (uint16_t)(warheadSlotIdx))->count;
 	if (!count) {
 		return;
 	}
@@ -10184,7 +10185,7 @@ void Hud_UpdateThreatIndicators(void) {
 			for (laserSlotIdx = 0; laserSlotIdx < craft->laserSlotCount; ++laserSlotIdx) {
 				uint8_t meshIdx;
 
-				if (craft->warheadData[laserSlotIdx].weaponType < 4u) {
+				if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlotIdx))->weaponType < 4u) {
 					continue;
 				}
 
@@ -10203,9 +10204,9 @@ void Hud_UpdateThreatIndicators(void) {
 					alreadyCheckedLaserVoice = 1;
 				}
 
-				if ((uint16_t)craft->warheadData[laserSlotIdx].turretTargetObjIdx == localPlayerObjIdx) {
+				if ((uint16_t)CraftExtended_GetWeaponEntry(craft, (uint16_t)(laserSlotIdx))->turretTargetObjIdx == localPlayerObjIdx) {
 					meshIdx = g_modelDefs[craft->modelIndex].weaponHardpoints[laserSlotIdx].meshIdx;
-					if (craft->componentHp[meshIdx] != 0) {
+					if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(meshIdx))) != 0) {
 						turretThreatState = 1;
 					}
 				}
@@ -12111,12 +12112,12 @@ void Hud_UpdateHUDText(void) {
 					g_flightTextShadowEnabled = 0;
 					FlightText_SetCursor(0, 0);
 					FlightText_DrawDecimalNumber(
-						craft->warheadData[modelDef->warheadLauncherFirstSlot[0]].count, 2u, 1u);
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherFirstSlot[0]))->count, 2u, 1u);
 					FlightText_SetCursor((int16_t)FlightText_MeasureStringWidth("00 "), 0);
 					FlightText_DrawString(":");
 					FlightText_SetCursor((int16_t)FlightText_MeasureStringWidth("00 : "), 0);
 					FlightText_DrawDecimalNumber(
-						craft->warheadData[modelDef->warheadLauncherLastSlot[0]].count, 2u, 1u);
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherLastSlot[0]))->count, 2u, 1u);
 					if (g_useHardware3D) {
 						FlightText_SetRenderOffset(0, 0);
 					} else {
@@ -12153,26 +12154,26 @@ void Hud_UpdateHUDText(void) {
 					FlightText_SetFontTier(0);
 					FlightText_SetCursor(0, 0);
 					FlightText_DrawDecimalNumber(
-						craft->warheadData[modelDef->warheadLauncherFirstSlot[0]].count, 2u, 1u);
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherFirstSlot[0]))->count, 2u, 1u);
 					cursorX = FlightText_MeasureStringWidth("00");
 					FlightText_SetCursor((int16_t)cursorX, 0);
 					FlightText_DrawString(":");
 					cursorX = (uint16_t)(cursorX + FlightText_MeasureStringWidth(":"));
 					FlightText_SetCursor((int16_t)cursorX, 0);
 					FlightText_DrawDecimalNumber(
-						craft->warheadData[modelDef->warheadLauncherLastSlot[0]].count, 2u, 1u);
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherLastSlot[0]))->count, 2u, 1u);
 					cursorX = (uint16_t)(cursorX + FlightText_MeasureStringWidth("00") +
 										 FlightText_MeasureStringWidth("-"));
 					FlightText_SetCursor((int16_t)cursorX, 0);
 					FlightText_DrawDecimalNumber(
-						craft->warheadData[modelDef->warheadLauncherFirstSlot[1]].count, 2u, 1u);
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherFirstSlot[1]))->count, 2u, 1u);
 					cursorX = (uint16_t)(cursorX + FlightText_MeasureStringWidth("00"));
 					FlightText_SetCursor((int16_t)cursorX, 0);
 					FlightText_DrawString(":");
 					cursorX = (uint16_t)(cursorX + FlightText_MeasureStringWidth(":"));
 					FlightText_SetCursor((int16_t)cursorX, 0);
 					FlightText_DrawDecimalNumber(
-						craft->warheadData[modelDef->warheadLauncherLastSlot[1]].count, 2u, 1u);
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherLastSlot[1]))->count, 2u, 1u);
 					if (g_useHardware3D) {
 						FlightText_SetRenderOffset(0, 0);
 					} else {
@@ -13140,7 +13141,7 @@ void Hud_DrawCmdTargetComponentLine(void) {
 						if (engineEmitterIdx == 0xffu) {
 							showPercent = 0;
 						} else {
-							componentPercent = targetCraft->engineEmitterHealth[engineEmitterIdx];
+							componentPercent = CraftExtended_GetEngineEmitterHealth(targetCraft, engineEmitterIdx);
 							if (componentPercent != 0xffu) {
 								componentPercent =
 									(uint8_t)(int)((float)componentPercent /
@@ -13159,8 +13160,8 @@ void Hud_DrawCmdTargetComponentLine(void) {
 				}
 			} else {
 				componentPercent =
-					(uint8_t)(int)((float)targetCraft->componentHp[(uint16_t)g_players[g_localPlayer]
-																	   .selectedTargetComponent] /
+					(uint8_t)(int)((float)(*CraftExtended_ComponentHpRef(targetCraft, (uint16_t)((uint16_t)g_players[g_localPlayer]
+																	   .selectedTargetComponent))) /
 								   ((float)g_meshTypeComponentMaxHp[meshType] * g_hudComponentPercentScale));
 			}
 		}

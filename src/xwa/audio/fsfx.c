@@ -1,4 +1,5 @@
 #include "xwa/audio/fsfx.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/assets/file_io.h"
 #include "xwa/assets/model_def.h"
 #include "xwa/assets/model_type.h"
@@ -1712,7 +1713,7 @@ void fsfx_UpdateMissileThreatWarning(void) {
 					lastSlot = g_modelDefs[modelIndex].warheadLauncherLastSlot[launcherIdx];
 					for (warheadSlot = g_modelDefs[modelIndex].warheadLauncherFirstSlot[launcherIdx];
 						 warheadSlot <= lastSlot; ++warheadSlot) {
-						if (craft->warheadData[warheadSlot].count != 0) {
+						if (CraftExtended_GetWeaponEntry(craft, warheadSlot)->count != 0) {
 							armedLockStrength = (int16_t)craft->warheadLockTicks;
 							launcherIdx = craft->warheadLauncherCount;
 							warheadSlot = lastSlot + 1;
@@ -1747,7 +1748,7 @@ void fsfx_UpdateMissileThreatWarning(void) {
 					lastSlot = g_modelDefs[modelIndex].warheadLauncherLastSlot[launcherIdx];
 					for (warheadSlot = g_modelDefs[modelIndex].warheadLauncherFirstSlot[launcherIdx];
 						 warheadSlot <= lastSlot; ++warheadSlot) {
-						if (craft->warheadData[warheadSlot].count != 0) {
+						if (CraftExtended_GetWeaponEntry(craft, warheadSlot)->count != 0) {
 							armedLockStrength = (int16_t)craft->warheadLockTicks;
 							launcherIdx = craft->warheadLauncherCount;
 							warheadSlot = lastSlot + 1;

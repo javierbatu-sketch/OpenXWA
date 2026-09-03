@@ -154,6 +154,7 @@ set(XWA_RECOVERED_SOURCES
     src/xwa/flight/mission/mission.c
     src/xwa/flight/net_session.c
     src/xwa/flight/object/collision.c
+    src/xwa/flight/object/craft_extended_state.c
     src/xwa/flight/object/damage.c
     src/xwa/flight/object/debris.c
     src/xwa/flight/object/laser.c

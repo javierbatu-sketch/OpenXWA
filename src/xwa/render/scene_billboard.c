@@ -3,6 +3,7 @@
 #include "xwa/render/renderer_internal.h"
 
 #include "xwa/flight/flight.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/math/fixed.h"
 #include "xwa/util/memory.h"
 #ifdef XWA_MODERN
@@ -3483,7 +3484,7 @@ void SceneBillboard_RenderQueuedTextured(int drawTargetComponentMarkers) {
 			if (g_objectTable[currentTargetObjectIdx].objectType == OBJ_AccelRing2 ||
 				g_objectTable[currentTargetObjectIdx].objectType == OBJ_AccelRing3) {
 				Targeting_DrawObjectBox(currentTargetObjectIdx, 0xFFFFu, 0x3Bu);
-				if (g_objectTable[currentTargetObjectIdx].mobj->pCraft->componentHp[4]) {
+				if (CraftExtended_GetComponentHp(g_objectTable[currentTargetObjectIdx].mobj->pCraft, 4u)) {
 					Targeting_DrawObjectBox(currentTargetObjectIdx,
 											(uint16_t)g_players[g_localPlayer].selectedTargetComponent,
 											0x36u);
@@ -3509,7 +3510,7 @@ void SceneBillboard_RenderQueuedTextured(int drawTargetComponentMarkers) {
 					craft = g_objectTable[currentTargetObjectIdx].mobj->pCraft;
 					while ((int)(uint16_t)meshIndex < meshCount) {
 						if (meshIndex != (uint16_t)g_players[g_localPlayer].selectedTargetComponent &&
-							craft->componentHp[meshIndex] &&
+							(*CraftExtended_ComponentHpRef(craft, (uint16_t)(meshIndex))) &&
 							ModelMesh_GetObjectTypeMeshType(modelType, meshIndex) == selectedMeshType) {
 							Targeting_DrawObjectBox(currentTargetObjectIdx, meshIndex, 0x36u);
 						}

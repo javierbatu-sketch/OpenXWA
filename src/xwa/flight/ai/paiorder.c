@@ -1,4 +1,5 @@
 #include "xwa/flight/ai/ai_internal.h"
+#include "xwa/flight/object/craft_extended_state.h"
 
 // GLOBAL: XWA 0x5B7670
 const unsigned int g_aiStillAttackLastAttackerRangeBySkill[4] = { 0x8000, 0xc000, 0xe000, 0 };
@@ -203,8 +204,9 @@ char paiorder_checkhyperorder(void) {
 char paiorder_componentgoneorder(void) {
 	if (g_paiContext.aiController->targetObjIdx != 0xffff &&
 		g_paiContext.aiController->targetComponent != 0xffff &&
-		g_objectTable[g_paiContext.aiController->targetObjIdx]
-				.mobj->pCraft->componentHp[g_paiContext.aiController->targetComponent] == 0) {
+		CraftExtended_GetComponentHp(
+			g_objectTable[g_paiContext.aiController->targetObjIdx].mobj->pCraft,
+			g_paiContext.aiController->targetComponent) == 0) {
 		return 1;
 	}
 
@@ -1288,7 +1290,7 @@ char paiorder_rocketsonboardorder(void) {
 			firstSlot = modelDef->warheadLauncherFirstSlot[launcherIdx];
 			weaponSlot = firstSlot;
 			while (weaponSlot <= lastSlot) {
-				if (craft->warheadData[weaponSlot].count != 0) {
+				if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponSlot))->count != 0) {
 					return 1;
 				}
 				++weaponSlot;
@@ -1360,7 +1362,8 @@ char paiorder_awaitboardorder(void) {
 
 		engineGlowCount = g_modelDefs[g_curCraft->modelIndex].engineGlowCount;
 		for (engineIndex = 0; engineIndex < engineGlowCount; ++engineIndex) {
-			g_curCraft->engineEmitterHealth[engineIndex] = g_modelDefs[g_curCraft->modelIndex].componentMaxHp;
+			CraftExtended_SetEngineEmitterHealth(
+				g_curCraft, engineIndex, g_modelDefs[g_curCraft->modelIndex].componentMaxHp);
 		}
 
 		if (g_useHardware3D) {
@@ -1541,7 +1544,7 @@ char paiorder_abortmissionorder(void) {
 							WarheadInventoryEntry* warhead;
 
 							slotCount = (int)(lastSlot - firstSlot + 1);
-							warhead = &g_curCraft->warheadData[firstSlot];
+							warhead = CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot));
 							do {
 								if (warhead->count != 0) {
 									hasWarheads = 1;

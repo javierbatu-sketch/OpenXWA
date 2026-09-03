@@ -1,4 +1,5 @@
 #include "xwa/flight/ai/ai_internal.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/death_star.h"
 #include "xwa/flight/hangar.h"
 #include "xwa/flight/starfield.h"
@@ -4406,8 +4407,8 @@ static char paiman_boardmaneuver(void) {
 							targetCount = 1;
 						if (targetCount > 99u)
 							targetCount = 99;
-						if (craft->warheadData[slot].count < targetCount) {
-							++craft->warheadData[slot].count;
+						if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->count < targetCount) {
+							++CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->count;
 							if (targetObjIdx == (uint16_t)g_players[g_localPlayer].objectIndex) {
 								if (warhead == OBJ_WarheadAdvancedTorpedo ||
 									warhead == OBJ_WarheadAdvancedMissile ||
@@ -4418,7 +4419,7 @@ static char paiman_boardmaneuver(void) {
 							}
 							anyRearmed = 1;
 						}
-						craft->warheadData[slot].laserCharge = 127;
+						CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge = 127;
 					}
 				}
 

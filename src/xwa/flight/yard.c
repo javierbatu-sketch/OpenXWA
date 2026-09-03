@@ -18,6 +18,7 @@
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/net_session.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/laser.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/player/player.h"
@@ -995,11 +996,12 @@ int Yard_SpawnObjectAtWorldPos(ObjectTypeId objectType, int worldX, int worldY, 
 			g_curCraft->aiController.maneuverPhase = 0;
 			g_curCraft->aiController.maneuverTimer = 0;
 
+			CraftExtended_ResetComponentArrays(g_curCraft);
 			for (componentIdx = 0, remainingCount = 50; remainingCount != 0;
 				 ++componentIdx, --remainingCount) {
-				g_curCraft->componentState[componentIdx] = 0;
-				g_curCraft->meshRotation[componentIdx] = 0;
-				g_curCraft->componentHp[componentIdx] = 0xffu;
+				(void)CraftExtended_SetMeshComponentState(g_curCraft, (uint16_t)componentIdx, 0u);
+				(*CraftExtended_MeshRotationRef(g_curCraft, (uint16_t)(componentIdx))) = 0;
+				(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))) = 0xffu;
 			}
 
 			meshCount = ModelMesh_GetObjectTypeMeshCount((ObjectTypeId)objectTypeId);
@@ -1009,13 +1011,13 @@ int Yard_SpawnObjectAtWorldPos(ObjectTypeId objectType, int worldX, int worldY, 
 				meshType = ModelMesh_GetObjectTypeMeshType((ObjectTypeId)objectTypeId, meshIdx);
 				switch (meshType) {
 					case MESH_Wing:
-						g_curCraft->componentHp[meshIdx] = 20;
-						g_curCraft->componentState[meshIdx] = 0;
+						(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) = 20;
+						(void)CraftExtended_SetMeshComponentState(g_curCraft, (uint16_t)meshIdx, 0u);
 						break;
 					case MESH_SmallGun:
 					case MESH_BeamSystem:
-						g_curCraft->componentHp[meshIdx] = 2;
-						g_curCraft->componentState[meshIdx] = 0;
+						(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) = 2;
+						(void)CraftExtended_SetMeshComponentState(g_curCraft, (uint16_t)meshIdx, 0u);
 						break;
 				}
 			}
@@ -1088,21 +1090,21 @@ int Yard_SpawnObjectAtWorldPos(ObjectTypeId objectType, int worldX, int worldY, 
 							for (slotIdx = firstSlot; slotIdx <= lastSlot; ++slotIdx) {
 								if (g_modelDefs[modelIndex].laserGroupMountType[groupIdx] == 1u ||
 									g_modelDefs[modelIndex].laserGroupMountType[groupIdx] == 2u) {
-									g_curCraft->warheadData[slotIdx].projectileTypeId =
+									CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->projectileTypeId =
 										g_curCraft->laserProjectileTypeId[groupIdx];
-									g_curCraft->warheadData[slotIdx].weaponType =
+									CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType =
 										g_modelDefs[modelIndex].laserGroupMountType[groupIdx];
 								} else {
-									g_curCraft->warheadData[slotIdx].projectileTypeId =
+									CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->projectileTypeId =
 										g_curCraft->laserProjectileTypeId[groupIdx];
-									g_curCraft->warheadData[slotIdx].weaponType = 4;
+									CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType = 4;
 								}
-								g_curCraft->warheadData[slotIdx].laserCharge = 127;
-								g_curCraft->warheadData[slotIdx].count = 0;
-								g_curCraft->warheadData[slotIdx].lastFireMeshIdx = 0xffu;
-								g_curCraft->warheadData[slotIdx].lastFireHardpointIdx = 0xffu;
-								g_curCraft->warheadData[slotIdx].weaponGroupIdx = (uint8_t)groupIdx;
-								g_curCraft->warheadData[slotIdx].turretTargetObjIdx = -1;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge = 127;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->count = 0;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->lastFireMeshIdx = 0xffu;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->lastFireHardpointIdx = 0xffu;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponGroupIdx = (uint8_t)groupIdx;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->turretTargetObjIdx = -1;
 							}
 						}
 					}
@@ -1245,16 +1247,16 @@ void Yard_UpdateCompactorCycle(int deltaTicks) {
 			meshCount = (uint16_t)ModelMesh_GetObjectTypeMeshCount(compactorObj->objectType);
 			if (meshCount > 1u) {
 				for (meshIdx = 1; meshIdx < meshCount; ++meshIdx) {
-					if (compactorCraft->meshRotation[meshIdx] < g_yardCompactorMeshOpenLimits[meshIdx]) {
-						compactorCraft->meshRotation[meshIdx] += (uint8_t)stepCount;
-						if (compactorCraft->meshRotation[meshIdx] > g_yardCompactorMeshOpenLimits[meshIdx]) {
-							compactorCraft->meshRotation[meshIdx] = g_yardCompactorMeshOpenLimits[meshIdx];
+					if ((*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx))) < g_yardCompactorMeshOpenLimits[meshIdx]) {
+						(*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx))) += (uint8_t)stepCount;
+						if ((*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx))) > g_yardCompactorMeshOpenLimits[meshIdx]) {
+							(*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx))) = g_yardCompactorMeshOpenLimits[meshIdx];
 						}
 					}
 				}
 			}
 
-			if (compactorCraft->meshRotation[2] == g_yardCompactorMeshOpenLimits[2]) {
+			if ((*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(2))) == g_yardCompactorMeshOpenLimits[2]) {
 				g_yardContext.compactorCycleState = 2;
 				fsfx_PlaySound(182, sourceObjIdx, (unsigned int)g_localPlayer);
 			}
@@ -1280,12 +1282,12 @@ void Yard_UpdateCompactorCycle(int deltaTicks) {
 			meshCount = (uint16_t)ModelMesh_GetObjectTypeMeshCount(compactorObj->objectType);
 			if (meshCount > 1u) {
 				for (meshIdx = 1; meshIdx < meshCount; ++meshIdx) {
-					meshRotation = compactorCraft->meshRotation[meshIdx];
+					meshRotation = (*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx)));
 					if (meshRotation > 0u) {
 						meshRotation = (uint8_t)(meshRotation - stepCount);
-						compactorCraft->meshRotation[meshIdx] = meshRotation;
+						(*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx))) = meshRotation;
 						if (meshRotation > g_yardCompactorMeshOpenLimits[meshIdx]) {
-							compactorCraft->meshRotation[meshIdx] = 0;
+							(*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(meshIdx))) = 0;
 						}
 					}
 				}
@@ -1309,7 +1311,7 @@ void Yard_UpdateCompactorCycle(int deltaTicks) {
 				}
 			}
 
-			if (compactorCraft->meshRotation[2] == 0) {
+			if ((*CraftExtended_MeshRotationRef(compactorCraft, (uint16_t)(2))) == 0) {
 				g_yardContext.compactorCycleState = 0;
 				(void)fsfx_PlaySound(182, sourceObjIdx, (unsigned int)g_localPlayer);
 				fsfx_PlaySound(185, sourceObjIdx, (unsigned int)g_localPlayer);
@@ -2168,10 +2170,10 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 				uint8_t rotation;
 
 				meshIdx = Yard_CentrifugeDoorMeshIndex(mechanismIdx);
-				rotation = (uint8_t)(centrifugeCraft->meshRotation[meshIdx] + stepCount);
-				centrifugeCraft->meshRotation[meshIdx] = rotation;
+				rotation = (uint8_t)((*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) + stepCount);
+				(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = rotation;
 				if (rotation >= 0x36u) {
-					centrifugeCraft->meshRotation[meshIdx] = 0x36u;
+					(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = 0x36u;
 					g_yardContext.centrifugeMechanisms[mechanismIdx].state = 2;
 				}
 				break;
@@ -2193,7 +2195,7 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 					g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum;
 				rotation = (uint8_t)(int)(g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum *
 										  0.00390625f);
-				centrifugeCraft->meshRotation[meshIdx] = rotation;
+				(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = rotation;
 
 				if (g_yardContext.centrifugeMechanisms[mechanismIdx].angularVelocity >=
 					800.0f - (float)(10 * mechanismIdx)) {
@@ -2223,10 +2225,10 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 				g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum =
 					(float)stepCount * g_yardContext.centrifugeMechanisms[mechanismIdx].angularVelocity +
 					g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum;
-				oldRotation = centrifugeCraft->meshRotation[meshIdx];
+				oldRotation = (*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx)));
 				rotation = (uint8_t)(int)(g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum *
 										  0.00390625f);
-				centrifugeCraft->meshRotation[meshIdx] = rotation;
+				(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = rotation;
 
 				if (!g_flightSimSideEffectsSuppressed) {
 					localPlayer = (unsigned int)g_localPlayer;
@@ -2250,7 +2252,7 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 				uint8_t rotation;
 
 				meshIdx = Yard_CentrifugeSpinMeshIndex(mechanismIdx);
-				oldRotation = centrifugeCraft->meshRotation[meshIdx];
+				oldRotation = (*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx)));
 				g_yardContext.centrifugeMechanisms[mechanismIdx].angularAccel =
 					g_yardContext.centrifugeMechanisms[mechanismIdx].angularAccel -
 					(float)stepCount * -0.005f;
@@ -2270,7 +2272,7 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 					g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum;
 				rotation = (uint8_t)(int)(g_yardContext.centrifugeMechanisms[mechanismIdx].meshRotationAccum *
 										  0.00390625f);
-				centrifugeCraft->meshRotation[meshIdx] = rotation;
+				(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = rotation;
 
 				if (!g_flightSimSideEffectsSuppressed) {
 					localPlayer = (unsigned int)g_localPlayer;
@@ -2282,7 +2284,7 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 				}
 
 				if (g_yardContext.centrifugeMechanisms[mechanismIdx].angularVelocity > 50.0f ||
-					centrifugeCraft->meshRotation[meshIdx] != 0) {
+					(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) != 0) {
 					break;
 				}
 
@@ -2345,13 +2347,13 @@ void Yard_UpdateCentrifugeMechanisms(int deltaTicks) {
 				uint8_t rotation;
 
 				meshIdx = Yard_CentrifugeDoorMeshIndex(mechanismIdx);
-				rotation = (uint8_t)(centrifugeCraft->meshRotation[meshIdx] - stepCount);
-				centrifugeCraft->meshRotation[meshIdx] = rotation;
+				rotation = (uint8_t)((*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) - stepCount);
+				(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = rotation;
 				if ((int8_t)rotation > 0) {
 					break;
 				}
 
-				centrifugeCraft->meshRotation[meshIdx] = 0;
+				(*CraftExtended_MeshRotationRef(centrifugeCraft, (uint16_t)(meshIdx))) = 0;
 				g_yardContext.centrifugeMechanisms[mechanismIdx].state = 0;
 				localPlayer = (unsigned int)g_localPlayer;
 				if (g_yardContext.playerChallengeStates[localPlayer].courseState == 6) {
@@ -2979,8 +2981,8 @@ void Yard_UpdateSmeltingRoomTurrets(int deltaTicks) {
 
 			(void)ModelMesh_GetObjectTypeMeshCount(g_objectTable[smeltingObjIdx].objectType);
 			for (mesh = 3; mesh <= 8; ++mesh) {
-				smeltingCraft->meshRotation[mesh] =
-					(uint8_t)(smeltingCraft->meshRotation[mesh] + stepCount * (10 - mesh));
+				(*CraftExtended_MeshRotationRef(smeltingCraft, (uint16_t)(mesh))) =
+					(uint8_t)((*CraftExtended_MeshRotationRef(smeltingCraft, (uint16_t)(mesh))) + stepCount * (10 - mesh));
 			}
 			break;
 		}
@@ -2990,8 +2992,8 @@ void Yard_UpdateSmeltingRoomTurrets(int deltaTicks) {
 
 			(void)ModelMesh_GetObjectTypeMeshCount(g_objectTable[smeltingObjIdx].objectType);
 			for (mesh = 0; mesh < 6; ++mesh) {
-				smeltingCraft->meshRotation[mesh + 3] =
-					(uint8_t)(smeltingCraft->meshRotation[mesh + 3] + stepCount);
+				(*CraftExtended_MeshRotationRef(smeltingCraft, (uint16_t)(mesh + 3))) =
+					(uint8_t)((*CraftExtended_MeshRotationRef(smeltingCraft, (uint16_t)(mesh + 3))) + stepCount);
 			}
 			break;
 		}
@@ -3016,10 +3018,10 @@ void Yard_UpdateSmeltingRoomTurrets(int deltaTicks) {
 
 			turretCraft = g_objectTable[smeltingObjIdx].mobj->pCraft;
 			if (result <= 5) {
-				if (turretCraft->componentHp[2] == 0) {
+				if ((*CraftExtended_ComponentHpRef(turretCraft, (uint16_t)(2))) == 0) {
 					continue;
 				}
-			} else if (turretCraft->componentHp[10] == 0) {
+			} else if ((*CraftExtended_ComponentHpRef(turretCraft, (uint16_t)(10))) == 0) {
 				continue;
 			}
 
@@ -3036,7 +3038,7 @@ void Yard_UpdateSmeltingRoomTurrets(int deltaTicks) {
 				smeltingModelIdx = GetModelIndexFromType(OBJ_SmeltingRoom);
 
 				ModelMesh_ApplyAnimatedMeshRotationToPoint(
-					smeltingCraft->meshRotation[g_yardContext.smeltingRoomTurretMeshIdx] << 8,
+					(*CraftExtended_MeshRotationRef(smeltingCraft, (uint16_t)(g_yardContext.smeltingRoomTurretMeshIdx))) << 8,
 					OBJ_SmeltingRoom, (unsigned int)g_yardContext.smeltingRoomTurretMeshIdx,
 					g_modelDefs[smeltingModelIdx].weaponHardpoints[hardpointSlot].x,
 					g_modelDefs[smeltingModelIdx].weaponHardpoints[hardpointSlot].y,
@@ -3164,9 +3166,9 @@ void Yard_UpdateSmeltingRoomTurrets(int deltaTicks) {
 				guidance->minSpeed = g_objectTable[projectileObjIdx].mobj->speed;
 				guidance->sourcePlayerIdx = -1;
 
-				smeltingCraft->warheadData[hardpointSlot].lastFireMeshIdx =
+				CraftExtended_GetWeaponEntry(smeltingCraft, (uint16_t)(hardpointSlot))->lastFireMeshIdx =
 					(uint8_t)g_yardContext.smeltingRoomTurretMeshIdx;
-				smeltingCraft->warheadData[hardpointSlot].lastFireHardpointIdx =
+				CraftExtended_GetWeaponEntry(smeltingCraft, (uint16_t)(hardpointSlot))->lastFireHardpointIdx =
 					g_modelDefs[smeltingModelIdx].weaponHardpoints[hardpointSlot].alternateMeshHardpointIdx;
 				fsfx_triggerweaponsfx((unsigned int)projectileObjIdx, (unsigned int)g_localPlayer);
 			}
@@ -3194,10 +3196,10 @@ void Yard_UpdateAccelRingLaunchers(int deltaTicks) {
 
 				craft = g_objectTable[launcherObjIdx].mobj->pCraft;
 				g_curCraft = craft;
-				if (craft->componentHp[4] == 0) {
+				if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(4))) == 0) {
 					if (g_flightPlayerCount > 1 && craft->aiController.aiPlanState == 0) {
-						craft->componentHp[4] = 2;
-						g_curCraft->componentState[4] = 0;
+						(*CraftExtended_ComponentHpRef(craft, (uint16_t)(4))) = 2;
+						(void)CraftExtended_SetMeshComponentState(g_curCraft, 4u, 0u);
 						for (playerIdx = 0; playerIdx < g_flightPlayerCount; ++playerIdx) {
 							g_curCraft->damageFromPlayer[playerIdx] = 0;
 						}
@@ -3212,10 +3214,10 @@ void Yard_UpdateAccelRingLaunchers(int deltaTicks) {
 
 				craft = g_objectTable[launcherObjIdx].mobj->pCraft;
 				g_curCraft = craft;
-				if (craft->componentHp[4] == 0) {
+				if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(4))) == 0) {
 					if (g_flightPlayerCount > 1 && craft->aiController.aiPlanState == 0) {
-						craft->componentHp[4] = 2;
-						g_curCraft->componentState[4] = 0;
+						(*CraftExtended_ComponentHpRef(craft, (uint16_t)(4))) = 2;
+						(void)CraftExtended_SetMeshComponentState(g_curCraft, 4u, 0u);
 						for (playerIdx = 0; playerIdx < g_flightPlayerCount; ++playerIdx) {
 							g_curCraft->damageFromPlayer[playerIdx] = 0;
 						}
@@ -3342,10 +3344,10 @@ void Yard_UpdateSecondaryAccelRingLaunchers(int deltaTicks) {
 		}
 
 		g_curCraft = g_objectTable[launcherObjIdx].mobj->pCraft;
-		if (g_curCraft->componentHp[4] == 0) {
+		if ((*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(4))) == 0) {
 			if (g_flightPlayerCount > 1 && g_curCraft->aiController.aiPlanState == 0) {
-				g_curCraft->componentHp[4] = 2;
-				g_curCraft->componentState[4] = 0;
+				(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(4))) = 2;
+				(void)CraftExtended_SetMeshComponentState(g_curCraft, 4u, 0u);
 				for (playerIdx = 0; playerIdx < g_flightPlayerCount; ++playerIdx) {
 					g_curCraft->damageFromPlayer[playerIdx] = 0;
 				}
@@ -3620,7 +3622,7 @@ int Yard_BuildAdvancedChallengeCourse(void) {
 	g_yardContext.centrifugeMechanisms[1].angularVelocity = 4.0f;
 	g_yardContext.centrifugeMechanisms[1].delayTicks = 2;
 	g_yardContext.centrifugeMechanisms[1].meshRotationAccum = 8192.0f;
-	g_objectTable[g_yardCentrifugeObjIdx].mobj->pCraft->meshRotation[4] = 32;
+	(*CraftExtended_MeshRotationRef(g_objectTable[g_yardCentrifugeObjIdx].mobj->pCraft, (uint16_t)(4))) = 32;
 	g_yardContext.centrifugeMechanisms[2].state = 2;
 	g_yardContext.centrifugeMechanisms[2].cycleParity = 0;
 	g_yardContext.centrifugeMechanisms[2].angularAccel = 0.0f;
@@ -5026,7 +5028,7 @@ void Yard_UpdateChallengeProgressAndScoring(int deltaTicks) {
 						finalType = ringObj->objectType;
 						if (finalType == OBJ_AccelRing2 || finalType == OBJ_AccelRing3) {
 							CraftData* ringCraft = ringObj->mobj->pCraft;
-							if (!ringCraft->componentHp[4] && ringCraft->damageFromPlayer[playerIdx]) {
+							if (!(*CraftExtended_ComponentHpRef(ringCraft, (uint16_t)(4))) && ringCraft->damageFromPlayer[playerIdx]) {
 								g_objectTable[g_players[playerIdx].objectIndex].mobj->speed += 60;
 							}
 						}

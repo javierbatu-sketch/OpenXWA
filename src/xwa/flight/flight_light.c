@@ -1,4 +1,5 @@
 #include "xwa/flight/flight_light.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/hangar.h"
 
 #include "xwa/assets/model_def.h"
@@ -104,7 +105,7 @@ unsigned int Craft_ApplyEngineEmitterDamage(uint16_t objIdx, uint16_t engineEmit
 	unsigned int remainingDamage;
 	unsigned int scaledHealth;
 
-	health = &g_curCraft->engineEmitterHealth[engineEmitterIdx];
+	health = CraftExtended_EngineEmitterHealthRef(g_curCraft, engineEmitterIdx);
 	if (*health == 0 || *health == 0xffu) {
 		return damage;
 	}
@@ -125,7 +126,7 @@ unsigned int Craft_ApplyEngineEmitterDamage(uint16_t objIdx, uint16_t engineEmit
 		*health = (uint8_t)destroyedCount;
 		engineGlowCount = g_modelDefs[g_curCraft->modelIndex].engineGlowCount;
 		for (glowIndex = 0; glowIndex < engineGlowCount; ++glowIndex) {
-			if (g_curCraft->engineEmitterHealth[glowIndex] == 0) {
+			if (CraftExtended_GetEngineEmitterHealth(g_curCraft, glowIndex) == 0) {
 				++destroyedCount;
 			}
 		}
@@ -168,7 +169,7 @@ unsigned int Craft_DamageNearestEngineEmitterForMesh(uint16_t objIdx, int16_t co
 	engineGlowCount = g_modelDefs[modelIndex].engineGlowCount;
 
 	for (emitterIdx = 0; emitterIdx < engineGlowCount; ++emitterIdx) {
-		if (g_curCraft->engineEmitterHealth[emitterIdx] != 0 &&
+		if (CraftExtended_GetEngineEmitterHealth(g_curCraft, emitterIdx) != 0 &&
 			(uint16_t)g_modelDefs[modelIndex].engineGlowMeshIdx[emitterIdx] == (uint16_t)meshIdx) {
 			OptEngineGlow* glow;
 			float distSq;
@@ -876,7 +877,7 @@ void FlightLight_AppendScenePointLightForObject(ObjectRecord* obj) {
 			g_scenePointLights[g_scenePointLightCount].intensity =
 				(float)(glow->dimensions.z * (float)engineScale * 300.0f);
 			g_scenePointLights[g_scenePointLightCount].cullRadius = (int)((float)engineScale * 16384.0f);
-			meshRotation = obj->mobj->pCraft->meshRotation[meshIdx];
+			meshRotation = (*CraftExtended_MeshRotationRef(obj->mobj->pCraft, (uint16_t)(meshIdx)));
 			localSide = (int)glow->position.x;
 			localUp = (int)glow->position.y;
 			if (meshRotation != 0) {

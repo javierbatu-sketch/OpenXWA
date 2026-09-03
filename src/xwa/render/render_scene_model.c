@@ -1,4 +1,5 @@
 #include "xwa/render/effects.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/render/renderer_internal.h"
 #include "xwa/util/string.h"
 
@@ -516,9 +517,9 @@ void GlowMark_ProcessPendingRequests(uint16_t objectIndex) {
 					g_glowMarkMeshOrdinal = meshOrdinal;
 					mobj = obj->mobj;
 					if (mobj != NULL && mobj->pCraft != NULL &&
-						mobj->pCraft->componentHp[meshOrdinal - 1] != 0) {
+						(*CraftExtended_ComponentHpRef(mobj->pCraft, (uint16_t)(meshOrdinal - 1))) != 0) {
 						g_glowMarkMeshRotationAngle =
-							(float)mobj->pCraft->meshRotation[meshOrdinal - 1] * 0.024543673f;
+							(float)(*CraftExtended_MeshRotationRef(mobj->pCraft, (uint16_t)(meshOrdinal - 1))) * 0.024543673f;
 					}
 
 					meshDesc =
