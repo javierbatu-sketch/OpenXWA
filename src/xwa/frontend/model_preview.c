@@ -1,4 +1,5 @@
 #include "xwa/frontend/model_preview.h"
+#include "aeron/log.h"
 #ifdef XWA_MODERN
 #include "xwa_runtime/snapshot/snapshot.h"
 #endif
@@ -447,9 +448,13 @@ char ModelPreview_LoadModel(const char* modelName, int objectType) {
 		}
 	}
 
+	Aeron_LogError("xwa.diag", "B5.3 MLOAD before BuildModelDef opt=%s previewType=%d modelIndex=%d",
+		g_modelPreviewOptFileName, g_modelPreviewModelType,
+		(int)g_modelTypeTable[g_modelPreviewModelType].modelIndex);
 	ModelBounds_ClearCache();
 	FeDiskIo_BuildModelDef((uint16_t)g_modelTypeTable[g_modelPreviewModelType].modelIndex,
 						   (uint16_t)g_modelPreviewModelType);
+	Aeron_LogError("xwa.diag", "B5.3 MLOAD after BuildModelDef");
 
 	memset(&g_modelPreviewMobileObject, 0, sizeof(g_modelPreviewMobileObject));
 	g_modelPreviewObject.objectType = OBJ_None;
@@ -487,6 +492,7 @@ char ModelPreview_LoadModel(const char* modelName, int objectType) {
 									(int)(lightY * g_modelPreviewNegativeOne * g_modelPreviewQ15Scale),
 									(int)(lightZ * g_modelPreviewQ15Scale), 0.80000001f, 1.0f, 1.0f, 1.0f);
 
+	Aeron_LogError("xwa.diag", "B5.3 MLOAD before legacy engine-glow rescale");
 	if (g_frontendD3DInitialized && g_modelTypeTable[g_modelPreviewModelType].modelIndex != -1) {
 		OptNode* firstRootNode;
 
@@ -508,11 +514,16 @@ char ModelPreview_LoadModel(const char* modelName, int objectType) {
 			glowCount = ModelMesh_CountEngineGlows(g_modelPreviewModelType, i);
 			glowIndex = 0;
 			glowCount &= 0xffff;
+			Aeron_LogError("xwa.diag", "B5.3 MLOAD mesh=%d glowCount=%d", i, glowCount);
 			for (; glowIndex < glowCount; ++glowIndex) {
 				OptEngineGlow* engineGlowParam;
 				float* glowValue;
 
+				Aeron_LogError("xwa.diag", "B5.3 MLOAD before GetEngineGlowParam mesh=%d glow=%d",
+					i, glowIndex);
 				engineGlowParam = ModelMesh_GetEngineGlowParam(g_modelPreviewModelType, i, glowIndex);
+				Aeron_LogError("xwa.diag", "B5.3 MLOAD after GetEngineGlowParam ptr=%p",
+					(void*)engineGlowParam);
 				glowValue = &engineGlowParam->position.x;
 				*glowValue *= g_modelPreviewScaleFactor;
 				glowValue = &engineGlowParam->position.y;
@@ -526,8 +537,10 @@ char ModelPreview_LoadModel(const char* modelName, int objectType) {
 			}
 		}
 	}
+	Aeron_LogError("xwa.diag", "B5.3 MLOAD after legacy engine-glow rescale");
 
 	g_loadingModel = 0;
+	Aeron_LogError("xwa.diag", "B5.3 MLOAD return success");
 	return 1;
 }
 
@@ -558,6 +571,10 @@ int ModelPreview_RenderViewport(int x, int y, int width, int height, void* softw
 	if (!g_loadedModels.byObjectType[0]) {
 		return 0;
 	}
+	Aeron_LogError("xwa.diag",
+		"B5.3 MPV enter opt=%s viewport=%d,%d %dx%d nodeSwitch=%d hw=%d frontD3D=%d",
+		g_modelPreviewOptFileName, x, y, width, height, g_nodeSwitchIndex,
+		g_useHardware3D, g_frontendD3DInitialized);
 
 	if (x < 0) {
 		width += x;
@@ -713,7 +730,9 @@ int ModelPreview_RenderViewport(int x, int y, int width, int height, void* softw
 		snapPreview.cam_rows[6] = (float)g_camMatR2_X * (1.0f / 32768.0f);
 		snapPreview.cam_rows[7] = (float)g_camMatR2_Y * (1.0f / 32768.0f);
 		snapPreview.cam_rows[8] = (float)g_camMatR2_Z * (1.0f / 32768.0f);
+		Aeron_LogError("xwa.diag", "B5.3 MPV before snapshot emit opt=%s", snapPreview.opt_name);
 		XwaSnapshot_EmitModelPreview(&snapPreview);
+		Aeron_LogError("xwa.diag", "B5.3 MPV after snapshot emit opt=%s", snapPreview.opt_name);
 	}
 #endif
 
@@ -732,22 +751,34 @@ int ModelPreview_RenderViewport(int x, int y, int width, int height, void* softw
 	savedLocalLightsLevel = g_localLightsLevel;
 	g_localLightsLevel = 0;
 
+	Aeron_LogError("xwa.diag", "B5.3 MPV before RenderScene_Initialize");
 	RenderScene_Initialize(1);
+	Aeron_LogError("xwa.diag", "B5.3 MPV after RenderScene_Initialize");
 	if (g_useHardware3D && g_frontendD3DInitialized) {
+		Aeron_LogError("xwa.diag", "B5.3 MPV before FlightLight_SetupObjectLighting");
 		FlightLight_SetupObjectLighting(&g_modelPreviewObject);
+		Aeron_LogError("xwa.diag", "B5.3 MPV after FlightLight_SetupObjectLighting");
 	}
 	g_renderFlags = 64;
+	Aeron_LogError("xwa.diag", "B5.3 MPV before RenderScene_DrawObjectModel");
 	RenderScene_DrawObjectModel(&g_modelPreviewObject);
+	Aeron_LogError("xwa.diag", "B5.3 MPV after RenderScene_DrawObjectModel");
 	g_objectTable = &g_modelPreviewObject;
 	if (g_useHardware3D && g_frontendD3DInitialized) {
+		Aeron_LogError("xwa.diag", "B5.3 MPV before EngineGlow_RenderSceneGlows");
 		EngineGlow_RenderSceneGlows();
+		Aeron_LogError("xwa.diag", "B5.3 MPV after EngineGlow_RenderSceneGlows");
 	}
 	g_objectTable = 0;
 
 	if (!softwareSurface) {
 		if (g_useHardware3D && g_frontendD3DInitialized) {
+			Aeron_LogError("xwa.diag", "B5.3 MPV before RenderScene_EffectsPass");
 			RenderScene_EffectsPass();
+			Aeron_LogError("xwa.diag", "B5.3 MPV after RenderScene_EffectsPass");
+			Aeron_LogError("xwa.diag", "B5.3 MPV before RenderScene_End3D");
 			RenderScene_End3D();
+			Aeron_LogError("xwa.diag", "B5.3 MPV after RenderScene_End3D");
 		} else {
 			RenderScene_DrawVisibleFaces();
 		}
@@ -760,6 +791,7 @@ int ModelPreview_RenderViewport(int x, int y, int width, int height, void* softw
 
 	g_useHardware3D = savedUseHardware3D;
 	g_localLightsLevel = savedLocalLightsLevel;
+	Aeron_LogError("xwa.diag", "B5.3 MPV return success");
 	return 1;
 }
 

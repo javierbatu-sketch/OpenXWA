@@ -28,6 +28,7 @@
 #include "aeron/asset/opt_model.h"
 
 #include "aeron/aeron.h"
+#include "aeron/log.h"
 #include "aeron/scene/bloom.h"
 #include "aeron/scene/present.h"
 #include "aeron/scene/scene3d.h"
@@ -118,10 +119,14 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 	if (!cmd || !p || slot < 0 || slot >= PREVIEW_SLOTS || p->dst_w <= 0 || p->dst_h <= 0) {
 		return NULL;
 	}
+	Aeron_LogError("xwa.diag",
+		"B5.3 RPV enter opt=%s slot=%d dst=%dx%d nodeSwitch=%d scale=%g",
+		p->opt_name, slot, p->dst_w, p->dst_h, p->node_switch_index, (double)p->model_scale);
 	if (!preview_ensure()) {
 		Aeron_CommandBufferSetFailure(cmd, "Model-preview resource preparation failed");
 		return NULL;
 	}
+	Aeron_LogError("xwa.diag", "B5.3 RPV after preview_ensure");
 	if (!s.present[slot]) {
 		s.present[slot] =
 			Aeron_CreateRenderTarget(&(AeronRenderTargetDesc) { .width = PREVIEW_RT_W,
@@ -142,10 +147,12 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 	cam.h_half_rad = atanf((float)p->dst_w / 1024.0f);
 	cam.v_half_rad = atanf((float)p->dst_h / 1024.0f);
 	cam.near_z = PREVIEW_NEAR_Z;
+	Aeron_LogError("xwa.diag", "B5.3 RPV before AeronScene_Begin");
 	if (!AeronScene_Begin(s.scene, &cam)) {
 		Aeron_CommandBufferSetFailure(cmd, "Model-preview scene initialization failed");
 		return NULL;
 	}
+	Aeron_LogError("xwa.diag", "B5.3 RPV after AeronScene_Begin");
 
 	XwaFlightSsaoParams ssao = { 0 };
 	XwaRemasterFlight_GetSsao(&ssao);
@@ -187,7 +194,9 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 	 * normalized the classic model's vertices at load (record's
 	 * model_scale); Aeron flight meshes use meters. A missing
 	 * mirrored mesh just renders an empty transparent PiP. */
+	Aeron_LogError("xwa.diag", "B5.3 RPV before preview_mesh opt=%s", p->opt_name);
 	AeronSceneMesh* mesh = preview_mesh(p->opt_name);
+	Aeron_LogError("xwa.diag", "B5.3 RPV after preview_mesh mesh=%p", (void*)mesh);
 	if (mesh) {
 		AeronSceneMeshInstance inst;
 		memset(&inst, 0, sizeof inst);
@@ -221,7 +230,10 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 		 * Cooked glbs are CCW-front; BACK keeps the hull solid under
 		 * this projection (verified empirically). */
 		inst.cull_mode = AERON_CULL_BACK;
+		Aeron_LogError("xwa.diag", "B5.3 RPV before AeronScene_AddMeshInstance variant=%u",
+			(unsigned)inst.variant);
 		AeronScene_AddMeshInstance(s.scene, &inst);
+		Aeron_LogError("xwa.diag", "B5.3 RPV after AeronScene_AddMeshInstance");
 
 		/* State-derived engine glows from the mesh's own glb extras —
 		 * the classic preview renders every emitter at a fixed base
@@ -233,15 +245,19 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 			flick ^= flick >> 17;
 			flick ^= flick << 5;
 			const float scale = (float)(0.60000002 - (double)(flick & 0xf) * 0.0024999999);
+			Aeron_LogError("xwa.diag", "B5.3 RPV before SubmitEngineGlows");
 			XwaRemasterShip_SubmitEngineGlows(s.scene, mesh, inst.transform, k,
 											  /*table=*/NULL, /*knockout_mask=*/NULL, scale,
 											  /*crows=*/NULL, /*cam_pos=*/NULL, glow_tex);
+			Aeron_LogError("xwa.diag", "B5.3 RPV after SubmitEngineGlows");
 		}
 	}
 
+	Aeron_LogError("xwa.diag", "B5.3 RPV before AeronScene_Render");
 	if (!AeronScene_Render(s.scene, cmd)) {
 		return NULL;
 	}
+	Aeron_LogError("xwa.diag", "B5.3 RPV after AeronScene_Render");
 
 	/* Bloom and tonemap into the slot's present RT; src_coverage keeps
 	 * the transparent background. The scene color RT is transient —
@@ -280,6 +296,7 @@ AeronTexture* XwaRemasterPreview_Render(AeronCommandBuffer* cmd, const XwaModelP
 								PREVIEW_RT_W, PREVIEW_RT_H, /*bar_y_uv=*/1.0f, tint,
 								/*src_coverage=*/1);
 	Aeron_EndRenderPass(pp);
+	Aeron_LogError("xwa.diag", "B5.3 RPV return success");
 	return Aeron_RenderTargetGetTexture(s.present[slot]);
 }
 
