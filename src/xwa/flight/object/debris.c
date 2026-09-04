@@ -8,6 +8,7 @@
 #include "xwa/config/game_config.h"
 #include "xwa/flight/flight.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/math/trig2.h"
 #include "xwa/render/renderer.h"
@@ -469,6 +470,7 @@ int Debris_AllocRubbleObject(int sourceObjIdx) {
 
 	memset(g_objectTable[newObjIdx].mobj, 0, offsetof(MobileObject, pWarheadGuidance));
 	memset(g_objectTable[newObjIdx].mobj->pCraft, 0, offsetof(CraftData, effectiveAiObjectLink));
+	CraftExtended_ResetCraft(g_objectTable[newObjIdx].mobj->pCraft);
 
 	g_objectTable[newObjIdx].mobj->sourceObjIdx = -1;
 	g_objectTable[newObjIdx].mobj->instanceExtent = 0;

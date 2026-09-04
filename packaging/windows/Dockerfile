@@ -232,13 +232,15 @@ RUN case "${XWA_BUILD_TYPE}" in \
         -DAERON_FSR3_SHADERGEN_EXECUTABLE=/opt/xwa-host/bin/aeron_fsr3_shadergen \
         -DAERON_SHADERCROSS_EXECUTABLE=/opt/xwa-host/bin/shadercross \
         -DXWA_BUILD_TOOLS=OFF \
+        -DAERON_BUILD_OPT2GLTF=ON \
         -DXWA_ENABLE_DEBUG_UI="${xwa_debug_ui}" \
         -DXWA_VERSION="${XWA_VERSION}" \
-    && cmake --build /build/xwa --target xwa --parallel
+    && cmake --build /build/xwa --target xwa opt2gltf --parallel
 
 RUN mkdir -p /build/package/openxwa-windows-x86_64/licenses \
         /build/package/openxwa-windows-x86_64/shaders \
     && cp /build/xwa/OpenXWA.exe /build/package/openxwa-windows-x86_64/ \
+    && cp /build/xwa/opt2gltf.exe /build/package/openxwa-windows-x86_64/ \
     && cp /build/xwa/shaders/*.dxil /build/xwa/shaders/*.spv \
         /build/package/openxwa-windows-x86_64/shaders/ \
     && cp -a /build/xwa/resources /build/package/openxwa-windows-x86_64/ \

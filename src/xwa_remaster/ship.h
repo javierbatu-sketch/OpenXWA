@@ -222,14 +222,16 @@ float XwaRemasterShip_EngineGlowScale(const XwaFlightObject* f);
  * `transform` is the instance's model->space matrix (fl_model_matrix
  * layout) with uniform scale `model_scale`; `table` applies rotary-
  * mesh articulation to emitters on rotated meshes (NULL = none);
- * `knockout_mask` bit N skips destroyed emitter N; `scale` is the
+ * `knockout_mask` bit N skips destroyed emitter N across the snapshot's
+ * 256-bit presentation mask; `scale` is the
  * classic intensity scale (EngineGlowScale / the preview's fixed
  * ~0.6 flickered base; <= 0 skips everything). `crows`/`cam_pos`
  * convert space->view for the view-dependent parts (NULL/NULL =
  * identity camera, space == eye — preview PiP). */
 void XwaRemasterShip_SubmitEngineGlows(AeronScene3D* scene, const AeronSceneMesh* mesh,
 									   const float transform[16], float model_scale,
-									   const AeronSceneMeshTable* table, uint32_t knockout_mask, float scale,
+									   const AeronSceneMeshTable* table,
+									   const uint32_t knockout_mask[XWA_SNAP_ENGINE_KNOCKOUT_WORDS], float scale,
 									   const float crows[9], const float cam_pos[3], const XwaAssetRef* tex);
 
 #ifdef __cplusplus

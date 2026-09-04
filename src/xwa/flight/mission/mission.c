@@ -22,6 +22,7 @@
 #include "xwa/flight/hud/hud.h"
 #include "xwa/flight/net_session.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/laser.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/player/player.h"
@@ -1901,9 +1902,9 @@ int Mission_ObjectMatchesTriggerVariableEx(uint16_t objectIdx, uint16_t variable
 						warheadLauncherFirstSlot = g_modelDefs[craft->modelIndex].warheadLauncherFirstSlot;
 						do {
 							lastSlot = warheadLauncherFirstSlot[2];
-							firstCount = craft->warheadData[*warheadLauncherFirstSlot++].count;
+							firstCount = CraftExtended_GetWeaponEntry(craft, (uint16_t)(*warheadLauncherFirstSlot++))->count;
 							--warheadLauncherCount;
-							count += firstCount + craft->warheadData[lastSlot].count;
+							count += firstCount + CraftExtended_GetWeaponEntry(craft, (uint16_t)(lastSlot))->count;
 						} while (warheadLauncherCount != 0);
 					}
 					if (count == 0) {
@@ -2372,12 +2373,9 @@ int Mission_EvaluateCondition(const XwaTrigger* trigger, uint8_t includeDeparted
 									for (launcherIdx = 0; launcherIdx < craft->warheadLauncherCount;
 										 ++launcherIdx) {
 										warheadCount +=
-											craft
-												->warheadData[modelDef->warheadLauncherFirstSlot[launcherIdx]]
-												.count;
+											CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherFirstSlot[launcherIdx]))->count;
 										warheadCount +=
-											craft->warheadData[modelDef->warheadLauncherLastSlot[launcherIdx]]
-												.count;
+											CraftExtended_GetWeaponEntry(craft, (uint16_t)(modelDef->warheadLauncherLastSlot[launcherIdx]))->count;
 									}
 									if (warheadCount == 0) {
 										matchesCondition = 1;
@@ -5953,6 +5951,7 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 			return -1;
 
 		// Fresh-slot mobile-object/craft state reset.
+		CraftExtended_ResetCraft(g_objectTable[objIdx].mobj->pCraft);
 		g_objectTable[objIdx].typeSpecificWord = 0;
 		memset(&g_objectTable[objIdx].mobj->proximityList, 0,
 			   sizeof(g_objectTable[objIdx].mobj->proximityList));
@@ -5979,8 +5978,7 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 		*(uint32_t*)&g_objectTable[objIdx].mobj->pCraft->specialCargoName[16] = 0;
 		*(uint32_t*)&g_objectTable[objIdx].mobj->pCraft->reserved3ED[0] = 0;
 		*(uint32_t*)&g_objectTable[objIdx].mobj->pCraft->reserved3ED[4] = 0;
-		memset(g_objectTable[objIdx].mobj->pCraft->warheadData, 0,
-			   sizeof(g_objectTable[objIdx].mobj->pCraft->warheadData));
+		CraftExtended_ResetWeaponState(g_objectTable[objIdx].mobj->pCraft);
 		memset(g_objectTable[objIdx].mobj->pCraft->aiFlight.objSignatures, 0,
 			   sizeof(g_objectTable[objIdx].mobj->pCraft->aiFlight.objSignatures));
 	} else {
@@ -6328,19 +6326,19 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 						}
 						if (firstSlot <= lastSlot) {
 							for (slot = firstSlot; slot <= lastSlot; ++slot) {
-								g_curCraft->warheadData[slot].projectileTypeId =
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->projectileTypeId =
 									g_curCraft->laserProjectileTypeId[g];
-								g_curCraft->warheadData[slot].weaponType =
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType =
 									(g_modelDefs[modelIndex].laserGroupMountType[g] == 1 ||
 									 g_modelDefs[modelIndex].laserGroupMountType[g] == 2)
 										? g_modelDefs[modelIndex].laserGroupMountType[g]
 										: 4;
-								g_curCraft->warheadData[slot].weaponGroupIdx = (uint8_t)g;
-								g_curCraft->warheadData[slot].laserCharge = 127;
-								g_curCraft->warheadData[slot].count = 0;
-								g_curCraft->warheadData[slot].lastFireMeshIdx = 0xFF;
-								g_curCraft->warheadData[slot].lastFireHardpointIdx = 0xFF;
-								g_curCraft->warheadData[slot].turretTargetObjIdx = -1;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponGroupIdx = (uint8_t)g;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->laserCharge = 127;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->count = 0;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->lastFireMeshIdx = 0xFF;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->lastFireHardpointIdx = 0xFF;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx = -1;
 							}
 						}
 					}
@@ -6370,19 +6368,19 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 					uint8_t remaining = g_modelDefs[modelIndex].laserGroupSlotCount[g];
 					if (g_modelDefs[modelIndex].laserGroupMountType[g] >= 4 && remaining) {
 						for (slot = 0; slot < 16; ++slot) {
-							if (!g_curCraft->warheadData[slot].weaponType) {
-								g_curCraft->warheadData[slot].projectileTypeId =
+							if (!CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType) {
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->projectileTypeId =
 									g_modelDefs[modelIndex].laserGroupWeaponType[g]
 										? g_modelDefs[modelIndex].laserGroupWeaponType[g]
 										: 281;
-								g_curCraft->warheadData[slot].weaponType =
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType =
 									g_modelDefs[modelIndex].laserGroupMountType[g];
-								g_curCraft->warheadData[slot].laserCharge = 127;
-								g_curCraft->warheadData[slot].count = 0;
-								g_curCraft->warheadData[slot].lastFireMeshIdx = 0xFF;
-								g_curCraft->warheadData[slot].lastFireHardpointIdx = 0xFF;
-								g_curCraft->warheadData[slot].weaponGroupIdx = (uint8_t)g;
-								g_curCraft->warheadData[slot].turretTargetObjIdx = -1;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->laserCharge = 127;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->count = 0;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->lastFireMeshIdx = 0xFF;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->lastFireHardpointIdx = 0xFF;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponGroupIdx = (uint8_t)g;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx = -1;
 								// Original only updates the low byte of the slot accumulator.
 								laserSlotAccum = (laserSlotAccum & ~0xFF) | (uint8_t)(laserSlotAccum + 1);
 								if (remaining == 1)
@@ -6425,11 +6423,11 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 						lastSlot = g_modelDefs[modelIndex].warheadLauncherLastSlot[launcher];
 						if (firstSlot <= lastSlot) {
 							for (slot = firstSlot; slot <= lastSlot; ++slot) {
-								g_curCraft->warheadData[slot].projectileTypeId = 0;
-								g_curCraft->warheadData[slot].weaponType = 3;
-								g_curCraft->warheadData[slot].laserCharge = 0;
-								g_curCraft->warheadData[slot].turretTargetObjIdx = -1;
-								g_curCraft->warheadData[slot].count = 0;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->projectileTypeId = 0;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType = 3;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->laserCharge = 0;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx = -1;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->count = 0;
 							}
 						}
 					}
@@ -6444,11 +6442,11 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 							for (slot = firstSlot; slot <= lastSlot; ++slot) {
 								uint8_t ammo;
 								int warheadAmmoClass;
-								g_curCraft->warheadData[slot].projectileTypeId =
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->projectileTypeId =
 									g_curCraft->warheadSlotTypeIds[launcher];
-								g_curCraft->warheadData[slot].weaponType = 3;
-								g_curCraft->warheadData[slot].laserCharge = 127;
-								g_curCraft->warheadData[slot].turretTargetObjIdx = -1;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType = 3;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->laserCharge = 127;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx = -1;
 								if (g_modelDefs[modelIndex].warheadLauncherType[1] == 0 || launcher != 0)
 									warheadAmmoClass =
 										g_missionFlightGroups[g_currentFlightGroupIdx].fg.warhead;
@@ -6468,7 +6466,7 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 								if (hasPlayerOwner && ammo > 9 &&
 									g_objectTable[objIdx].objectType != OBJ_MissileBoat)
 									ammo = 9;
-								g_curCraft->warheadData[slot].count = ammo;
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->count = ammo;
 							}
 						}
 					}
@@ -6642,12 +6640,13 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 
 	g_objectTable[objIdx].typeSpecificByte[0] = 0;
 	g_objectTable[objIdx].typeSpecificByte[1] = 0;
+	CraftExtended_ResetComponentArrays(g_curCraft);
 	{
 		int i;
 		for (i = 0; i < 50; ++i) {
-			g_curCraft->componentState[i] = 0;
-			g_curCraft->meshRotation[i] = 0;
-			g_curCraft->componentHp[i] = 0xFF;
+			(void)CraftExtended_SetMeshComponentState(g_curCraft, (uint16_t)i, 0u);
+			(*CraftExtended_MeshRotationRef(g_curCraft, (uint16_t)(i))) = 0;
+			(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(i))) = 0xFF;
 		}
 	}
 
@@ -6660,16 +6659,16 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 				MeshType meshType = ModelMesh_GetObjectTypeMeshType(objectType, meshIdx);
 				if (ModelMesh_HasExplosionType1(objectType, meshIdx)) {
 					if (objType == OBJ_SuperStarDestroyer && meshType == MESH_ShieldGenerator)
-						g_curCraft->componentHp[meshIdx] = (uint8_t)(2 * g_meshTypeComponentMaxHp[8] - 1);
+						(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) = (uint8_t)(2 * g_meshTypeComponentMaxHp[8] - 1);
 					else
-						g_curCraft->componentHp[meshIdx] = g_meshTypeComponentMaxHp[meshType];
+						(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) = g_meshTypeComponentMaxHp[meshType];
 				}
 				if ((g_spawnStatus1 == 5 || g_spawnStatus2 == 5 || g_spawnStatus1 == 14 ||
 					 g_spawnStatus2 == 14) &&
 					(meshType == MESH_GunTurret || meshType == MESH_RotaryGunTurret ||
 					 meshType == MESH_SmallGun)) {
-					g_curCraft->componentHp[meshIdx] = 0;
-					g_curCraft->componentState[meshIdx] = 4;
+					(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) = 0;
+					(void)CraftExtended_SetMeshComponentState(g_curCraft, (uint16_t)meshIdx, 4u);
 				}
 				++meshIdx;
 			} while ((uint16_t)meshIdx < meshCount);
@@ -6687,8 +6686,8 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 			while (tableIdx < end) {
 				uint8_t comp = g_platformBeamDisabledComponentIds[tableIdx];
 				if (comp != 0xFF) {
-					g_curCraft->componentHp[comp] = 0;
-					g_curCraft->componentState[comp] = 4;
+					(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(comp))) = 0;
+					(void)CraftExtended_SetMeshComponentState(g_curCraft, comp, 4u);
 				}
 				++tableIdx;
 			}
@@ -6750,7 +6749,7 @@ ObjectIndex Mission_InitFlightGroupObjectSlot(uint16_t objectTypeOverride, uint1
 			{
 				int i;
 				for (i = 0; i < engineGlowCount; ++i)
-					g_curCraft->engineEmitterHealth[i] = g_modelDefs[modelIndex].componentMaxHp;
+					CraftExtended_SetEngineEmitterHealth(g_curCraft, i, g_modelDefs[modelIndex].componentMaxHp);
 			}
 		}
 
@@ -7265,6 +7264,8 @@ void Mission_FreeObjectStorageHandles(void) {
 		g_mobileObjectCharDataHandle = 0;
 	}
 
+	CraftExtended_Free();
+
 	if (g_craftDataPoolHandle != 0) {
 		Memory_UnlockHandle(g_craftDataPoolHandle);
 		Memory_FreeHandle("CRAFTSHANDLE", g_craftDataPoolHandle);
@@ -7376,6 +7377,8 @@ uint16_t Mission_Init(char* fileName) {
 		Memory_FreeHandle("CHARSHANDLE", g_mobileObjectCharDataHandle);
 		g_mobileObjectCharDataHandle = 0;
 	}
+	CraftExtended_Free();
+
 	if (g_craftDataPoolHandle != 0) {
 		Memory_UnlockHandle(g_craftDataPoolHandle);
 		Memory_FreeHandle("CRAFTSHANDLE", g_craftDataPoolHandle);
@@ -7408,6 +7411,9 @@ uint16_t Mission_Init(char* fileName) {
 	}
 	if (g_craftDataPoolHandle != 0) {
 		g_craftDataPoolBase = (CraftData*)Memory_LockHandle(g_craftDataPoolHandle);
+	}
+	if (g_craftDataPoolHandle == 0 || !CraftExtended_Allocate(g_craftObjectSlotsTotal)) {
+		return 0;
 	}
 	if (g_warheadGuidancePoolHandle != 0) {
 		g_warheadGuidancePoolBase = (WarheadGuidanceState*)Memory_LockHandle(g_warheadGuidancePoolHandle);
@@ -9721,8 +9727,8 @@ unsigned int Mission_ComputeCraftPointValue(int objIdx) {
 
 		projectileType = craft->warheadSlotTypeIds[launcherIdx];
 		warheadCount =
-			craft->warheadData[g_modelDefs[modelIndex].warheadLauncherFirstSlot[launcherIdx]].count +
-			craft->warheadData[g_modelDefs[modelIndex].warheadLauncherLastSlot[launcherIdx]].count;
+			CraftExtended_GetWeaponEntry(craft, (uint16_t)(g_modelDefs[modelIndex].warheadLauncherFirstSlot[launcherIdx]))->count +
+			CraftExtended_GetWeaponEntry(craft, (uint16_t)(g_modelDefs[modelIndex].warheadLauncherLastSlot[launcherIdx]))->count;
 		points += g_warheadProjectilePointValueByObjectType[projectileType] * warheadCount;
 	}
 

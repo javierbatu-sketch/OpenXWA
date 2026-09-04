@@ -8,6 +8,7 @@
 #include "xwa/flight/hud/hud.h"
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/player/player.h"
 #include "xwa/input/dinput.h"
@@ -490,11 +491,11 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 
 	componentId += 0xffff;
 	componentIdx = (uint16_t)componentId;
-	if (g_curCraft->componentHp[componentIdx] == 0) {
+	if ((*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))) == 0) {
 		return damageAmount;
 	}
 
-	if (g_curCraft->componentHp[componentIdx] == 0xffu &&
+	if ((*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))) == 0xffu &&
 		(g_objectTable[objIdx].objectType != OBJ_SuperStarDestroyer ||
 		 ModelMesh_GetObjectTypeMeshType(OBJ_SuperStarDestroyer, componentIdx) != MESH_Bridge)) {
 		return damageAmount;
@@ -526,7 +527,7 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 		for (meshIdx = 0; meshIdx < meshCount; ++meshIdx) {
 			if (ModelMesh_GetObjectTypeMeshType(g_objectTable[objIdx].objectType, meshIdx) ==
 					MESH_ShieldGenerator &&
-				g_curCraft->componentHp[meshIdx] != 0) {
+				(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) != 0) {
 				++liveShieldGeneratorCount;
 			}
 		}
@@ -543,7 +544,7 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 
 			hullMax = g_curCraft->hullMax;
 			hullDamage = g_curCraft->hullDamage;
-			componentHp = g_curCraft->componentHp[componentIdx];
+			componentHp = (*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx)));
 			damageAmount =
 				(unsigned int)(hullMax - 5 * (int)((uint32_t)hullMax / 100u) - hullDamage + 16 * componentHp);
 		} else if (g_objectTable[sourceObjIdx].objectType == OBJ_AWing &&
@@ -554,7 +555,7 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 
 			hullMax = g_curCraft->hullMax;
 			hullDamage = g_curCraft->hullDamage;
-			componentHp = g_curCraft->componentHp[componentIdx];
+			componentHp = (*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx)));
 			damageAmount = (unsigned int)(hullMax - hullDamage + 16 * componentHp);
 		} else {
 			return damageAmount;
@@ -564,15 +565,15 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 	{
 		int remainingHp;
 
-		remainingHp = (16 * g_curCraft->componentHp[componentIdx] - (int)damageAmount) >> 4;
+		remainingHp = (16 * (*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))) - (int)damageAmount) >> 4;
 		if (remainingHp <= 0) {
 			remainingHp = 0;
 		}
-		g_curCraft->componentHp[componentIdx] = (uint8_t)remainingHp;
+		(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))) = (uint8_t)remainingHp;
 	}
 
 	damageAmount = 0;
-	if (g_curCraft->componentHp[componentIdx] != 0) {
+	if ((*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))) != 0) {
 		return damageAmount;
 	}
 
@@ -591,7 +592,7 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 				if (meshIdx != componentIdx &&
 					ModelMesh_GetObjectTypeMeshType(g_objectTable[relatedObjIdx].objectType, meshIdx) ==
 						MESH_ShieldGenerator &&
-					g_curCraft->componentHp[meshIdx] != 0) {
+					(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) != 0) {
 					++liveShieldGeneratorCount;
 				}
 			}
@@ -606,14 +607,14 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 				MESH_EnergyGenerator) {
 			g_curCraft->shieldFront = 0;
 			damageAmount = (unsigned int)(g_curCraft->hullMax - g_curCraft->hullDamage +
-										  16 * g_curCraft->componentHp[componentIdx]);
+										  16 * (*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(componentIdx))));
 		}
 
 		if (!ModelMesh_IsObjectTypeMeshDamageable(g_objectTable[relatedObjIdx].objectType, componentIdx)) {
 			return damageAmount;
 		}
 
-		g_curCraft->componentState[componentIdx] = 4;
+		(void)CraftExtended_SetMeshComponentState(g_curCraft, componentIdx, 4u);
 		for (playerIdx = 0; playerIdx < 8; ++playerIdx) {
 			PlayerData* player;
 
@@ -633,7 +634,7 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 						player->selectedTargetComponent = 0;
 					}
 
-					if (g_curCraft->componentState[(uint16_t)player->selectedTargetComponent] == 0 &&
+					if (CraftExtended_GetMeshComponentState(g_curCraft, (uint16_t)player->selectedTargetComponent) == 0u &&
 						Craft_IsSelectableDamageComponentMesh(g_objectTable[relatedObjIdx].objectType,
 															  (uint16_t)player->selectedTargetComponent) &&
 						ModelMesh_GetObjectTypeMeshType(g_objectTable[relatedObjIdx].objectType,
@@ -650,7 +651,7 @@ unsigned int Craft_DamageComponent(uint16_t objIdx, int componentId, unsigned in
 							player->selectedTargetComponent = 0;
 						}
 
-						if (g_curCraft->componentState[(uint16_t)player->selectedTargetComponent] == 0 &&
+						if (CraftExtended_GetMeshComponentState(g_curCraft, (uint16_t)player->selectedTargetComponent) == 0u &&
 							Craft_IsSelectableDamageComponentMesh(
 								g_objectTable[relatedObjIdx].objectType,
 								(uint16_t)player->selectedTargetComponent)) {
@@ -879,7 +880,7 @@ void Craft_DetachDamageableComponent(uint16_t sourceObjIdx, int detachAll, uint1
 			meshIdx = componentIdx;
 		}
 
-		if (sourceCraft != NULL && sourceCraft->componentState[meshIdx] == 0 &&
+		if (sourceCraft != NULL && CraftExtended_GetMeshComponentState(sourceCraft, meshIdx) == 0u &&
 			ModelMesh_IsObjectTypeMeshDamageable(g_objectTable[sourceObjIdx].objectType, meshIdx)) {
 			detachedObjIdx = Object_SpawnDetachedComponent(sourceObjIdx, (uint8_t)meshIdx);
 			if (detachedObjIdx != 0xffffu) {
@@ -938,12 +939,13 @@ void Craft_DetachDamageableComponent(uint16_t sourceObjIdx, int detachAll, uint1
 					Particle_AttachEffectToObject(3, detachedObjIdx, outVertex, NULL);
 				}
 
-				sourceCraft->componentState[meshIdx] = 4;
+				(void)CraftExtended_SetMeshComponentState(sourceCraft, meshIdx, 4u);
 				if (g_objectTable[detachedObjIdx].mobj != NULL &&
 					g_objectTable[detachedObjIdx].mobj->pCraft != NULL) {
-					g_objectTable[detachedObjIdx]
-						.mobj->pCraft->componentState[ModelMesh_GetObjectTypeMeshCount(
-							g_objectTable[sourceObjIdx].objectType)] = 4;
+					(void)CraftExtended_SetDetachedPostMeshState(
+						g_objectTable[detachedObjIdx].mobj->pCraft,
+						(uint16_t)ModelMesh_GetObjectTypeMeshCount(g_objectTable[sourceObjIdx].objectType),
+						4u);
 				}
 				if ((uint16_t)detachAll == 0u) {
 					return;
@@ -1014,7 +1016,7 @@ void Craft_SpawnMainHullExplosionEffects(uint16_t sourceObjIdx, uint16_t forceAt
 	}
 
 	result = hullMeshes[(uint16_t)((uint16_t)GameRand() % hullMeshCount)];
-	if (g_curCraft->componentHp[result]) {
+	if ((*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(result)))) {
 		result = (uint16_t)Craft_SpawnExplosionObjectAtMesh(
 			sourceObjIdx, result, g_modelTypeTable[(uint16_t)objectType].maxBoundsExtent >> 4, 1);
 		if (result != 0xFFFF && genusId != 18) {
@@ -1182,8 +1184,8 @@ void Damage_QueueCraftBillboards(uint16_t objectIndex) {
 
 		if ((uint16_t)ModelMesh_GetObjectTypeMeshType(objectTypeInt, meshIdx) == (uint16_t)MESH_Fuselage) {
 			craft = g_objectTable[objectIndex].mobj->pCraft;
-			if (craft->componentState[meshIdx] == 0) {
-				frame = craft->componentState[49];
+			if (CraftExtended_GetMeshComponentState(craft, meshIdx) == 0u) {
+				frame = CraftExtended_GetSpecialComponentState(craft);
 				if (frame != 0) {
 					if (haveBillboardAngle == 0) {
 						int angle;

@@ -1,0 +1,240 @@
+name: XWAU extended craft state contracts
+
+on:
+  push:
+    branches:
+      - xwau-004-static-materials
+  pull_request:
+    paths:
+      - 'src/xwa/flight/object/object.h'
+      - 'src/xwa/flight/object/craft_extended_state.h'
+      - 'src/xwa/flight/object/craft_extended_state.c'
+      - 'src/xwa/flight/object/object.c'
+      - 'src/xwa/flight/object/debris.c'
+      - 'src/xwa/flight/death_star.c'
+      - 'src/xwa/flight/mission/mission.c'
+      - 'src/xwa/flight/yard.c'
+      - 'src/xwa/flight/hangar.c'
+      - 'src/xwa/flight/flight.c'
+      - 'src/xwa/flight/ai/pai.c'
+      - 'src/xwa/flight/ai/paifight.c'
+      - 'src/xwa/flight/ai/paiman.c'
+      - 'src/xwa/flight/ai/paiorder.c'
+      - 'src/xwa/flight/hud/hud.c'
+      - 'src/xwa/flight/flight_light.c'
+      - 'src/xwa/flight/object/collision.c'
+      - 'src/xwa/flight/player/player.c'
+      - 'src/xwa/audio/fsfx.c'
+      - 'src/xwa/flight/object/laser.c'
+      - 'src/xwa/render/render_scene_core.c'
+      - 'src/xwa/render/render_scene_model.c'
+      - 'src/xwa/render/engine_glow.c'
+      - 'src/xwa_runtime/snapshot/snapshot.h'
+      - 'src/xwa_runtime/snapshot/snapshot.c'
+      - 'src/xwa_runtime/snapshot/snapshot_export.c'
+      - 'src/xwa_remaster/ship.h'
+      - 'src/xwa_remaster/ship.c'
+      - 'src/xwa_remaster/flight.c'
+      - 'src/xwa_remaster/hud_cmd.c'
+      - 'src/xwa_remaster/preview.c'
+      - 'tests/xwau_extended_craft_state_layout_test.c'
+      - 'tests/xwau_extended_craft_state_pool_test.c'
+      - 'tests/xwau_extended_craft_state_projection_test.c'
+      - 'tests/xwau_extended_craft_state_mission_wiring_test.py'
+      - 'tests/xwau_extended_craft_state_lifecycle_guard_test.py'
+      - 'tests/xwau_extended_craft_state_component_state_guard_test.py'
+      - 'tests/xwau_extended_craft_state_mesh_rotation_guard_test.py'
+      - 'tests/xwau_extended_craft_state_component_hp_guard_test.py'
+      - 'tests/xwau_extended_craft_state_engine_health_guard_test.py'
+      - 'tests/xwau_extended_craft_state_warhead_ai_guard_test.py'
+      - 'tests/xwau_extended_craft_state_warhead_laser_guard_test.py'
+      - 'tests/xwau_extended_craft_state_warhead_mission_flight_guard_test.py'
+      - 'tests/xwau_extended_craft_state_warhead_hud_hangar_yard_guard_test.py'
+      - 'tests/xwau_extended_craft_state_final_warhead_guard_test.py'
+      - 'tests/xwau_extended_craft_state_access_guard_test.py'
+      - 'tests/xwau_extended_craft_state_collision_alias_test.py'
+      - 'tests/xwau_extended_world_state_test.c'
+      - 'tests/xwau_extended_world_state_flight_integration_test.py'
+      - 'tests/xwau_extract_flight_resync_impl.py'
+      - 'tests/xwau_extended_world_state_resync_test.c'
+      - 'tests/xwau_extended_world_state_resync_integration_test.py'
+      - 'tests/xwau_extended_world_state_primary_checksum_test.py'
+      - 'tests/xwau_extended_film_world_state_test.c'
+      - 'tests/xwau_extended_film_world_state_integration_test.py'
+      - 'tests/xwau_extended_snapshot_test.c'
+      - 'tests/xwau_extended_snapshot_guard_test.py'
+      - '.github/workflows/xwau-extended-craft-state-test.yml'
+  workflow_dispatch:
+
+jobs:
+  layout:
+    name: retail layout and sidecar constants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build layout contract
+        shell: bash
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Isrc \
+            tests/xwau_extended_craft_state_layout_test.c \
+            -o xwau_extended_craft_state_layout_test
+
+      - name: Run layout contract
+        shell: bash
+        run: ./xwau_extended_craft_state_layout_test
+
+      - name: Build pool mapping contract
+        shell: bash
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Isrc \
+            tests/xwau_extended_craft_state_pool_test.c \
+            src/xwa/flight/object/craft_extended_state.c \
+            -o xwau_extended_craft_state_pool_test
+
+      - name: Run pool mapping contract
+        shell: bash
+        run: ./xwau_extended_craft_state_pool_test
+
+      - name: Build seed and projection contract
+        shell: bash
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Isrc \
+            tests/xwau_extended_craft_state_projection_test.c \
+            src/xwa/flight/object/craft_extended_state.c \
+            -o xwau_extended_craft_state_projection_test
+
+      - name: Run seed and projection contract
+        shell: bash
+        run: ./xwau_extended_craft_state_projection_test
+
+      - name: Build XWES world-state codec contract
+        shell: bash
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Isrc \
+            tests/xwau_extended_world_state_test.c \
+            src/xwa/flight/object/craft_extended_state.c \
+            -o xwau_extended_world_state_test
+
+      - name: Run XWES world-state codec contract
+        shell: bash
+        run: ./xwau_extended_world_state_test
+
+      - name: Check Flight/XWES world-state integration
+        shell: bash
+        run: python3 tests/xwau_extended_world_state_flight_integration_test.py
+
+
+      - name: Build resync functions from recovered Flight source
+        shell: bash
+        run: |
+          python3 tests/xwau_extract_flight_resync_impl.py \
+            src/xwa/flight/flight.c \
+            xwau_flight_resync_impl.c
+          cc -std=c11 -Wall -Wextra -Werror \
+            tests/xwau_extended_world_state_resync_test.c \
+            xwau_flight_resync_impl.c \
+            -o xwau_extended_world_state_resync_test
+
+      - name: Run extended world-state resync contract
+        shell: bash
+        run: ./xwau_extended_world_state_resync_test
+
+      - name: Check resync protocol integration
+        shell: bash
+        run: python3 tests/xwau_extended_world_state_resync_integration_test.py
+
+
+      - name: Check primary world checksum includes XWES
+        shell: bash
+        run: python3 tests/xwau_extended_world_state_primary_checksum_test.py
+
+      - name: Build film world-state contract
+        shell: bash
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Isrc \
+            tests/xwau_extended_film_world_state_test.c \
+            src/xwa/flight/object/craft_extended_state.c \
+            -o xwau_extended_film_world_state_test
+
+      - name: Run film world-state contract
+        shell: bash
+        run: ./xwau_extended_film_world_state_test
+
+      - name: Check film world-state integration
+        shell: bash
+        run: python3 tests/xwau_extended_film_world_state_integration_test.py
+
+      - name: Build extended renderer snapshot contract
+        shell: bash
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror \
+            -Isrc \
+            tests/xwau_extended_snapshot_test.c \
+            -o xwau_extended_snapshot_test
+
+      - name: Run extended renderer snapshot contract
+        shell: bash
+        run: ./xwau_extended_snapshot_test
+
+      - name: Check extended renderer snapshot integration
+        shell: bash
+        run: python3 tests/xwau_extended_snapshot_guard_test.py
+
+      - name: Check mission lifecycle wiring
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_mission_wiring_test.py
+
+      - name: Check extended craft lifecycle ownership
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_lifecycle_guard_test.py
+
+      - name: Check component-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_component_state_guard_test.py
+
+      - name: Check mesh-rotation authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_mesh_rotation_guard_test.py
+
+      - name: Check component-HP authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_component_hp_guard_test.py
+
+      - name: Check engine-emitter-health authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_engine_health_guard_test.py
+
+      - name: Check AI weapon-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_warhead_ai_guard_test.py
+
+
+      - name: Check laser weapon-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_warhead_laser_guard_test.py
+
+      - name: Check mission and flight weapon-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_warhead_mission_flight_guard_test.py
+
+      - name: Check HUD, Hangar, and Yard weapon-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_warhead_hud_hangar_yard_guard_test.py
+
+      - name: Check final weapon-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_final_warhead_guard_test.py
+
+      - name: Check complete extended-state authority boundary
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_access_guard_test.py
+
+      - name: Check recovered collision layout alias
+        shell: bash
+        run: python3 tests/xwau_extended_craft_state_collision_alias_test.py

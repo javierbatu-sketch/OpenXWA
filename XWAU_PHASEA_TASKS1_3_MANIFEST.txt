@@ -1,0 +1,38 @@
+OpenXWA-XWAU Phase A — Tasks 1-3 checkpoint
+Baseline archive: OpenXWA_401d211_source(2).zip
+Baseline archive SHA-256: 03fb83fbd3fc95a653f6348f283a44cfe8f941555a0bf622bb8120c1f7ce3237
+Intended OpenXWA HEAD: 401d21129a41eb40a2370d2008289016406f2f83
+
+Scope closed in this checkpoint:
+- Task 1: XWAU extended craft-state constants/POD + retail layout contract.
+- Task 2: sidecar pool allocation, stable ordinal mapping, mission lifecycle wiring.
+- Task 3: deterministic reset, legacy seed/projection, bounded mesh/special/sentinel/engine/weapon accessors.
+
+Critical layout correction established during Task 1:
+- Modern packed CraftData is 0x3F5 + sizeof(ObjectRecord*), i.e. 1021 bytes on x86-64.
+- The retail/world-state CraftData contract remains exactly 1017 bytes: 0x3F5-byte prefix + 4-byte encoded effectiveAiObjectLink.
+- componentState offset 0x22E; meshRotation 0x260; componentHp 0x292; WarheadInventoryEntry 14 bytes.
+
+Semantic contracts:
+- Renderable meshes: 0..253.
+- Fixed auxiliary/special component state: slot 254.
+- Detached-component post-mesh sentinel: dynamic index meshCount; distinct from fixed special slot except when meshCount==254.
+- Engine emitters: 0..254.
+- Weapon gameplay slots: 0..119; backing 120..127 not addressable through gameplay accessor.
+- Extended component HP reset default: 0xFF.
+
+Focused verification in this environment:
+GREEN: tests/xwau_extended_craft_state_layout_test.c
+GREEN: tests/xwau_extended_craft_state_pool_test.c
+GREEN: tests/xwau_extended_craft_state_projection_test.c
+GREEN: tests/xwau_extended_craft_state_mission_wiring_test.py
+GREEN: dedicated workflow YAML parses successfully.
+
+Full CMake/OpenXWA build NOT claimed here because the uploaded source archive contains an empty aeron/ submodule directory. Run full build/CI in the real worktree after applying this checkpoint and initializing Aeron.
+
+Out of scope/not changed:
+- No gameplay raw-access migration yet.
+- No world-state XWES tail yet.
+- No snapshot expansion yet.
+- No Aeron changes.
+- No NoBloom changes.

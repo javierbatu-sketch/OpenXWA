@@ -33,7 +33,7 @@ if(XWA_ENABLE_ASAN)
     message(STATUS "AddressSanitizer enabled (XWA_ENABLE_ASAN=ON)")
 endif()
 
-# Aeron engine (window, GPU HAL, input, audio, VFS) — shared git submodule.
+# Aeron engine (window, GPU HAL, input, audio, VFS) Ã¢â‚¬â€ shared git submodule.
 option(XWA_BUILD_TOOLS "Build OpenXWA and Aeron asset/developer tools" ON)
 set(AERON_BUILD_TOOLS ${XWA_BUILD_TOOLS})
 set(AERON_ENABLE_VIDEO ON)
@@ -154,6 +154,7 @@ set(XWA_RECOVERED_SOURCES
     src/xwa/flight/mission/mission.c
     src/xwa/flight/net_session.c
     src/xwa/flight/object/collision.c
+    src/xwa/flight/object/craft_extended_state.c
     src/xwa/flight/object/damage.c
     src/xwa/flight/object/debris.c
     src/xwa/flight/object/laser.c
@@ -236,7 +237,7 @@ if(NOT MSVC)
         PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing")
 endif()
 
-# Remaster driver — snapshot -> aeron_scene translation.
+# Remaster driver Ã¢â‚¬â€ snapshot -> aeron_scene translation.
 # Snapshot data is its semantic render input; narrow modern-adapter controls
 # coordinate ownership of classic presentation layers.
 add_library(xwa_remaster STATIC
@@ -258,6 +259,11 @@ add_library(xwa_remaster STATIC
     src/xwa_remaster/preview.c
     src/xwa_remaster/ship.c
     src/xwa_remaster/opt_mesh.c
+    src/xwa_remaster/xwau_material.c
+    src/xwa_remaster/xwau_material_asset.c
+    src/xwa_remaster/xwau_material_render.c
+    src/xwa_remaster/xwau_normal_map.c
+    src/xwa_remaster/xwau_opt_materials.c
     src/xwa_remaster/original_2d.c
     src/xwa_remaster/sky_stars.c
     src/xwa_remaster/assets.c
@@ -278,6 +284,9 @@ target_link_libraries(xwa_remaster
         aeron_asset
         xwa_2d_formats
 )
+if(NOT MSVC)
+    target_link_libraries(xwa_remaster PRIVATE m)
+endif()
 
 # OpenXWA-owned scene shaders use Aeron's cross-platform shader pipeline and
 # land beside the shared runtime shaders so Aeron_CreateShader can resolve

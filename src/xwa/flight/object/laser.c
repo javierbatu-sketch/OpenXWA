@@ -1,4 +1,5 @@
 #include "xwa/flight/object/laser.h"
+#include "xwa/flight/object/craft_extended_state.h"
 
 #include "xwa/assets/model_bounds.h"
 #include "xwa/assets/model_def.h"
@@ -231,7 +232,7 @@ static __inline void laser_UpdatePlayerWarheadLock(uint16_t objectIdx, int playe
 		modelIndex = (ModelIndex)GetModelIndexFromType(g_objectTable[objectIdx].objectType);
 		firstSlot = g_modelDefs[modelIndex].warheadLauncherFirstSlot[g_players[playerIdx].selectedWarhead];
 		loadedWarheadCount =
-			g_curCraft->warheadData[firstSlot + 1u].count + g_curCraft->warheadData[firstSlot].count;
+			CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot + 1u))->count + CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot))->count;
 	}
 
 	currentTargetObjIdx = (uint16_t)g_players[playerIdx].currentTargetObjectIdx;
@@ -486,20 +487,20 @@ static __inline void laser_UpdateAiPowerRedirects(uint16_t objectIdx, int* shiel
 
 				totalLaserCharge = 0;
 				for (drainSlotIdx = 0; drainSlotIdx < g_curCraft->laserSlotCount; ++drainSlotIdx) {
-					if ((int8_t)g_curCraft->warheadData[drainSlotIdx].laserCharge > 0) {
+					if ((int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(drainSlotIdx))->laserCharge > 0) {
 						totalLaserCharge =
 							(int16_t)(totalLaserCharge +
-									  (int8_t)g_curCraft->warheadData[drainSlotIdx].laserCharge);
+									  (int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(drainSlotIdx))->laserCharge);
 					}
 				}
 
 				shieldStep = g_objectTable[objectIdx].objectType == OBJ_MissileBoat ? 32 : 4;
 				for (drainSlotIdx = 0, budgetTicks = 0;
 					 totalLaserCharge != 0 && budgetTicks < (uint16_t)chargeBudget; ++budgetTicks) {
-					if ((int8_t)g_curCraft->warheadData[drainSlotIdx].laserCharge > 0) {
+					if ((int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(drainSlotIdx))->laserCharge > 0) {
 						--totalLaserCharge;
-						g_curCraft->warheadData[drainSlotIdx].laserCharge =
-							(uint8_t)(g_curCraft->warheadData[drainSlotIdx].laserCharge - 1u);
+						CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(drainSlotIdx))->laserCharge =
+							(uint8_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(drainSlotIdx))->laserCharge - 1u);
 						g_curCraft->shieldFront += shieldStep;
 						if (g_curCraft->shieldFront >= shieldMax) {
 							totalLaserCharge = 0;
@@ -521,9 +522,9 @@ static __inline void laser_UpdateAiPowerRedirects(uint16_t objectIdx, int* shiel
 			totalCharge = 0;
 			chargedSlotCount = 0;
 			for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
-				if (g_curCraft->warheadData[slotIdx].weaponType != 0) {
+				if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType != 0) {
 					totalCharge =
-						(int16_t)(totalCharge + (int8_t)g_curCraft->warheadData[slotIdx].laserCharge);
+						(int16_t)(totalCharge + (int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge);
 					++chargedSlotCount;
 				}
 			}
@@ -563,7 +564,7 @@ static __inline void laser_UpdateAiPowerRedirects(uint16_t objectIdx, int* shiel
 				for (meshIdx = 0; meshIdx < meshCount; ++meshIdx) {
 					if (ModelMesh_GetObjectTypeMeshType(g_objectTable[objectIdx].objectType, meshIdx) ==
 							MESH_ShieldGenerator &&
-						g_curCraft->componentHp[meshIdx] != 0) {
+						(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) != 0) {
 						++liveShieldGenerators;
 					}
 				}
@@ -709,8 +710,8 @@ void laser_weaponsfire(void) {
 				uint16_t slotIdx;
 
 				for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
-					if (g_curCraft->warheadData[slotIdx].weaponType != 0 &&
-						g_curCraft->warheadData[slotIdx].weaponType < 4u) {
+					if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType != 0 &&
+						CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType < 4u) {
 						int16_t chargeBasis;
 						int16_t chargeDelta;
 
@@ -723,13 +724,13 @@ void laser_weaponsfire(void) {
 							g_objectTable[objectIdx].objectType == OBJ_TIEBomber) {
 							chargeDelta = (int16_t)(3 * chargeBasis);
 						}
-						g_curCraft->warheadData[slotIdx].laserCharge =
-							(uint8_t)(g_curCraft->warheadData[slotIdx].laserCharge + chargeDelta);
-						if (chargeDelta < 0 && (int8_t)g_curCraft->warheadData[slotIdx].laserCharge < 0) {
-							g_curCraft->warheadData[slotIdx].laserCharge = 0;
+						CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge =
+							(uint8_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge + chargeDelta);
+						if (chargeDelta < 0 && (int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge < 0) {
+							CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge = 0;
 						}
-						if (chargeDelta > 0 && (int8_t)g_curCraft->warheadData[slotIdx].laserCharge < 0) {
-							g_curCraft->warheadData[slotIdx].laserCharge = 127;
+						if (chargeDelta > 0 && (int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge < 0) {
+							CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge = 127;
 						}
 					}
 				}
@@ -741,7 +742,7 @@ void laser_weaponsfire(void) {
 
 				anyLaserCharge = 0;
 				for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
-					if ((int8_t)g_curCraft->warheadData[slotIdx].laserCharge > 0) {
+					if ((int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge > 0) {
 						anyLaserCharge = 1;
 					}
 				}
@@ -830,10 +831,10 @@ void laser_weaponsfire(void) {
 			}
 
 			for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
-				if (g_curCraft->warheadData[slotIdx].weaponType >= 4u &&
-					g_curCraft->warheadData[slotIdx].turretTargetObjIdx != -1) {
+				if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType >= 4u &&
+					CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->turretTargetObjIdx != -1) {
 					laser_firewarheadlauncher(objectIdx, slotIdx,
-											  (uint16_t)g_curCraft->warheadData[slotIdx].turretTargetObjIdx);
+											  (uint16_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->turretTargetObjIdx);
 				}
 			}
 
@@ -920,9 +921,9 @@ static __inline uint16_t laser_ComputeLauncherCooldownTicks(ModelIndex modelInde
 	uint16_t cooldown;
 
 	cooldown = g_modelDefs[modelIndex]
-				   .laserGroupFireCooldownTicks[g_curCraft->warheadData[launcherIdx].weaponGroupIdx];
+				   .laserGroupFireCooldownTicks[CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->weaponGroupIdx];
 	if (cooldown == 0) {
-		cooldown = (uint16_t)(g_curCraft->warheadData[launcherIdx].weaponType != 4 ? 236u : 118u);
+		cooldown = (uint16_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->weaponType != 4 ? 236u : 118u);
 	}
 	if (ownerPlayerIdx == -1) {
 		uint16_t skill;
@@ -944,7 +945,7 @@ static __inline uint16_t laser_SelectWarheadLauncherProjectileType(ObjectRecord*
 																   uint16_t launcherIdx) {
 	uint16_t projectileType;
 
-	if (g_curCraft->warheadData[launcherIdx].count != 0) {
+	if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->count != 0) {
 		int isIonLauncherGroup;
 		int groupIdx;
 		int groupsLeft;
@@ -963,7 +964,7 @@ static __inline uint16_t laser_SelectWarheadLauncherProjectileType(ObjectRecord*
 		uint16_t typeIdx;
 		uint8_t requiredIff;
 
-		projectileType = g_curCraft->warheadData[launcherIdx].projectileTypeId;
+		projectileType = CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->projectileTypeId;
 		typeIdx = (uint16_t)projectileType - OBJ_LaserRebel;
 #ifdef XWA_MODERN
 		requiredIff = g_projectileRequiredIffByType[typeIdx];
@@ -1006,7 +1007,7 @@ static __inline int laser_GetLargeObjectLauncherPoint(ObjectRecord* ownerObj, Mo
 		for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
 			if (slotIdx != launcherIdx) {
 				excludedHardpointIndices[excludedCount++] =
-					g_curCraft->warheadData[slotIdx].lastFireHardpointIdx;
+					CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->lastFireHardpointIdx;
 			}
 		}
 
@@ -1035,10 +1036,10 @@ static __inline int laser_GetLargeObjectLauncherPoint(ObjectRecord* ownerObj, Mo
 															g_rotatedZ, g_curCraft);
 		excludedCount = 0;
 		for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
-			if ((uint16_t)g_curCraft->warheadData[slotIdx].lastFireMeshIdx == (uint16_t)meshIdx &&
+			if ((uint16_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->lastFireMeshIdx == (uint16_t)meshIdx &&
 				slotIdx != launcherIdx) {
 				excludedHardpointIndices[excludedCount++] =
-					g_curCraft->warheadData[slotIdx].lastFireHardpointIdx;
+					CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->lastFireHardpointIdx;
 			}
 		}
 
@@ -1121,7 +1122,7 @@ static __inline void laser_GetModelHardpointLauncherPoint(ObjectRecord* ownerObj
 			g_rotatedY = rotateFwd;
 			g_rotatedZ = rotateUp;
 		}
-		ModelMesh_ApplyAnimatedMeshRotationToPoint((uint16_t)g_curCraft->meshRotation[meshIndex] << 8,
+		ModelMesh_ApplyAnimatedMeshRotationToPoint((uint16_t)(*CraftExtended_MeshRotationRef(g_curCraft, (uint16_t)(meshIndex))) << 8,
 												   ownerObj->objectType, meshIndex, rotateSide, rotateFwd,
 												   rotateUp);
 		if (ownerObj->objectType == OBJ_ImperialStarDestroyer2) {
@@ -1242,7 +1243,7 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 	}
 
 	if (g_objectTable[targetRef].objectType == OBJ_None) {
-		g_curCraft->warheadData[launcherIdx].turretTargetObjIdx = -1;
+		CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretTargetObjIdx = -1;
 		return;
 	}
 
@@ -1252,7 +1253,7 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 	if (!laser_ObjectTypeUsesExpandedTargetProbe(ownerObj->objectType)) {
 		meshIdx = g_modelDefs[modelIndex].weaponHardpoints[launcherIdx].meshIdx;
 		hardpointIdx = g_modelDefs[modelIndex].weaponHardpoints[launcherIdx].alternateMeshHardpointIdx;
-		if (g_curCraft->componentHp[meshIdx] == 0) {
+		if ((*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) == 0) {
 			return;
 		}
 	}
@@ -1262,8 +1263,8 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 	}
 	if (g_curCraft->beamEffectAccum[2] >= 0x18000u) {
 		if (g_missionElapsedClock.subsecondTicks < 118) {
-			g_curCraft->warheadData[launcherIdx].turretRotBucket =
-				(int16_t)(g_curCraft->warheadData[launcherIdx].turretRotBucket + (uint16_t)g_elapsedTicks);
+			CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket =
+				(int16_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket + (uint16_t)g_elapsedTicks);
 			return;
 		}
 #ifdef XWA_MODERN
@@ -1271,11 +1272,11 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 			return;
 		}
 #endif
-		++g_curCraft->warheadData[launcherIdx].turretRotBucket;
+		++CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket;
 	} else if (g_curCraft->beamEffectAccum[2] >= 0x8000u) {
 		if (g_missionElapsedClock.subsecondTicks < 118) {
-			g_curCraft->warheadData[launcherIdx].turretRotBucket =
-				(int16_t)(g_curCraft->warheadData[launcherIdx].turretRotBucket + (uint16_t)g_elapsedTicks);
+			CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket =
+				(int16_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket + (uint16_t)g_elapsedTicks);
 			return;
 		}
 #ifdef XWA_MODERN
@@ -1283,10 +1284,10 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 			return;
 		}
 #endif
-		g_curCraft->warheadData[launcherIdx].turretRotBucket =
-			(int16_t)(g_curCraft->warheadData[launcherIdx].turretRotBucket + 2);
+		CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket =
+			(int16_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket + 2);
 	}
-	if (g_curCraft->warheadData[launcherIdx].turretRotBucket > 0) {
+	if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket > 0) {
 		return;
 	}
 
@@ -1311,7 +1312,7 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 			}
 		}
 
-		g_curCraft->warheadData[launcherIdx].turretRotBucket =
+		CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->turretRotBucket =
 			(int16_t)laser_ComputeLauncherCooldownTicks(modelIndex, launcherIdx, ownerPlayerIdx);
 	}
 
@@ -1356,16 +1357,16 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 		uint32_t rangeScore;
 
 		rangeLimit = (uint32_t)g_modelDefs[modelIndex]
-						 .laserGroupFireRange[g_curCraft->warheadData[launcherIdx].weaponGroupIdx];
+						 .laserGroupFireRange[CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->weaponGroupIdx];
 		if (rangeLimit == 0) {
-			rangeLimit = (g_curCraft->warheadData[launcherIdx].weaponType != 5) ? 81920u : 163840u;
+			rangeLimit = (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->weaponType != 5) ? 81920u : 163840u;
 		}
 		rangeScore = (uint32_t)collide_roughdistance3d(dx, dy, dz);
 		g_targetRangeScore = (int)rangeScore;
 		if (rangeScore > rangeLimit) {
 			return;
 		}
-		if (g_curCraft->warheadData[launcherIdx].weaponType == 5 && rangeScore < 0x4000u) {
+		if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->weaponType == 5 && rangeScore < 0x4000u) {
 			return;
 		}
 	}
@@ -1530,8 +1531,8 @@ void laser_firewarheadlauncher(unsigned int ownerObjIdx, uint16_t launcherIdx, u
 		guidance->minSpeed = g_objectTable[projectileObjIdx].mobj->speed;
 	}
 
-	g_curCraft->warheadData[launcherIdx].lastFireMeshIdx = (uint8_t)meshIdx;
-	g_curCraft->warheadData[launcherIdx].lastFireHardpointIdx = hardpointIdx;
+	CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->lastFireMeshIdx = (uint8_t)meshIdx;
+	CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(launcherIdx))->lastFireHardpointIdx = hardpointIdx;
 	fsfx_triggerweaponsfx(projectileObjIdx, g_localPlayer);
 }
 
@@ -2013,8 +2014,8 @@ int laser_firemissile(int firerObjIdx, int warheadSlot, int projectileType, unsi
 	playerOwnerIdx = g_objectTable[firerObjIdx].playerOwnerIdx;
 	effectiveAi = pai_GetEffectiveAIController(g_curCraft);
 	projectileObjIdx = 0xffff;
-	if (g_curCraft->warheadData[warheadSlot].weaponType == 3 &&
-		g_curCraft->warheadData[warheadSlot].count > 0) {
+	if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->weaponType == 3 &&
+		CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->count > 0) {
 		projectileObjIdx = laser_createprojectile((unsigned int)firerObjIdx, warheadSlot,
 												  (ObjectTypeId)projectileType, playerOwnerIdx);
 		if (projectileObjIdx != 0xffff) {
@@ -2026,7 +2027,7 @@ int laser_firemissile(int firerObjIdx, int warheadSlot, int projectileType, unsi
 			fsfx_triggerweaponsfx((unsigned int)projectileObjIdx, (unsigned int)playerOwnerIdx);
 			if (g_missionFlightGroups[g_objectTable[firerObjIdx].flightGroupIdx].fg.status1 != 21 &&
 				g_missionFlightGroups[g_objectTable[firerObjIdx].flightGroupIdx].fg.status2 != 21) {
-				--g_curCraft->warheadData[warheadSlot].count;
+				--CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(warheadSlot))->count;
 			}
 
 			guidance = g_objectTable[projectileObjIdx].mobj->pWarheadGuidance;
@@ -2087,8 +2088,8 @@ int laser_firemissile(int firerObjIdx, int warheadSlot, int projectileType, unsi
 				unsigned int firstSlot;
 
 				firstSlot = g_modelDefs[g_curCraft->modelIndex].warheadLauncherFirstSlot[fireMode];
-				if (g_curCraft->warheadData[firstSlot].count >=
-					g_curCraft->warheadData[firstSlot + 1].count) {
+				if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot))->count >=
+					CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot + 1))->count) {
 					g_curCraft->warheadLauncherFlags[fireMode] &= 0x7fu;
 				} else {
 					g_curCraft->warheadLauncherFlags[fireMode] |= 0x80u;
@@ -2208,14 +2209,14 @@ void laser_firelasersystem(unsigned int shooterObjIdx, int laserGroupIdx, int pl
 	projectileTypeId = updateFireDelay;
 	slotIdx = firstSlot;
 	while (slotIdx <= lastSlot) {
-		if (g_curCraft->warheadData[slotIdx].weaponType != 0) {
+		if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType != 0) {
 			int8_t laserCharge;
 
-			laserCharge = (int8_t)g_curCraft->warheadData[slotIdx].laserCharge;
+			laserCharge = (int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge;
 			if (laserCharge > 0) {
 				unsigned int projectileObjIdx;
 
-				projectileTypeId = g_curCraft->warheadData[slotIdx].projectileTypeId;
+				projectileTypeId = CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->projectileTypeId;
 				if ((projectileTypeId == OBJ_LaserRebel || projectileTypeId == OBJ_LaserImperial ||
 					 projectileTypeId == OBJ_LaserIon) &&
 					laserCharge >= 64) {
@@ -2233,20 +2234,20 @@ void laser_firelasersystem(unsigned int shooterObjIdx, int laserGroupIdx, int pl
 						g_missionFlightGroups[g_objectTable[shooterObjIdx].flightGroupIdx].fg.status2 != 21) {
 						if (firingPlayerIdx != -1) {
 							if (g_objectTable[shooterObjIdx].genusId) {
-								if (g_curCraft->warheadData[slotIdx].weaponType < 4u) {
-									g_curCraft->warheadData[slotIdx].laserCharge =
-										(uint8_t)(g_curCraft->warheadData[slotIdx].laserCharge - 3u);
+								if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->weaponType < 4u) {
+									CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge =
+										(uint8_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge - 3u);
 								}
 							} else if (modelIndex == GetModelIndexFromType(OBJ_TIEFighter) ||
 									   modelIndex == GetModelIndexFromType(OBJ_TIEBomber)) {
-								g_curCraft->warheadData[slotIdx].laserCharge =
-									(uint8_t)(g_curCraft->warheadData[slotIdx].laserCharge - 3u);
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge =
+									(uint8_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge - 3u);
 							} else {
-								g_curCraft->warheadData[slotIdx].laserCharge =
-									(uint8_t)(g_curCraft->warheadData[slotIdx].laserCharge - 4u);
+								CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge =
+									(uint8_t)(CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge - 4u);
 							}
 						} else {
-							--g_curCraft->warheadData[slotIdx].laserCharge;
+							--CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge;
 						}
 					}
 
@@ -2258,8 +2259,8 @@ void laser_firelasersystem(unsigned int shooterObjIdx, int laserGroupIdx, int pl
 					} else if (firedCount < 2u) {
 						fsfx_triggerweaponsfx((unsigned int)projectileObjIdx, (unsigned int)g_localPlayer);
 					}
-					if ((int8_t)g_curCraft->warheadData[slotIdx].laserCharge < 0) {
-						g_curCraft->warheadData[slotIdx].laserCharge = 0;
+					if ((int8_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge < 0) {
+						CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx))->laserCharge = 0;
 					}
 
 					guidance = g_objectTable[projectileObjIdx].mobj->pWarheadGuidance;
@@ -2345,14 +2346,14 @@ void laser_firerocketsystem(int firerObjIdx, unsigned int fireMode) {
 		if (laser_firemissile(firerObjIdx, firstSlot, g_curCraft->warheadSlotTypeIds[fireMode], fireMode) !=
 			0xffff) {
 			firedCount = 1;
-		} else if (g_curCraft->warheadData[firstSlot].count > 0) {
+		} else if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot))->count > 0) {
 			blockedByLoadedSlot = 1;
 		}
 
 		if (laser_firemissile(firerObjIdx, (uint16_t)(firstSlot + 1u),
 							  g_curCraft->warheadSlotTypeIds[fireMode], fireMode) != 0xffff) {
 			++firedCount;
-		} else if (g_curCraft->warheadData[(uint16_t)(firstSlot + 1u)].count > 0) {
+		} else if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)((uint16_t)(firstSlot + 1u)))->count > 0) {
 			blockedByLoadedSlot = 1;
 		}
 	} else if ((fireFlags & 0x80) != 0) {
@@ -2362,14 +2363,14 @@ void laser_firerocketsystem(int firerObjIdx, unsigned int fireMode) {
 		if (laser_firemissile(firerObjIdx, secondSlot, g_curCraft->warheadSlotTypeIds[fireMode], fireMode) !=
 			0xffff) {
 			firedCount = 1;
-		} else if (g_curCraft->warheadData[secondSlot].count > 0) {
+		} else if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(secondSlot))->count > 0) {
 			blockedByLoadedSlot = 1;
 		}
 	} else {
 		if (laser_firemissile(firerObjIdx, firstSlot, g_curCraft->warheadSlotTypeIds[fireMode], fireMode) !=
 			0xffff) {
 			firedCount = 1;
-		} else if (g_curCraft->warheadData[firstSlot].count > 0) {
+		} else if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(firstSlot))->count > 0) {
 			blockedByLoadedSlot = 1;
 		}
 	}
@@ -2552,7 +2553,7 @@ void laser_fireplayerweapon(int playerIdx) {
 
 				firstSlot = g_modelDefs[craft->modelIndex]
 								.warheadLauncherFirstSlot[g_players[playerIdx].selectedWarhead];
-				if (craft->warheadData[firstSlot + 1u].count + craft->warheadData[firstSlot].count == 0) {
+				if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(firstSlot + 1u))->count + CraftExtended_GetWeaponEntry(craft, (uint16_t)(firstSlot))->count == 0) {
 					g_players[playerIdx].selectedWeaponMode = 0;
 					g_players[playerIdx].selectedWarhead = 0;
 					craft->laserFireCooldownTicks[0] = 118;

@@ -253,8 +253,34 @@ typedef struct XwaDirLight {
  * uses the (R0, R2, R1) row arrangement (FVIEW_ComputeObjectViewMatrix)
  * — that hazard lives in the driver's math, not in this data. */
 
-/* CraftData carries 50 per-mesh slots. */
-#define XWA_SNAP_MAX_MESH_SLOTS 50
+/* Read-only presentation boundary: renderable craft meshes are ordinals 0..253.
+ * Simulation-only component state 254 is deliberately not exported as a mesh. */
+#define XWA_SNAP_MAX_MESH_SLOTS 254
+#define XWA_SNAP_ENGINE_EMITTER_COUNT 255
+#define XWA_SNAP_ENGINE_KNOCKOUT_WORDS 8
+
+static inline void XwaSnapshot_EngineKnockoutClear(uint32_t mask[XWA_SNAP_ENGINE_KNOCKOUT_WORDS]) {
+	if (!mask) {
+		return;
+	}
+	for (uint32_t i = 0; i < XWA_SNAP_ENGINE_KNOCKOUT_WORDS; i++) {
+		mask[i] = 0;
+	}
+}
+
+static inline void XwaSnapshot_EngineKnockoutSet(uint32_t mask[XWA_SNAP_ENGINE_KNOCKOUT_WORDS],
+										 uint16_t emitter_index) {
+	if (!mask || emitter_index >= XWA_SNAP_ENGINE_EMITTER_COUNT) {
+		return;
+	}
+	mask[emitter_index >> 5] |= (uint32_t)1u << (emitter_index & 31u);
+}
+
+static inline int XwaSnapshot_EngineKnockoutIsSet(const uint32_t mask[XWA_SNAP_ENGINE_KNOCKOUT_WORDS],
+										  uint16_t emitter_index) {
+	return mask && emitter_index < XWA_SNAP_ENGINE_EMITTER_COUNT &&
+		   (mask[emitter_index >> 5] & ((uint32_t)1u << (emitter_index & 31u))) != 0;
+}
 
 /* Genus values the driver dispatches on (mirrors ModelGenusId — part
  * of the captured records' vocabulary, so drivers need no engine
@@ -375,6 +401,9 @@ typedef struct XwaFlightObject {
 	uint8_t component_state[XWA_SNAP_MAX_MESH_SLOTS];
 	uint8_t mesh_rotation[XWA_SNAP_MAX_MESH_SLOTS];
 	uint8_t component_hp[XWA_SNAP_MAX_MESH_SLOTS];
+	/* Presentation-only projection of the simulation special component state 254.
+	 * Kept separate so mesh ordinal 49 remains mesh 49 in the extended snapshot. */
+	uint8_t damage_flame_frame;
 	/* ---- engine-glow state (EngineGlow_RenderObjectGlows inputs; the
 	 * HD driver derives the glow fans from these + the cooked glb's
 	 * engine-glow extras). objectKind 5/6 use the speed-boost scale
@@ -389,9 +418,9 @@ typedef struct XwaFlightObject {
 	uint16_t eg_output_scale;   /* CraftData.engineOutputScale */
 	uint16_t eg_max_speed;      /* CraftData.aiFlight.maxSpeedCache */
 	/* Damage knockouts: bit N = emitter N destroyed (classic per-model
-	 * emitter order == the cooked glb's glow list order; emitters past
-	 * 32 keep drawing). */
-	uint32_t eg_knockout_mask;
+	 * emitter order == the cooked glb's glow list order). Eight words
+	 * preserve presentation state for emitter ordinals 0..254. */
+	uint32_t eg_knockout_mask[XWA_SNAP_ENGINE_KNOCKOUT_WORDS];
 } XwaFlightObject;
 
 #define XWA_SNAP_MAX_FLIGHT_OBJECTS 1664

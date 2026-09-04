@@ -3,6 +3,7 @@
 #include "xwa/assets/model_def.h"
 #include "xwa/assets/model_type.h"
 #include "xwa/flight/fediskio.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/player/player.h"
 #include "xwa/frontend/frontend_display.h"
 #include "xwa/math/fixed.h"
@@ -546,7 +547,7 @@ int ModelMesh_FindNearestLiveFloatHardpoint(int modelType, int localX, int local
 	}
 
 	for (bestHardpointIndex = 0; bestHardpointIndex < floatHardpointCount; ++bestHardpointIndex) {
-		if (craft->componentHp[hardpoints[bestHardpointIndex].componentIndex] &&
+		if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(hardpoints[bestHardpointIndex].componentIndex))) &&
 			!excludedHardpointMap[bestHardpointIndex]) {
 			break;
 		}
@@ -564,7 +565,7 @@ int ModelMesh_FindNearestLiveFloatHardpoint(int modelType, int localX, int local
 
 	if (hardpointIndex != floatHardpointCount) {
 		for (++hardpoints; hardpointIndex < floatHardpointCount; ++hardpoints, ++hardpointIndex) {
-			if (!craft->componentHp[hardpoints->componentIndex] || excludedHardpointMap[hardpointIndex]) {
+			if (!(*CraftExtended_ComponentHpRef(craft, (uint16_t)(hardpoints->componentIndex))) || excludedHardpointMap[hardpointIndex]) {
 				continue;
 			}
 
@@ -1081,7 +1082,7 @@ int ModelMesh_FindNearestVertexForPoint(int modelType, int localX, int localY, i
 		nearestIndex = 0;
 		while (nearestIndex < vertexCount) {
 			uint8_t component = vertexComponentMap[nearestIndex];
-			if (component != 0 && craft->componentHp[component & 0x7f] != 0 && excluded[nearestIndex] == 0) {
+			if (component != 0 && (*CraftExtended_ComponentHpRef(craft, (uint16_t)(component & 0x7f))) != 0 && excluded[nearestIndex] == 0) {
 				break;
 			}
 			++nearestIndex;
@@ -1107,7 +1108,7 @@ int ModelMesh_FindNearestVertexForPoint(int modelType, int localX, int localY, i
 
 	for (vertexIndex = nearestIndex + 1; vertexIndex < vertexCount; ++vertexIndex) {
 		if (vertexComponentMap == NULL || vertexComponentMap[vertexIndex] == 0 ||
-			(craft->componentHp[vertexComponentMap[vertexIndex] & 0x7f] != 0 && excluded[vertexIndex] == 0)) {
+			((*CraftExtended_ComponentHpRef(craft, (uint16_t)(vertexComponentMap[vertexIndex] & 0x7f))) != 0 && excluded[vertexIndex] == 0)) {
 			float dx;
 			float dy;
 			float dz;
@@ -1796,7 +1797,7 @@ int ModelMesh_FindNearestLiveMainHullByBounds(int modelType, int localX, int loc
 		for (vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex) {
 			uint8_t component = vertexComponentMap[vertexIndex];
 
-			if (component != 0 && craft->componentHp[component & 0x7f] != 0) {
+			if (component != 0 && (*CraftExtended_ComponentHpRef(craft, (uint16_t)(component & 0x7f))) != 0) {
 				break;
 			}
 		}
@@ -2011,7 +2012,7 @@ int ModelMesh_FindNearestLiveComponentByType(int modelType, MeshType meshTypeFil
 		} else {
 			componentIndex = rootIndex;
 		}
-		if (craft->componentHp[componentIndex] == 0) {
+		if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(componentIndex))) == 0) {
 			continue;
 		}
 

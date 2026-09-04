@@ -1,4 +1,5 @@
 #include "xwa/flight/ai/ai_internal.h"
+#include "xwa/flight/object/craft_extended_state.h"
 
 #include "aeron/log.h"
 
@@ -174,7 +175,7 @@ void pai_UpdateAllCraftAI(void) {
 						for (slotIdx = 0; slotIdx < g_curCraft->laserSlotCount; ++slotIdx) {
 							WarheadInventoryEntry* weapon;
 
-							weapon = &g_curCraft->warheadData[slotIdx];
+							weapon = CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slotIdx));
 							if (weapon->weaponType >= 4u && (uint16_t)weapon->turretTargetObjIdx == 0xffffu) {
 								hasFreeTurretSlot = 1;
 								break;

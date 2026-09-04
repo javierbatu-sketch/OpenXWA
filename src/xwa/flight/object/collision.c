@@ -18,6 +18,7 @@
 #include "xwa/flight/hud/hud.h"
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/object/damage.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/laser.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/player/player.h"
@@ -1004,7 +1005,7 @@ uint16_t collide_targetinrange(int16_t shooterObjIdx, int16_t targetObjIdx, int1
 	shooterModelIndex = shooterCraft->modelIndex;
 	projectileType =
 		g_modelDefs[shooterModelIndex].laserGroupWeaponType[g_players[g_localPlayer].selectedWarhead];
-	if ((int8_t)shooterCraft->warheadData[(uint16_t)hardpointIndex].laserCharge >= 64) {
+	if ((int8_t)CraftExtended_GetWeaponEntry(shooterCraft, (uint16_t)hardpointIndex)->laserCharge >= 64) {
 		++projectileType;
 	}
 
@@ -2290,10 +2291,10 @@ int collide_CheckLocalSweepAgainstObjectModel(unsigned int sourceObjIdx, unsigne
 			craft = targetMobj->pCraft;
 			if (craft != NULL) {
 				meshIdx = meshOrdinal - 1;
-				if (craft->componentHp[meshIdx] == 0) {
+				if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(meshIdx))) == 0) {
 					continue;
 				}
-				meshRotation = craft->meshRotation[meshIdx];
+				meshRotation = CraftExtended_GetMeshRotation(craft, meshIdx);
 				if (meshRotation != 0) {
 					if (!g_provingGroundsModeActive && g_objectTable[sourceObjIdx].playerOwnerIdx != -1) {
 						continue;
@@ -2540,7 +2541,7 @@ void collide_TestSweepAgainstModelMeshes(unsigned int sourceObjIdx, unsigned int
 				switch (targetObjectType) {
 					case OBJ_AccelRing2:
 					case OBJ_AccelRing3:
-						if (g_collisionStagedModelProbe && targetObj->mobj->pCraft->componentHp[4] != 0 &&
+						if (g_collisionStagedModelProbe && CraftExtended_GetComponentHp(targetObj->mobj->pCraft, 4u) != 0 &&
 							g_collideSweepCurrentMeshOrdinal - 1 != 4) {
 							continue;
 						}
@@ -2580,11 +2581,11 @@ void collide_TestSweepAgainstModelMeshes(unsigned int sourceObjIdx, unsigned int
 					unsigned int meshRotation;
 
 					craft = targetMobj->pCraft;
-					if (craft->componentHp[g_collideSweepCurrentMeshOrdinal - 1] == 0) {
+					if ((*CraftExtended_ComponentHpRef(craft, (uint16_t)(g_collideSweepCurrentMeshOrdinal - 1))) == 0) {
 						continue;
 					}
 
-					meshRotation = craft->meshRotation[g_collideSweepCurrentMeshOrdinal - 1];
+					meshRotation = CraftExtended_GetMeshRotation(craft, (uint16_t)(g_collideSweepCurrentMeshOrdinal - 1));
 					if (meshRotation != 0 && !g_provingGroundsModeActive &&
 						g_objectTable[sourceObjIdx].playerOwnerIdx != -1) {
 						continue;
@@ -4217,14 +4218,14 @@ static __inline void collide_HandleCraftDestruction(unsigned int targetObjIdx, C
 				direction.y = 1.0f;
 				direction.z = 0.0f;
 				if ((uint16_t)GameRand2() <= 0x6000) {
-					targetCraft->componentState[49] = 1;
+					(void)CraftExtended_SetSpecialComponentState(targetCraft, 1u);
 				} else {
 					Particle_AttachEffectToObject(1, (uint16_t)targetObjIdx, NULL, &direction);
 					if (g_flightPlayerCount > 1 || g_filmRecording == 2 || g_filmPlaybackMode == 2)
-						targetCraft->componentState[49] = 1;
+						(void)CraftExtended_SetSpecialComponentState(targetCraft, 1u);
 				}
 			} else {
-				targetCraft->componentState[49] = 1;
+				(void)CraftExtended_SetSpecialComponentState(targetCraft, 1u);
 			}
 			{
 				uint16_t meshCount =
@@ -4346,8 +4347,8 @@ char collide_damagecraft(unsigned int targetObjIdx, unsigned int componentId, un
 										uint8_t lastSlot =
 											g_modelDefs[modelIdx].warheadLauncherLastSlot[launcher];
 										damageAmount +=
-											((srcCraft->warheadData[firstSlot].count +
-											  srcCraft->warheadData[lastSlot].count) *
+											((CraftExtended_GetWeaponEntry(srcCraft, firstSlot)->count +
+											  CraftExtended_GetWeaponEntry(srcCraft, lastSlot)->count) *
 											 (unsigned int)
 												 g_projectileDamageByType[slotType - OBJ_LaserRebel]) >>
 											3;
@@ -4616,7 +4617,7 @@ char collide_damagecraft(unsigned int targetObjIdx, unsigned int componentId, un
 			if (tgtType == OBJ_AccelRing2 || tgtType == OBJ_AccelRing3) {
 				if ((uint16_t)ModelMesh_GetObjectTypeMeshType(g_objectTable[targetObjIdx].objectType,
 															  (uint16_t)componentId - 1) == MESH_BeamSystem &&
-					!targetCraft->meshRotation[(uint16_t)componentId + 49]) {
+					!CraftExtended_GetComponentHp(targetCraft, (uint16_t)componentId - 1)) {
 					++g_yardContext.playerChallengeStates[creditPlayerIdx].field_40;
 					++targetCraft->damageFromPlayer[creditPlayerIdx];
 					targetCraft->aiController.aiPlanState = 1416;
@@ -4832,8 +4833,8 @@ char collide_damagecraft(unsigned int targetObjIdx, unsigned int componentId, un
 							unsigned int slot;
 							if (targetCraft->laserSlotCount) {
 								for (slot = 0; slot < targetCraft->laserSlotCount; ++slot) {
-									if (targetCraft->warheadData[slot].weaponType >= 4)
-										targetCraft->warheadData[slot].turretTargetObjIdx = -1;
+									if (CraftExtended_GetWeaponEntry(targetCraft, slot)->weaponType >= 4)
+										CraftExtended_GetWeaponEntry(targetCraft, slot)->turretTargetObjIdx = -1;
 								}
 							}
 							for (slot = 0; slot < targetCraft->cannonClassCount; ++slot)
@@ -5325,7 +5326,7 @@ void collide_laserhitcraft(unsigned int projectileObjIdx, unsigned int targetObj
 				if (g_objectTable[targetObjIdx].playerOwnerIdx != -1) {
 					uint16_t i;
 					for (i = 0; i < targetCraft->laserSlotCount; ++i) {
-						targetCraft->warheadData[i].laserCharge = 0;
+						CraftExtended_GetWeaponEntry(targetCraft, i)->laserCharge = 0;
 					}
 					if ((targetCraft->workingSubsystems & 0x10) != 0) {
 						targetCraft->systemHealth[2] = 0;
@@ -5996,7 +5997,7 @@ void collide_ApplyEngineWashDamage(int victimObjIdx, int sourceObjIdx) {
 				unsigned int g;
 				for (g = 0; g < g_modelDefs[modelIdx].engineGlowCount; ++g) {
 					if (g_modelDefs[modelIdx].engineGlowMeshIdx[g] == meshIndex) {
-						intensity = (double)(sourceCraft->engineEmitterHealth[g] /
+						intensity = (double)(CraftExtended_GetEngineEmitterHealth(sourceCraft, g) /
 											 (int)g_modelDefs[modelIdx].componentMaxHp);
 						break;
 					}

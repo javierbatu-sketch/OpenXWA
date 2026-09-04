@@ -33,6 +33,7 @@
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/net_session.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/damage.h"
 #include "xwa/flight/object/laser.h"
 #include "xwa/flight/player/player.h"
@@ -61,6 +62,7 @@
 #include "xwa_runtime/timing/modern_flight_timing.h"
 #endif
 
+#include <limits.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -857,14 +859,14 @@ int Flight_UpdateFighterWarnings(char resetState) {
 									int laserSlotIdx;
 									WarheadInventoryEntry* weapon;
 
-									weapon = turretCraft->warheadData;
+									weapon = CraftExtended_GetWeaponEntry(turretCraft, 0u);
 									for (laserSlotIdx = 0; laserSlotIdx < turretCraft->laserSlotCount;
 										 ++laserSlotIdx, ++weapon) {
 										if (weapon->weaponType >= 4u &&
 											(uint16_t)weapon->turretTargetObjIdx == candidateObjIdx &&
-											turretCraft->componentHp[g_modelDefs[turretCraft->modelIndex]
+											(*CraftExtended_ComponentHpRef(turretCraft, (uint16_t)(g_modelDefs[turretCraft->modelIndex]
 																		 .weaponHardpoints[laserSlotIdx]
-																		 .meshIdx] != 0) {
+																		 .meshIdx))) != 0) {
 											fsfx_speakorderack(g_localPlayer, (int)candidateObjIdx, 4, -1,
 															   0xffffu, 0xccccu);
 										}
@@ -1497,9 +1499,9 @@ void FlightObject_AnimateCrewMeshRotations(int objectIndex, int resetToNeutral) 
 	craft = g_objectTable[objectIndex].mobj->pCraft;
 	if (sideMeshIdx >= 0) {
 		if (resetToNeutral) {
-			craft->meshRotation[sideMeshIdx] = 0;
+			(void)CraftExtended_SetMeshRotation(craft, (uint16_t)sideMeshIdx, 0);
 		} else {
-			rotation = &craft->meshRotation[sideMeshIdx];
+			rotation = CraftExtended_MeshRotationRef(craft, (uint16_t)sideMeshIdx);
 			value = *rotation;
 			if ((value & 1u) != 0) {
 				value += 2;
@@ -1519,9 +1521,9 @@ void FlightObject_AnimateCrewMeshRotations(int objectIndex, int resetToNeutral) 
 
 	if (forwardMeshIdx >= 0) {
 		if (resetToNeutral) {
-			craft->meshRotation[forwardMeshIdx] = 0;
+			(void)CraftExtended_SetMeshRotation(craft, (uint16_t)forwardMeshIdx, 0);
 		} else {
-			rotation = &craft->meshRotation[forwardMeshIdx];
+			rotation = CraftExtended_MeshRotationRef(craft, (uint16_t)forwardMeshIdx);
 			value = *rotation;
 			if ((value & 1u) != 0) {
 				value -= 2;
@@ -1549,7 +1551,7 @@ void FlightObject_AnimateCrewMeshRotations(int objectIndex, int resetToNeutral) 
 		g_objectTable[objectIndex].objectType == OBJ_ImperialPilot) {
 		int count;
 
-		rotation = &craft->meshRotation[2];
+		rotation = CraftExtended_MeshRotationRef(craft, 2);
 		count = 4;
 		do {
 			if (resetToNeutral) {
@@ -1624,26 +1626,26 @@ void FlightObject_InitMeshAnimationDefaults(int objIdx) {
 
 					meshType = ModelMesh_GetObjectTypeMeshType(objectType, meshIdx);
 					if (meshType == MESH_Bridge && objectType == OBJ_BWing) {
-						g_curCraft->meshRotation[meshIdx] = openRotation;
+						(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, openRotation);
 					}
 					if (meshType == MESH_Launcher && objectType == OBJ_MissileBoat) {
-						g_curCraft->meshRotation[meshIdx] = 32;
+						(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, 32);
 					}
 					if (meshType == MESH_RotaryWing) {
 						if (objectType == OBJ_XWing) {
 							if (ModelMesh_GetCenterZ(OBJ_XWing, meshIdx) < 0) {
-								g_curCraft->meshRotation[meshIdx] = 12;
+								(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, 12);
 							} else {
-								g_curCraft->meshRotation[meshIdx] = 8;
+								(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, 8);
 							}
 						} else if (objectType == OBJ_BWing) {
-							g_curCraft->meshRotation[meshIdx] = openRotation;
+							(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, openRotation);
 						} else if (objectType == OBJ_Shuttle) {
-							g_curCraft->meshRotation[meshIdx] = 96;
+							(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, 96);
 						} else if (objectType == OBJ_SkiprayBlastBoat) {
-							g_curCraft->meshRotation[meshIdx] = openRotation;
+							(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, openRotation);
 						} else if (objectType == OBJ_MissileBoat) {
-							g_curCraft->meshRotation[meshIdx] = 66;
+							(void)CraftExtended_SetMeshRotation(g_curCraft, (uint16_t)meshIdx, 66);
 						}
 					}
 					++meshIdx;
@@ -1867,33 +1869,35 @@ void FlightObject_UpdateSpecialBehavior(void) {
 									remainingMeshes = meshCount;
 									do {
 										MeshType meshType = ModelMesh_GetObjectTypeMeshType(modelType, m);
+										uint8_t* meshRotation =
+											CraftExtended_MeshRotationRef(g_curCraft, (uint16_t)m);
 
 										// Falcon bridge fold (no completion accounting).
 										if (meshType == MESH_Bridge && objectType == 4 &&
 											(g_curCraft->sFoilState & 1)) {
-											uint8_t mr = g_curCraft->meshRotation[m];
+											uint8_t mr = *meshRotation;
 											if (g_curCraft->sFoilState & 2) {
 												if (mr < 0x40) {
-													g_curCraft->meshRotation[m] = (uint8_t)(mr + 2);
+													*meshRotation = (uint8_t)(mr + 2);
 												}
 											} else if (mr > 0) {
-												g_curCraft->meshRotation[m] = (uint8_t)(mr - 2);
-												if (g_curCraft->meshRotation[m] > 0x80) {
-													g_curCraft->meshRotation[m] = 0;
+												*meshRotation = (uint8_t)(mr - 2);
+												if (*meshRotation > 0x80) {
+													*meshRotation = 0;
 												}
 											}
 										}
 										// Launcher arms (type 12).
 										if (meshType == MESH_Launcher && objectType == 12 &&
 											(g_curCraft->sFoilState & 1)) {
-											uint8_t mr = g_curCraft->meshRotation[m];
+											uint8_t mr = *meshRotation;
 											if (g_curCraft->sFoilState & 2) {
 												if (mr < 0x20) {
-													g_curCraft->meshRotation[m] = (uint8_t)(mr + 1);
+													*meshRotation = (uint8_t)(mr + 1);
 													anyRotated = 1;
 												}
 											} else if (mr > 0) {
-												g_curCraft->meshRotation[m] = (uint8_t)(mr - 1);
+												*meshRotation = (uint8_t)(mr - 1);
 												anyRotated = 1;
 											}
 										}
@@ -1902,43 +1906,43 @@ void FlightObject_UpdateSpecialBehavior(void) {
 											if (g_curCraft->sFoilState & 2) {
 												if ((uint16_t)objectType == 1) {
 													int maxRotation = ModelMesh_GetCenterZ(1, m) < 0 ? 12 : 8;
-													if (g_curCraft->meshRotation[m] < maxRotation) {
-														++g_curCraft->meshRotation[m];
+													if (*meshRotation < maxRotation) {
+														++*meshRotation;
 														anyRotated = 1;
 													}
 												} else if ((uint16_t)objectType == 4) {
-													if (g_curCraft->meshRotation[m] < 0x40u) {
-														g_curCraft->meshRotation[m] += 2;
+													if (*meshRotation < 0x40u) {
+														*meshRotation += 2;
 														anyRotated = 1;
 													}
 												} else if ((uint16_t)objectType == 50) {
-													if (g_curCraft->meshRotation[m] < 0x60u) {
-														g_curCraft->meshRotation[m] += 2;
+													if (*meshRotation < 0x60u) {
+														*meshRotation += 2;
 														anyRotated = 1;
 													}
 												} else if ((uint16_t)objectType == 17) {
-													if (g_curCraft->meshRotation[m] < 0x40u) {
-														g_curCraft->meshRotation[m] += 2;
+													if (*meshRotation < 0x40u) {
+														*meshRotation += 2;
 														anyRotated = 1;
 													}
 												} else if ((uint16_t)objectType == 12) {
-													if (g_curCraft->meshRotation[m] < 0x42u) {
-														g_curCraft->meshRotation[m] += 2;
+													if (*meshRotation < 0x42u) {
+														*meshRotation += 2;
 														anyRotated = 1;
 													}
 												}
 											} else {
 												if ((uint16_t)objectType == 1) {
-													if (g_curCraft->meshRotation[m] > 0) {
-														--g_curCraft->meshRotation[m];
+													if (*meshRotation > 0) {
+														--*meshRotation;
 														anyRotated = 1;
 													}
 												} else if ((uint16_t)objectType == 4 ||
 														   (uint16_t)objectType == 50 ||
 														   (uint16_t)objectType == 17 ||
 														   (uint16_t)objectType == 12) {
-													if (g_curCraft->meshRotation[m] > 0) {
-														g_curCraft->meshRotation[m] -= 2;
+													if (*meshRotation > 0) {
+														*meshRotation -= 2;
 														anyRotated = 1;
 													}
 												}
@@ -2132,19 +2136,21 @@ void FlightObject_UpdateSpecialBehavior(void) {
 				for (slot = 0; slot < g_curCraft->laserSlotCount; ++slot) {
 					int meshIdx;
 
-					if (g_curCraft->warheadData[slot].weaponType < 4u) {
+					if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType < 4u) {
 						continue;
 					}
 					meshIdx = g_modelDefs[g_curCraft->modelIndex].weaponHardpoints[slot].meshIdx;
-					if (!g_curCraft->componentHp[meshIdx] ||
+					if (!(*CraftExtended_ComponentHpRef(g_curCraft, (uint16_t)(meshIdx))) ||
 						ModelMesh_GetObjectTypeMeshType(modelType, meshIdx) != MESH_RotaryGunTurret) {
 						continue;
 					}
-					if (g_curCraft->warheadData[slot].turretTargetObjIdx == -1) {
-						uint8_t mr = g_curCraft->meshRotation[meshIdx];
-						g_curCraft->meshRotation[meshIdx] = (mr & 1) ? (uint8_t)(mr + 4) : (uint8_t)(mr - 4);
+					uint8_t* meshRotation =
+						CraftExtended_MeshRotationRef(g_curCraft, (uint16_t)meshIdx);
+					if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx == -1) {
+						uint8_t mr = *meshRotation;
+						*meshRotation = (mr & 1) ? (uint8_t)(mr + 4) : (uint8_t)(mr - 4);
 						if ((uint16_t)GameRand() < 0x600u) {
-							g_curCraft->meshRotation[meshIdx] ^= 1u;
+							*meshRotation ^= 1u;
 						}
 					} else {
 						OptRotationScale* rs = ModelMesh_GetRotScaleData(modelType, meshIdx);
@@ -2153,7 +2159,7 @@ void FlightObject_UpdateSpecialBehavior(void) {
 						int side, fwd, up, rotationProj, dirProj, upProj;
 
 						Mission_ResolveObjectOrMissionPointWorldLoc(
-							(uint16_t)g_curCraft->warheadData[slot].turretTargetObjIdx, 0, 0, 0);
+							(uint16_t)CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx, 0, 0, 0);
 						worldlocx -= to->world_x;
 						worldlocy -= to->world_y;
 						worldlocz -= to->world_z;
@@ -2180,7 +2186,7 @@ void FlightObject_UpdateSpecialBehavior(void) {
 						upProj = Xwa_Dot3Q15Inline((int)rs->upAxis.x, (int)rs->upAxis.y, (int)rs->upAxis.z,
 												   worldlocx, worldlocy, worldlocz);
 						(void)rotationProj;
-						g_curCraft->meshRotation[meshIdx] = (uint8_t)(trig2_arctan(upProj, dirProj) >> 8);
+						*meshRotation = (uint8_t)(trig2_arctan(upProj, dirProj) >> 8);
 					}
 				}
 			}
@@ -2194,7 +2200,7 @@ void FlightObject_UpdateSpecialBehavior(void) {
 					// Animated-texture mesh: advance the frame stored in componentState[49],
 					// temporarily reusing OBJ_AnimationTextureGroup2008's model info.
 					ObjectTypeId savedType = g_objectTable[(uint16_t)objIdx].objectType;
-					uint16_t frame = g_curCraft->componentState[49];
+					uint16_t frame = CraftExtended_GetSpecialComponentState(g_curCraft);
 
 					g_flightObjectAnimFrameScratch = frame;
 					g_objectTable[(uint16_t)objIdx].objectType = OBJ_AnimationTextureGroup2008;
@@ -2219,7 +2225,8 @@ void FlightObject_UpdateSpecialBehavior(void) {
 						}
 					}
 					g_objectTable[(uint16_t)objIdx].objectType = savedType;
-					g_curCraft->componentState[49] = (uint8_t)g_flightObjectAnimFrameScratch;
+					(void)CraftExtended_SetSpecialComponentState(
+						g_curCraft, (uint8_t)g_flightObjectAnimFrameScratch);
 				}
 
 				// Cosmetic hull breakup effects on a dying craft.
@@ -2234,7 +2241,8 @@ void FlightObject_UpdateSpecialBehavior(void) {
 								FlightObject_SpawnEscapePodOrPilot((uint16_t)objIdx);
 								--g_objectTable[(uint16_t)objIdx].mobj->ejectionSpawnCount;
 							}
-						} else if (g_objectTable[(uint16_t)objIdx].mobj->pCraft->componentState[m] != 4) {
+						} else if (CraftExtended_GetMeshComponentState(
+								g_objectTable[(uint16_t)objIdx].mobj->pCraft, m) != 4u) {
 							if (m % 3 == 0) {
 								Craft_SpawnMainHullExplosionEffects((uint16_t)objIdx, 0);
 							}
@@ -2246,10 +2254,12 @@ void FlightObject_UpdateSpecialBehavior(void) {
 				if (doRotate) {
 					if (meshType == 11 || meshType == 23 || meshType == 12 || meshType == 24 ||
 						meshType == 13 || meshType == 25) {
-						uint8_t mr = g_curCraft->meshRotation[m];
-						g_curCraft->meshRotation[m] = (mr & 1) ? (uint8_t)(mr + 4) : (uint8_t)(mr - 4);
+						uint8_t* meshRotation =
+							CraftExtended_MeshRotationRef(g_curCraft, (uint16_t)m);
+						uint8_t mr = *meshRotation;
+						*meshRotation = (mr & 1) ? (uint8_t)(mr + 4) : (uint8_t)(mr - 4);
 						if ((uint16_t)GameRand() < 0x200u) {
-							g_curCraft->meshRotation[m] ^= 1u;
+							*meshRotation ^= 1u;
 						}
 					}
 				}
@@ -2918,12 +2928,14 @@ static void FlightWorldState_SerializeMobileObject(FlightSerializedMobileObject*
 }
 
 static void FlightWorldState_SerializeCraftData(FlightSerializedCraftData* dst, const CraftData* src) {
+	CraftData legacyImage;
 	uint32_t encodedLink;
 	enum { FLIGHT_SERIALIZED_CRAFT_EFFECTIVE_LINK_OFFSET = 0x3F5 };
 
+	CraftExtended_ProjectToLegacy(src, &legacyImage);
 	memset(dst, 0, sizeof(*dst));
-	memcpy(dst->bytes, src, offsetof(CraftData, effectiveAiObjectLink));
-	encodedLink = FlightWorldState_EncodeOffset(src->effectiveAiObjectLink, g_objectTable);
+	memcpy(dst->bytes, &legacyImage, offsetof(CraftData, effectiveAiObjectLink));
+	encodedLink = FlightWorldState_EncodeOffset(legacyImage.effectiveAiObjectLink, g_objectTable);
 	FlightWorldState_WriteU32(&dst->bytes[FLIGHT_SERIALIZED_CRAFT_EFFECTIVE_LINK_OFFSET], encodedLink);
 }
 
@@ -3079,6 +3091,7 @@ static void FlightWorldState_RestoreCraftData(CraftData* dst, const FlightSerial
 	memcpy(dst, src->bytes, offsetof(CraftData, effectiveAiObjectLink));
 	encodedLink = FlightWorldState_ReadU32(&src->bytes[FLIGHT_SERIALIZED_CRAFT_EFFECTIVE_LINK_OFFSET]);
 	dst->effectiveAiObjectLink = (ObjectRecord*)FlightWorldState_DecodeOffset(encodedLink, g_objectTable);
+	CraftExtended_SeedFromLegacy(dst);
 }
 
 static void FlightWorldState_RestoreWarheadGuidance(WarheadGuidanceState* dst,
@@ -3154,6 +3167,10 @@ void Flight_AllocWorldStateBuffers(void) {
 	}
 	GameRand_GetPrimarySeed();
 	bufferSize += 3023u * (uint32_t)g_flightPlayerCount + 22086u;
+	if (!CraftExtended_WorldStateBufferSizeWithTail(bufferSize, g_craftObjectSlotsTotal, &bufferSize)) {
+		FeDiskIo_FatalError(0);
+		return;
+	}
 
 	g_worldStateHandle = Memory_AllocHandle("WORLDSTATEDATA", bufferSize);
 	if (g_worldStateHandle == 0) {
@@ -3757,6 +3774,23 @@ int Flight_SaveWorldState(void) {
 	FlightWorldState_WriteBlock(&cursor, &randSeed, sizeof(randSeed));
 	FlightWorldState_WriteBlock(&cursor, g_players, 3023u * (uint32_t)g_flightPlayerCount);
 
+	{
+		size_t xwesCapacity;
+		size_t xwesSize;
+
+		xwesCapacity = CraftExtended_WorldStateMaxTailSize(g_craftObjectSlotsTotal);
+		if (xwesCapacity == 0u ||
+			!CraftExtended_WriteWorldStateTail(cursor, xwesCapacity, &xwesSize)) {
+			FeDiskIo_FatalError(0);
+			return 0;
+		}
+		cursor += xwesSize;
+	}
+
+	if ((size_t)(cursor - g_worldStateBuffer) > (size_t)INT_MAX) {
+		FeDiskIo_FatalError(0);
+		return 0;
+	}
 	g_worldStateSize = (int)(cursor - g_worldStateBuffer);
 	worldStateSize = g_worldStateSize;
 	return g_worldStateSize;
@@ -3775,6 +3809,9 @@ int Flight_ChecksumWorldState(int expectedChecksum, int serverTicks) {
 	uint32_t slot;
 	uint32_t byteCount;
 	uint16_t randSeed;
+	uint8_t* extendedCursor;
+	int extendedWorldStateBytes;
+	uint32_t extendedWorldStateChecksum;
 	int finalSegmentSize;
 
 	segmentThreshold = g_worldStateSize >> 4;
@@ -4021,6 +4058,28 @@ int Flight_ChecksumWorldState(int expectedChecksum, int serverTicks) {
 
 	DebugPrintfChannel(0x20000, "randomSeed set to %d.\n", randSeed);
 
+	extendedWorldStateBytes = g_worldStateSize - (int)(cursor - g_worldStateBuffer);
+	extendedWorldStateChecksum = 0;
+	if (extendedWorldStateBytes > 0) {
+		int remainingExtendedWorldStateBytes;
+
+		extendedCursor = cursor;
+		remainingExtendedWorldStateBytes = extendedWorldStateBytes;
+		do {
+			extendedWorldStateChecksum += *extendedCursor++;
+		} while (--remainingExtendedWorldStateBytes != 0);
+
+		if (segmentIndex > 0) {
+			g_worldChecksum[segmentIndex - 1] += extendedWorldStateChecksum;
+			totalChecksum += extendedWorldStateChecksum;
+		} else {
+			g_worldChecksum[0] = extendedWorldStateChecksum;
+			peerChecksum[0] = (uint32_t)extendedWorldStateBytes;
+			segmentIndex = 1;
+			totalChecksum += extendedWorldStateChecksum;
+		}
+	}
+
 	finalSegmentSize = (int)(cursor - segmentStart);
 	if (finalSegmentSize > segmentThreshold) {
 		peerChecksum[segmentIndex] = (uint32_t)finalSegmentSize;
@@ -4184,6 +4243,7 @@ void Flight_RestoreWorldState(void) {
 	uint32_t fgStatsSize;
 	uint16_t randSeed;
 
+	CraftExtended_ResetAll();
 	cursor = g_worldStateBuffer;
 	for (slot = 0; slot < g_regionObjectSlotEnd; ++slot) {
 		ObjectRecord* obj;
@@ -4286,6 +4346,33 @@ void Flight_RestoreWorldState(void) {
 	cursor += sizeof(randSeed);
 	Math_SeedRandom(randSeed);
 	memcpy(g_players, cursor, 3023u * (uint32_t)g_flightPlayerCount);
+	cursor += 3023u * (uint32_t)g_flightPlayerCount;
+
+	{
+		size_t classicSize;
+		size_t extendedSize;
+		size_t consumed;
+
+		if (worldStateSize < 0) {
+			FeDiskIo_FatalError(0);
+			return;
+		}
+		classicSize = (size_t)(cursor - g_worldStateBuffer);
+		if (classicSize > (size_t)worldStateSize) {
+			FeDiskIo_FatalError(0);
+			return;
+		}
+
+		extendedSize = (size_t)worldStateSize - classicSize;
+		if (extendedSize != 0u) {
+			consumed = 0u;
+			if (!CraftExtended_OverlayWorldStateTail(cursor, extendedSize, &consumed) ||
+				consumed != extendedSize) {
+				FeDiskIo_FatalError(0);
+				return;
+			}
+		}
+	}
 #endif
 }
 
@@ -5726,15 +5813,15 @@ void Flight_StepSimToTime(int targetTimestamp) {
 							unsigned int weaponIdx;
 
 							for (weaponIdx = 0; weaponIdx < craft->laserSlotCount; ++weaponIdx) {
-								if (craft->warheadData[weaponIdx].turretRetargetCooldownTimer > 0) {
-									craft->warheadData[weaponIdx].turretRetargetCooldownTimer =
-										(int16_t)(craft->warheadData[weaponIdx].turretRetargetCooldownTimer -
+								if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponIdx))->turretRetargetCooldownTimer > 0) {
+									CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponIdx))->turretRetargetCooldownTimer =
+										(int16_t)(CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponIdx))->turretRetargetCooldownTimer -
 												  (uint16_t)g_elapsedTicks);
 									craft = g_curCraft;
 								}
-								if (craft->warheadData[weaponIdx].turretRotBucket > 0) {
-									craft->warheadData[weaponIdx].turretRotBucket =
-										(int16_t)(craft->warheadData[weaponIdx].turretRotBucket -
+								if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponIdx))->turretRotBucket > 0) {
+									CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponIdx))->turretRotBucket =
+										(int16_t)(CraftExtended_GetWeaponEntry(craft, (uint16_t)(weaponIdx))->turretRotBucket -
 												  (uint16_t)g_elapsedTicks);
 									craft = g_curCraft;
 								}
@@ -5937,6 +6024,10 @@ void Flight_AdvanceOneStep(int targetTimestamp) {
 						}
 						GameRand_GetPrimarySeed();
 						bufferSize += 3023u * (uint32_t)g_flightPlayerCount + 22086u;
+						if (!CraftExtended_WorldStateBufferSizeWithTail(bufferSize, g_craftObjectSlotsTotal, &bufferSize)) {
+							FeDiskIo_FatalError(0);
+							return;
+						}
 
 						g_worldStateHandle = Memory_AllocHandle("WORLDSTATEDATA", bufferSize);
 						if (g_worldStateHandle == 0) {
@@ -6060,6 +6151,10 @@ void Flight_AdvanceOneStep(int targetTimestamp) {
 				}
 				GameRand_GetPrimarySeed();
 				bufferSize += 3023u * (uint32_t)g_flightPlayerCount + 22086u;
+				if (!CraftExtended_WorldStateBufferSizeWithTail(bufferSize, g_craftObjectSlotsTotal, &bufferSize)) {
+					FeDiskIo_FatalError(0);
+					return;
+				}
 
 				g_worldStateHandle = Memory_AllocHandle("WORLDSTATEDATA", bufferSize);
 				if (g_worldStateHandle == 0) {
@@ -6075,6 +6170,12 @@ void Flight_AdvanceOneStep(int targetTimestamp) {
 
 			Film_ReadBytes(&loopIdx, sizeof(loopIdx));
 			Film_ReadBytes(g_worldStateBuffer, loopIdx);
+			if (loopIdx > (uint32_t)INT_MAX) {
+				FeDiskIo_FatalError(0);
+				return;
+			}
+			worldStateSize = (int)loopIdx;
+			g_worldStateSize = worldStateSize;
 			Flight_RestoreWorldState();
 			if (allocatedWorldState) {
 				Memory_FreeHandle("WORLDSTATEDATA", g_worldStateHandle);
@@ -7386,8 +7487,8 @@ static __inline int FlightAction_TransferShieldsToLasers(unsigned int playerIdx,
 
 	laserDeficit = 0;
 	for (slot = 0; slot < craft->laserSlotCount; ++slot) {
-		if (craft->warheadData[slot].weaponType < 4) {
-			laserDeficit += 127 - craft->warheadData[slot].laserCharge;
+		if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->weaponType < 4) {
+			laserDeficit += 127 - CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge;
 		}
 	}
 
@@ -7415,8 +7516,8 @@ static __inline int FlightAction_TransferShieldsToLasers(unsigned int playerIdx,
 		uint16_t attempts;
 		uint8_t slot = 0;
 		for (attempts = 0; chargesToAdd > 0 && attempts < 100; ++attempts) {
-			if (craft->warheadData[slot].laserCharge != 127 && craft->warheadData[slot].weaponType < 4) {
-				++craft->warheadData[slot].laserCharge;
+			if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge != 127 && CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->weaponType < 4) {
+				++CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge;
 			}
 			--chargesToAdd;
 			++slot;
@@ -7464,16 +7565,16 @@ static __inline void FlightAction_TransferAllLasersToShields(unsigned int player
 	shieldStep = FlightAction_ShieldLaserTransferStep(obj);
 	laserCharge = 0;
 	for (slot = 0; slot < craft->laserSlotCount; ++slot) {
-		if (craft->warheadData[slot].laserCharge > 0 && craft->warheadData[slot].weaponType < 4) {
-			laserCharge += craft->warheadData[slot].laserCharge;
+		if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge > 0 && CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->weaponType < 4) {
+			laserCharge += CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge;
 		}
 	}
 
 	if (laserCharge != 0) {
 		uint8_t slot = 0;
 		while (laserCharge != 0) {
-			if (craft->warheadData[slot].laserCharge > 0 && craft->warheadData[slot].weaponType < 4) {
-				--craft->warheadData[slot].laserCharge;
+			if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge > 0 && CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->weaponType < 4) {
+				--CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge;
 				--laserCharge;
 				if (craft->shieldFront < maxShield) {
 					craft->shieldFront += craft->shieldRear >= maxShield ? shieldStep : shieldStep / 2;
@@ -7551,8 +7652,8 @@ static __inline void FlightAction_TransferLasersToShields(unsigned int playerIdx
 
 	slot = 0;
 	for (attempts = 0; chargesToDrain > 0 && attempts < 100; ++attempts) {
-		if (craft->warheadData[slot].laserCharge > 0 && craft->warheadData[slot].weaponType < 4) {
-			--craft->warheadData[slot].laserCharge;
+		if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge > 0 && CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->weaponType < 4) {
+			--CraftExtended_GetWeaponEntry(craft, (uint16_t)(slot))->laserCharge;
 			--chargesToDrain;
 			if (craft->shieldDistribMode == 0) {
 				if (craft->shieldFront >= maxShield) {
@@ -7842,8 +7943,8 @@ static __inline uint16_t FlightAction_CycleAttackerTarget(unsigned int playerIdx
 				return candidateIdx;
 			}
 			for (slot = 0; slot < candidateCraft->laserSlotCount; ++slot) {
-				if (candidateCraft->warheadData[slot].weaponType == 4 &&
-					(uint16_t)candidateCraft->warheadData[slot].turretTargetObjIdx == playerObjIdx) {
+				if (CraftExtended_GetWeaponEntry(candidateCraft, (uint16_t)(slot))->weaponType == 4 &&
+					(uint16_t)CraftExtended_GetWeaponEntry(candidateCraft, (uint16_t)(slot))->turretTargetObjIdx == playerObjIdx) {
 					return candidateIdx;
 				}
 			}
@@ -8050,8 +8151,8 @@ static __inline void FlightAction_CommandTargetWait(unsigned int playerIdx) {
 			pai_setupcraftcontext(targetObjIdx);
 			pai_ApplyPendingPlanTargetAndManeuver(targetObjIdx);
 			for (slot = 0; slot < g_curCraft->laserSlotCount; ++slot) {
-				if (g_curCraft->warheadData[slot].weaponType >= 4) {
-					g_curCraft->warheadData[slot].turretTargetObjIdx = -1;
+				if (CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->weaponType >= 4) {
+					CraftExtended_GetWeaponEntry(g_curCraft, (uint16_t)(slot))->turretTargetObjIdx = -1;
 				}
 			}
 			msg_radioMessage((int16_t)targetObjIdx, g_curCraft, MSG_ACK_WAITING, 4, 0);
@@ -8105,7 +8206,7 @@ static __inline int FlightAction_TargetComponentSelectable(ObjectTypeId objectTy
 														   CraftData const* targetCraft,
 														   uint16_t componentIdx) {
 	MeshType meshType;
-	if (targetCraft->componentState[componentIdx] != 0) {
+	if (CraftExtended_GetMeshComponentState(targetCraft, componentIdx) != 0u) {
 		return 0;
 	}
 
@@ -8115,7 +8216,7 @@ static __inline int FlightAction_TargetComponentSelectable(ObjectTypeId objectTy
 		int meshIdx;
 		int targetId = ModelMesh_GetTargetId((uint16_t)objectType, componentIdx);
 		if (targetId == 0 || (targetId == 1 && meshType != 1 && meshType != 3)) {
-			return targetCraft->componentHp[componentIdx] != 0;
+			return (*CraftExtended_ComponentHpRef(targetCraft, (uint16_t)(componentIdx))) != 0;
 		}
 
 		meshCount = ModelMesh_GetObjectTypeMeshCount((uint16_t)objectType);
@@ -8130,7 +8231,7 @@ static __inline int FlightAction_TargetComponentSelectable(ObjectTypeId objectTy
 		}
 	}
 
-	return targetCraft->componentHp[componentIdx] != 0;
+	return (*CraftExtended_ComponentHpRef(targetCraft, (uint16_t)(componentIdx))) != 0;
 }
 
 static __inline void FlightAction_CycleTargetComponent(unsigned int playerIdx, int direction) {
@@ -9050,13 +9151,13 @@ void Flight_ProcessPlayerActions(unsigned int playerIdx) {
 							if (modelIndex != (ModelIndex)0xffffu) {
 								uint8_t firstSlot =
 									g_modelDefs[(uint16_t)modelIndex].warheadLauncherFirstSlot[0];
-								uint8_t primaryCount = craft->warheadData[firstSlot].count;
-								uint8_t secondaryCount = craft->warheadData[firstSlot + 1u].count;
+								uint8_t primaryCount = CraftExtended_GetWeaponEntry(craft, (uint16_t)(firstSlot))->count;
+								uint8_t secondaryCount = CraftExtended_GetWeaponEntry(craft, (uint16_t)(firstSlot + 1u))->count;
 								if ((primaryCount + secondaryCount) == 0 &&
 									craft->warheadLauncherCount > 1u) {
 									firstSlot = g_modelDefs[(uint16_t)modelIndex].warheadLauncherFirstSlot[1];
-									primaryCount = craft->warheadData[firstSlot].count;
-									secondaryCount = craft->warheadData[firstSlot + 1u].count;
+									primaryCount = CraftExtended_GetWeaponEntry(craft, (uint16_t)(firstSlot))->count;
+									secondaryCount = CraftExtended_GetWeaponEntry(craft, (uint16_t)(firstSlot + 1u))->count;
 								}
 								if ((primaryCount + secondaryCount) != 0) {
 									g_players[currentPlayerIdx].selectedWeaponMode = 1;
@@ -9113,8 +9214,8 @@ void Flight_ProcessPlayerActions(unsigned int playerIdx) {
 								g_players[currentPlayerIdx].turretAutoFireState = 0;
 								msg_emitInFlightMessage(MSG_GUNNER_LINKED, (int)currentPlayerIdx);
 								for (i = 0; i < craft->laserSlotCount; ++i) {
-									if (craft->warheadData[i].weaponType >= 4) {
-										craft->warheadData[i].turretTargetObjIdx = -1;
+									if (CraftExtended_GetWeaponEntry(craft, (uint16_t)(i))->weaponType >= 4) {
+										CraftExtended_GetWeaponEntry(craft, (uint16_t)(i))->turretTargetObjIdx = -1;
 									}
 								}
 							} else {

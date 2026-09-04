@@ -17,6 +17,7 @@
 #include "xwa/flight/hud/hud.h"
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/damage.h"
 #include "xwa/flight/object/laser.h"
 #include "xwa/flight/player/player.h"
@@ -1136,7 +1137,7 @@ void DeathStar_HandleReactorHit(unsigned int projectileObjIdx, unsigned int reac
 						case 1:
 							Craft_DamageComponent(g_deathStarReactorCoreObjIdx, hitComponentId + 1, 0x100u,
 												  g_objectTable[projectileObjIdx].mobj->sourceObjIdx);
-							if (!reactorCraft->componentHp[1]) {
+							if (!(*CraftExtended_ComponentHpRef(reactorCraft, (uint16_t)(1)))) {
 								collide_damagecraft(g_deathStarReactorCoreObjIdx, 0xFFFFu, 0xFFFFFFFDu, 0x20u,
 													0);
 								fsfx_PlaySound(169, g_deathStarReactorCoreObjIdx, g_localPlayer);
@@ -1144,7 +1145,7 @@ void DeathStar_HandleReactorHit(unsigned int projectileObjIdx, unsigned int reac
 							effect = 270;
 							break;
 						case 2:
-							if (!reactorCraft->componentHp[1]) {
+							if (!(*CraftExtended_ComponentHpRef(reactorCraft, (uint16_t)(1)))) {
 								Craft_DamageComponent(g_deathStarReactorCoreObjIdx, hitComponentId + 1,
 													  0x100u,
 													  g_objectTable[projectileObjIdx].mobj->sourceObjIdx);
@@ -1154,7 +1155,7 @@ void DeathStar_HandleReactorHit(unsigned int projectileObjIdx, unsigned int reac
 					g_curCraft = savedCurCraft;
 					g_missionFlightGroups[(uint8_t)g_deathStarReactorCoreFgIdx].fg.status2 = 20;
 					g_missionFlightGroups[(uint8_t)g_deathStarReactorCoreFgIdx].fg.status1 = 20;
-					if (!reactorCraft->componentHp[2]) {
+					if (!(*CraftExtended_ComponentHpRef(reactorCraft, (uint16_t)(2)))) {
 						CraftData* coreCraft;
 						unsigned int destructionTime;
 						fsfx_PlaySound(170, g_deathStarReactorCoreObjIdx, g_localPlayer);
@@ -1183,7 +1184,7 @@ void DeathStar_HandleReactorHit(unsigned int projectileObjIdx, unsigned int reac
 		case OBJ_DSReactorCylinder:
 			if (g_deathStarReactorCoreObjIdx)
 				result =
-					g_objectTable[g_deathStarReactorCoreObjIdx].mobj->pCraft->componentHp[1] != 0 ? 0x110 : 0;
+					CraftExtended_GetComponentHp(g_objectTable[g_deathStarReactorCoreObjIdx].mobj->pCraft, 1u) != 0 ? 0x110 : 0;
 			break;
 		case OBJ_DSFocusLens:
 			if (objectType == OBJ_DSLaserInternal) {
@@ -2266,6 +2267,7 @@ void DeathStar_InitMobileObjectForType(uint16_t objectType, unsigned int objIdx)
 	if (modelIndex != 0xffffu) {
 		craft = mobj->pCraft;
 		memset(craft, 0, sizeof(*craft));
+		CraftExtended_ResetCraft(craft);
 		craft->modelIndex = (uint16_t)modelIndex;
 		craft->leader_obj_idx = -1;
 		craft->workingSubsystems = 0x03ffu;
@@ -2273,7 +2275,6 @@ void DeathStar_InitMobileObjectForType(uint16_t objectType, unsigned int objIdx)
 		craft->hullMax = g_modelDefs[(uint16_t)modelIndex].hullStrength;
 		craft->systemDamageHullThreshold = g_modelDefs[(uint16_t)modelIndex].systemDamageHullThreshold;
 		craft->shieldFront = 2 * g_modelDefs[(uint16_t)modelIndex].shieldStrength;
-		memset(craft->componentHp, 0xff, sizeof(craft->componentHp));
 		craft->aiController.pendingPlanId = 0;
 		craft->aiController.currentPlanId = 0;
 		craft->engineOutputScale = 0xffffu;
@@ -3324,8 +3325,8 @@ void DeathStar_InitReactorAssaultState(void) {
 	}
 
 	craft = g_objectTable[g_deathStarReactorAssaultCraftObjIdx].mobj->pCraft;
-	craft->warheadData[g_modelDefs[craft->modelIndex].warheadLauncherFirstSlot[0]].count = 1;
-	craft->warheadData[g_modelDefs[craft->modelIndex].warheadLauncherLastSlot[0]].count = 1;
+	CraftExtended_GetWeaponEntry(craft, g_modelDefs[craft->modelIndex].warheadLauncherFirstSlot[0])->count = 1;
+	CraftExtended_GetWeaponEntry(craft, g_modelDefs[craft->modelIndex].warheadLauncherLastSlot[0])->count = 1;
 }
 
 // FUNCTION: XWA 0x428270

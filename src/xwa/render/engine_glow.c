@@ -1,4 +1,5 @@
 #include "xwa/flight/fediskio.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/net_session.h"
 #include "xwa/render/effects.h"
 #include "xwa/render/renderer_internal.h"
@@ -1648,7 +1649,7 @@ void GlowMark_QueueCraftDamageSurfaceEffects(uint16_t objectIndex) {
 		switch ((int)g_objectTable[objectIndex].objectType) {
 			case OBJ_AccelRing2:
 			case OBJ_AccelRing3:
-				if (g_objectTable[objectIndex].mobj->pCraft->componentHp[4] == 0 &&
+				if (CraftExtended_GetComponentHp(g_objectTable[objectIndex].mobj->pCraft, 4u) == 0 &&
 					(uint16_t)GameRand2() % 100 < 10) {
 					float scale;
 
@@ -1808,7 +1809,7 @@ int16_t EngineGlow_BuildProjectedQuad(unsigned int objIdx, const OptEngineGlow* 
 	meshRotation = 0;
 	craft = g_objectTable[objIdx].mobj->pCraft;
 	if (craft) {
-		meshRotation = craft->meshRotation[meshIdx];
+		meshRotation = (*CraftExtended_MeshRotationRef(craft, (uint16_t)(meshIdx)));
 	}
 
 	g_rotatedX = (int)glow->position.x;

@@ -19,6 +19,7 @@
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/net_session.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/object.h"
 #include "xwa/flight/starfield.h"
 #include "xwa/flight/yard.h"
@@ -207,7 +208,7 @@ void Player_AutoGunnerToggle(unsigned int playerIdx) {
 					for (slotIdx = 0; slotIdx < craft->laserSlotCount; ++slotIdx) {
 						WarheadInventoryEntry* weapon;
 
-						weapon = &craft->warheadData[slotIdx];
+						weapon = CraftExtended_GetWeaponEntry(craft, slotIdx);
 						if (weapon->weaponType >= 4u) {
 							if (g_players[playerIdx].currentTargetObjectIdx == weapon->turretTargetObjIdx) {
 								weapon->turretTargetObjIdx = -1;
@@ -1111,8 +1112,8 @@ void Player_HandleHyperspaceCommand(CraftData* craft, unsigned int playerIdx, ch
 			uint16_t slotIdx;
 
 			for (slotIdx = 0; slotIdx < craft->laserSlotCount; ++slotIdx) {
-				if (craft->warheadData[slotIdx].weaponType >= 4u) {
-					craft->warheadData[slotIdx].turretTargetObjIdx = -1;
+				if (CraftExtended_GetWeaponEntry(craft, slotIdx)->weaponType >= 4u) {
+					CraftExtended_GetWeaponEntry(craft, slotIdx)->turretTargetObjIdx = -1;
 				}
 			}
 		}
@@ -2483,12 +2484,9 @@ uint16_t Player_PickTargetInSight(int playerIdx) {
 			targetMobile = g_objectTable[(uint16_t)g_players[playerIdx].currentTargetObjectIdx].mobj;
 			if (subsystemIdx < meshCount) {
 				int meshIdx;
-				uint8_t* componentHp;
-
 				meshIdx = 0;
-				componentHp = targetMobile->pCraft->componentHp;
 				do {
-					if (*componentHp != 0) {
+					if (CraftExtended_GetComponentHp(targetMobile->pCraft, (uint16_t)meshIdx) != 0) {
 						MeshType meshType;
 
 						meshType = ModelMesh_GetObjectTypeMeshType(targetType, meshIdx);
@@ -2503,7 +2501,6 @@ uint16_t Player_PickTargetInSight(int playerIdx) {
 					}
 					++subsystemIdx;
 					++meshIdx;
-					++componentHp;
 				} while (subsystemIdx < meshCount);
 			}
 		}
@@ -2681,8 +2678,8 @@ void Player_CycleGunnerSeat(int playerIdx, void* forcePilotFlag) {
 				uint16_t slotIdx;
 
 				for (slotIdx = 0; slotIdx < craft->laserSlotCount; ++slotIdx) {
-					if (craft->warheadData[slotIdx].weaponType >= 4u) {
-						craft->warheadData[slotIdx].turretTargetObjIdx = -1;
+					if (CraftExtended_GetWeaponEntry(craft, slotIdx)->weaponType >= 4u) {
+						CraftExtended_GetWeaponEntry(craft, slotIdx)->turretTargetObjIdx = -1;
 					}
 				}
 			}
@@ -2944,12 +2941,12 @@ void Player_SetTarget(uint16_t newTargetObjIdx, unsigned int playerIdx) {
 					targetObjectType = (uint16_t)g_objectTable[targetObjIdx].objectType;
 					switch (targetObjectType) {
 						case OBJ_AccelRing2:
-							if (g_objectTable[targetObjIdx].mobj->pCraft->componentHp[4] != 0) {
+							if (CraftExtended_GetComponentHp(g_objectTable[targetObjIdx].mobj->pCraft, 4u) != 0) {
 								g_players[playerIdx].selectedTargetComponent = 4;
 							}
 							break;
 						case OBJ_AccelRing3:
-							if (g_objectTable[targetObjIdx].mobj->pCraft->componentHp[4] != 0) {
+							if (CraftExtended_GetComponentHp(g_objectTable[targetObjIdx].mobj->pCraft, 4u) != 0) {
 								g_players[playerIdx].selectedTargetComponent = 4;
 							}
 							break;
@@ -3065,12 +3062,12 @@ void Player_ValidateCurrentTargets(int playerIdx) {
 			for (i = 0; i < craft->laserSlotCount; ++i) {
 				ObjectRecord* turretTargetObj;
 
-				if (craft->warheadData[i].weaponType >= 4u &&
-					craft->warheadData[i].turretTargetObjIdx != -1) {
-					turretTargetObj = &g_objectTable[(uint16_t)craft->warheadData[i].turretTargetObjIdx];
+				if (CraftExtended_GetWeaponEntry(craft, i)->weaponType >= 4u &&
+					CraftExtended_GetWeaponEntry(craft, i)->turretTargetObjIdx != -1) {
+					turretTargetObj = &g_objectTable[(uint16_t)CraftExtended_GetWeaponEntry(craft, i)->turretTargetObjIdx];
 					if (turretTargetObj->objectType == OBJ_None ||
 						turretTargetObj->genusId == GENUS_Explosion) {
-						craft->warheadData[i].turretTargetObjIdx = -1;
+						CraftExtended_GetWeaponEntry(craft, i)->turretTargetObjIdx = -1;
 						g_players[playerIdx].turretAutoFireState = 0;
 					}
 				}

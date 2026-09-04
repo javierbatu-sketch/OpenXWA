@@ -13,6 +13,7 @@
 #include "xwa/flight/flight.h"
 #include "xwa/flight/mission/mission.h"
 #include "xwa/flight/object/collision.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/damage.h"
 #include "xwa/flight/object/debris.h"
 #include "xwa/flight/object/laser.h"
@@ -170,6 +171,7 @@ uint16_t Object_AllocSlotForGenus(uint16_t genusId) {
 		}
 
 		collide_ResetObjectProximityForSlot(candidateObjIdx);
+		CraftExtended_ResetCraft(g_objectTable[candidateObjIdx].mobj->pCraft);
 		return candidateObjIdx;
 	}
 
@@ -489,6 +491,7 @@ int FlightObject_SpawnEscapePodOrPilot(int sourceObjIdx) {
 	for (i = 0; i < 2; ++i) {
 		g_objectTable[objIdx].typeSpecificByte[i] = 0;
 	}
+	CraftExtended_ResetComponentArrays(craft);
 	{
 		int componentIndex;
 		int remainingComponents;
@@ -496,9 +499,9 @@ int FlightObject_SpawnEscapePodOrPilot(int sourceObjIdx) {
 		componentIndex = 0;
 		remainingComponents = 50;
 		do {
-			craft->componentState[componentIndex] = 0;
-			craft->meshRotation[componentIndex] = 0;
-			craft->componentHp[componentIndex] = 0xffu;
+			(void)CraftExtended_SetMeshComponentState(craft, (uint16_t)componentIndex, 0u);
+			(*CraftExtended_MeshRotationRef(craft, (uint16_t)(componentIndex))) = 0;
+			(*CraftExtended_ComponentHpRef(craft, (uint16_t)(componentIndex))) = 0xffu;
 			++componentIndex;
 		} while (--remainingComponents != 0);
 	}
@@ -512,7 +515,7 @@ int FlightObject_SpawnEscapePodOrPilot(int sourceObjIdx) {
 			do {
 				meshType = ModelMesh_GetObjectTypeMeshType(objectTypeId, meshIndex);
 				if (ModelMesh_IsObjectTypeMeshDamageable(objectTypeId, meshIndex)) {
-					craft->componentHp[meshIndex] = g_meshTypeComponentMaxHp[meshType];
+					(*CraftExtended_ComponentHpRef(craft, (uint16_t)(meshIndex))) = g_meshTypeComponentMaxHp[meshType];
 				}
 				++meshIndex;
 			} while (meshIndex < ModelMesh_GetObjectTypeMeshCount(objectTypeId));
@@ -703,6 +706,8 @@ void Object_CopyStatePreservingStorage(unsigned int dstObjIdx, unsigned int srcO
 	if (g_objectTable[dstObjIdx].mobj->pCraft != NULL && g_objectTable[srcObjIdx].mobj->pCraft != NULL) {
 		memcpy(g_objectTable[dstObjIdx].mobj->pCraft, g_objectTable[srcObjIdx].mobj->pCraft,
 			   sizeof(CraftData));
+		CraftExtended_Copy(g_objectTable[dstObjIdx].mobj->pCraft,
+					   g_objectTable[srcObjIdx].mobj->pCraft);
 	}
 	if (g_objectTable[dstObjIdx].mobj->pWarheadGuidance != NULL &&
 		g_objectTable[srcObjIdx].mobj->pWarheadGuidance != NULL) {
@@ -1117,9 +1122,7 @@ void Object_ClearSlotState(uint32_t objIdx) {
 	memset(g_objectTable[objIdx].mobj, 0, offsetof(MobileObject, moveVectorDirty));
 
 	if (g_objectTable[objIdx].mobj->pCraft != NULL) {
-		memset(g_objectTable[objIdx].mobj->pCraft, 0,
-			   offsetof(CraftData, warheadData[14].count) +
-				   sizeof(g_objectTable[objIdx].mobj->pCraft->warheadData[14].count));
+		CraftExtended_ClearLegacyReusablePrefix(g_objectTable[objIdx].mobj->pCraft);
 		g_objectTable[objIdx].mobj->iff = -1;
 	}
 
@@ -2111,7 +2114,7 @@ void Object_UpdateLifetimeAndMovement(void) {
 							if (tgtCraft->beamTypeId == 3 && tgtCraft->beamActive) {
 								targetIsActiveBeam = 1;
 							}
-							if (tgtComp != 0xFFFF && tgtCraft->componentHp[tgtComp] == 0) {
+							if (tgtComp != 0xFFFF && (*CraftExtended_ComponentHpRef(tgtCraft, (uint16_t)(tgtComp))) == 0) {
 								goto projectile_detonate;
 							}
 						}

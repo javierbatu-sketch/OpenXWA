@@ -1,6 +1,7 @@
 #include "xwa/render/renderer_internal.h"
 
 #include "xwa/flight/flight_display.h"
+#include "xwa/flight/object/craft_extended_state.h"
 #include "xwa/flight/object/damage.h"
 #include "xwa/flight/yard.h"
 
@@ -541,7 +542,7 @@ int16_t RenderScene_DrawObjectModel(ObjectRecord* obj) {
 				++meshOrdinal;
 				mobj = obj->mobj;
 				if (mobj && mobj->pCraft) {
-					if (mobj->pCraft->componentState[meshOrdinal - 1]) {
+					if (CraftExtended_GetMeshComponentState(mobj->pCraft, (uint16_t)(meshOrdinal - 1)) != 0u) {
 						continue;
 					}
 
@@ -555,14 +556,14 @@ int16_t RenderScene_DrawObjectModel(ObjectRecord* obj) {
 						}
 						if (bridgeIndex != -1) {
 							mobj = obj->mobj;
-							if (mobj->pCraft->meshRotation[bridgeIndex]) {
+							if ((*CraftExtended_MeshRotationRef(mobj->pCraft, (uint16_t)(bridgeIndex)))) {
 								memcpy(&savedMesh, &mesh, sizeof(savedMesh));
 								saveMeshForBwing = 1;
 								turretAxisAngle[0] = 0.0f;
 								turretAxisAngle[1] = -1.0f;
 								turretAxisAngle[2] = 0.0f;
 								turretAxisAngle[3] =
-									mobj->pCraft->meshRotation[bridgeIndex] * g_meshRotationToRadians;
+									(*CraftExtended_MeshRotationRef(mobj->pCraft, (uint16_t)(bridgeIndex))) * g_meshRotationToRadians;
 								Math3D_BuildAxisAngleMatrix(&out, turretAxisAngle);
 								Math3D_MulMatrix3x3((Matrix3x3*)mesh.orient, &out);
 								Math3D_RotateVec3(&mesh.pos, &out);
@@ -620,11 +621,11 @@ int16_t RenderScene_DrawObjectModel(ObjectRecord* obj) {
 													g_turretRotationToRadians);
 						} else {
 							mesh.rotAngle =
-								obj->mobj->pCraft->meshRotation[meshOrdinal - 1] * g_meshRotationToRadians;
+								(*CraftExtended_MeshRotationRef(obj->mobj->pCraft, (uint16_t)(meshOrdinal - 1))) * g_meshRotationToRadians;
 						}
 					} else {
 						mesh.rotAngle =
-							obj->mobj->pCraft->meshRotation[meshOrdinal - 1] * g_meshRotationToRadians;
+							(*CraftExtended_MeshRotationRef(obj->mobj->pCraft, (uint16_t)(meshOrdinal - 1))) * g_meshRotationToRadians;
 					}
 				}
 			}
@@ -851,7 +852,7 @@ int RenderScene_DrawObjectModelHardware(ObjectRecord* obj) {
 			++meshOrdinal;
 			mobj = obj->mobj;
 			if (mobj && mobj->pCraft) {
-				if (mobj->pCraft->componentState[meshOrdinal - 1]) {
+				if (CraftExtended_GetMeshComponentState(mobj->pCraft, (uint16_t)(meshOrdinal - 1)) != 0u) {
 					continue;
 				}
 
@@ -865,13 +866,13 @@ int RenderScene_DrawObjectModelHardware(ObjectRecord* obj) {
 					}
 					if (bridgeIndex != -1) {
 						mobj = obj->mobj;
-						if (mobj->pCraft->meshRotation[bridgeIndex]) {
+						if ((*CraftExtended_MeshRotationRef(mobj->pCraft, (uint16_t)(bridgeIndex)))) {
 							memcpy(&savedMesh, &mesh, sizeof(savedMesh));
 							saveMeshForBwing = 1;
 							axisAngle[0] = 0.0f;
 							axisAngle[1] = -1.0f;
 							axisAngle[2] = 0.0f;
-							axisAngle[3] = mobj->pCraft->meshRotation[bridgeIndex] * g_meshRotationToRadians;
+							axisAngle[3] = (*CraftExtended_MeshRotationRef(mobj->pCraft, (uint16_t)(bridgeIndex))) * g_meshRotationToRadians;
 							Math3D_BuildAxisAngleMatrix(&out, axisAngle);
 							Math3D_MulMatrix3x3((Matrix3x3*)mesh.orient, &out);
 							Math3D_RotateVec3(&mesh.pos, &out);
@@ -908,7 +909,7 @@ int RenderScene_DrawObjectModelHardware(ObjectRecord* obj) {
 					}
 				} else {
 					mesh.rotAngle =
-						obj->mobj->pCraft->meshRotation[meshOrdinal - 1] * g_meshRotationToRadians;
+						(*CraftExtended_MeshRotationRef(obj->mobj->pCraft, (uint16_t)(meshOrdinal - 1))) * g_meshRotationToRadians;
 				}
 			}
 		}
