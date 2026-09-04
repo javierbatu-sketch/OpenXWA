@@ -33,7 +33,9 @@
 #include "xwa/util/memory.h"
 #include "xwa_runtime/snapshot/snapshot.h"
 
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef XWA_MODERN
@@ -3597,6 +3599,111 @@ void FeDiskIo_InitResources(void) {
 	g_unusedFlightRenderColorByte = g_flightColorEscapeBypassChar;
 }
 
+static int FeDiskIo_StringEqualsIgnoreCase(const char* lhs, const char* rhs) {
+	while (*lhs != '\0' && *rhs != '\0') {
+		if (tolower((unsigned char)*lhs) != tolower((unsigned char)*rhs)) {
+			return 0;
+		}
+		++lhs;
+		++rhs;
+	}
+	return *lhs == *rhs;
+}
+
+static char* FeDiskIo_TrimIniText(char* text) {
+	char* end;
+
+	while (isspace((unsigned char)*text)) {
+		++text;
+	}
+	end = text + strlen(text);
+	while (end > text && isspace((unsigned char)end[-1])) {
+		--end;
+	}
+	*end = '\0';
+	return text;
+}
+
+typedef struct FeDiskIoCockpitPovValues {
+	int values[3];
+	uint8_t presentMask;
+} FeDiskIoCockpitPovValues;
+
+/* XWAU/CockpitLook authored POV. Active [CockpitPov] wins; [CockpitPov;]
+ * is the shipped compatibility reference used by replacement cockpit OPTs. */
+static void FeDiskIo_ApplyCockpitPov(const char* modelName, uint16_t modelIndex) {
+	char path[256];
+	char line[512];
+	XwaFile* stream;
+	FeDiskIoCockpitPovValues active = { { 0, 0, 0 }, 0 };
+	FeDiskIoCockpitPovValues reference = { { 0, 0, 0 }, 0 };
+	FeDiskIoCockpitPovValues* current = NULL;
+
+	if (!modelName || modelName[0] == '\0' || modelIndex >= XWA_MODEL_DEF_COUNT) {
+		return;
+	}
+	snprintf(path, sizeof path, "FlightModels\\%s.ini", modelName);
+	stream = File_Open(AERON_VFS_ROOT_ASSET, path, "rt");
+	if (!stream) {
+		return;
+	}
+
+	while (File_ReadLine(stream, line, sizeof line)) {
+		char* text = FeDiskIo_TrimIniText(line);
+		if (*text == '[') {
+			char* close = strchr(text + 1, ']');
+			current = NULL;
+			if (close) {
+				*close = '\0';
+				text = FeDiskIo_TrimIniText(text + 1);
+				if (FeDiskIo_StringEqualsIgnoreCase(text, "CockpitPov")) {
+					current = &active;
+				} else if (FeDiskIo_StringEqualsIgnoreCase(text, "CockpitPov;") ||
+						   FeDiskIo_StringEqualsIgnoreCase(text, ";CockpitPov")) {
+					current = &reference;
+				}
+			}
+			continue;
+		}
+		if (!current || *text == '\0' || *text == ';' || (text[0] == '/' && text[1] == '/')) {
+			continue;
+		}
+
+		char* equals = strchr(text, '=');
+		if (!equals) {
+			continue;
+		}
+		*equals = '\0';
+		char* key = FeDiskIo_TrimIniText(text);
+		char* valueText = FeDiskIo_TrimIniText(equals + 1);
+		char* end = NULL;
+		long value = strtol(valueText, &end, 10);
+		if (end == valueText || value < INT16_MIN || value > INT16_MAX) {
+			continue;
+		}
+		for (int axis = 0; axis < 3; ++axis) {
+			static const char* const keys[3] = { "CockpitPovX", "CockpitPovY", "CockpitPovZ" };
+			if (FeDiskIo_StringEqualsIgnoreCase(key, keys[axis])) {
+				current->values[axis] = (int)value;
+				current->presentMask |= (uint8_t)(1u << axis);
+				break;
+			}
+		}
+	}
+	File_Close(stream);
+
+	const FeDiskIoCockpitPovValues* selected = active.presentMask == 7 ? &active :
+												 reference.presentMask == 7 ? &reference : NULL;
+	if (!selected) {
+		return;
+	}
+	g_modelDefs[modelIndex].primaryHardpointX = (int16_t)selected->values[0];
+	g_modelDefs[modelIndex].primaryHardpointY = (int16_t)selected->values[1];
+	g_modelDefs[modelIndex].primaryHardpointZ = (int16_t)selected->values[2];
+	Aeron_LogInfo("xwa.assets", "Cockpit POV '%s': %d,%d,%d (%s)", modelName, selected->values[0],
+				  selected->values[1], selected->values[2], selected == &active ? "configured" : "reference");
+}
+
 static __inline int FlightModel_IsTieCockpitObjectType(uint16_t objectType) {
 	return objectType == OBJ_TIEFighter || objectType == OBJ_TIEInterceptor ||
 		   objectType == OBJ_TIEAdvanced || objectType == OBJ_TIEDefender || objectType == OBJ_TIEBizarro ||
@@ -3706,6 +3813,7 @@ void FeDiskIo_LoadCockpitModel(void) {
 
 		if (modelHandle != 0) {
 			g_cockpitModel = modelHandle;
+			FeDiskIo_ApplyCockpitPov(modelName, (uint16_t)GetModelIndexFromType((ObjectTypeId)objectType));
 			g_players[g_localPlayer].cockpitLookAvailable = 1;
 			FeDiskIo_LoadCockpitGlowEmitters(objectType);
 			if (FlightModel_IsTieCockpitObjectType(objectType)) {

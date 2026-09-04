@@ -1484,7 +1484,9 @@ static __inline int D3DInfo_ComputeMipLevelCount(const OptTextureData* textureDa
 	int minDimension;
 
 	mipLevelCount = 1;
-	if (textureData->width * textureData->height == textureData->textureSize) {
+	if (textureData->width > 0 && textureData->height > 0 && textureData->textureSize > 0 &&
+		(uint64_t)(uint32_t)textureData->width * (uint64_t)(uint32_t)textureData->height ==
+			(uint64_t)(uint32_t)textureData->textureSize) {
 		minDimension = textureData->width;
 		if (textureData->width >= textureData->height) {
 			minDimension = textureData->height;
@@ -1555,11 +1557,36 @@ static __inline D3DInfoNode* D3DInfo_AllocOrReuse(int textureId) {
 	return node;
 }
 
-/* Scratch buffer holding the extracted lightmap plane for the whole mip chain
- * (256x256 base + mips = 87360 texels). Reused per texture; consumed inside
- * D3DInfo_CreateFromOptTexture before the next call. */
-// GLOBAL: XWA 0x64D1B0
-uint8_t g_d3dLightmapScratchPixels[87360];
+static int D3DInfo_ComputeMipTexelCount(int width, int height, int mipLevelCount,
+									   size_t* outTexelCount) {
+	size_t texelCount;
+	int mipLevel;
+
+	if (width <= 0 || height <= 0 || mipLevelCount <= 0 || mipLevelCount > 6 || outTexelCount == NULL) {
+		return 0;
+	}
+
+	texelCount = 0;
+	for (mipLevel = 0; mipLevel < mipLevelCount; ++mipLevel) {
+		size_t mipWidth = (size_t)width;
+		size_t mipHeight = (size_t)height;
+		size_t mipTexelCount;
+
+		if (mipWidth > SIZE_MAX / mipHeight) {
+			return 0;
+		}
+		mipTexelCount = mipWidth * mipHeight;
+		if (texelCount > SIZE_MAX - mipTexelCount) {
+			return 0;
+		}
+		texelCount += mipTexelCount;
+		width >>= 1;
+		height >>= 1;
+	}
+
+	*outTexelCount = texelCount;
+	return 1;
+}
 
 // FUNCTION: XWA 0x4418A0
 D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptTextureData* textureData,
@@ -1573,6 +1600,8 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 	int mipLevel;
 	int lightmapRemapIndex;
 	int lightmapEnabled;
+	uint8_t* lightmapScratchPixels;
+	size_t mipTexelCount;
 	Std3DTextureFormatMode fmt;
 	Std3DVBuffer baseVBuffers[6];
 	Std3DVBuffer lightmapVBuffers[6];
@@ -1596,8 +1625,24 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 		mipLevelCount = D3DInfo_ComputeMipLevelCount(sourceTexture);
 		lightmapEnabled = brightPalette[256];
 		lightmapRemapIndex = palette[256];
-		if (lightmapRemapIndex < 0) {
-			DebugPrintf("NEGATIVE REMAP INDEX");
+		lightmapScratchPixels = NULL;
+		mipTexelCount = 0;
+		if (!D3DInfo_ComputeMipTexelCount(width, height, mipLevelCount, &mipTexelCount)) {
+			Aeron_LogError("xwa.assets", "Invalid OPT texture dimensions %dx%d with %d mip levels", width,
+						  height, mipLevelCount);
+			return d3dInfo;
+		}
+		if (lightmapEnabled != 0 && lightmapRemapIndex >= 4096) {
+			Aeron_LogError("xwa.assets", "Invalid OPT lightmap palette index %d", lightmapRemapIndex);
+			lightmapEnabled = 0;
+		}
+		if (lightmapEnabled != 0 && textureName != NULL && textureName[0] != '_') {
+			lightmapScratchPixels = (uint8_t*)malloc(mipTexelCount);
+			if (lightmapScratchPixels == NULL) {
+				Aeron_LogWarn("xwa.assets", "Could not allocate %zu-byte OPT lightmap for '%s'",
+							  mipTexelCount, textureName);
+				lightmapEnabled = 0;
+			}
 		}
 
 		{
@@ -1621,7 +1666,7 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 			}
 
 			{
-				int offset = 0;
+				size_t offset = 0;
 
 				lightmapCount = 0;
 				lightmapStopped = 0;
@@ -1643,9 +1688,9 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 					if (lightmapEnabled != 0 && textureName != NULL && textureName[0] != '_' &&
 						!lightmapStopped) {
 						const uint8_t* srcPixel = (const uint8_t*)pixelData + offset;
-						uint8_t* lightmapPixel = &g_d3dLightmapScratchPixels[offset];
+						uint8_t* lightmapPixel = lightmapScratchPixels + offset;
 						int hasLightmap = 0;
-						int remainingPixels = width * height;
+						size_t remainingPixels = (size_t)width * (size_t)height;
 
 						while (remainingPixels != 0) {
 							uint8_t index = *srcPixel++;
@@ -1665,7 +1710,7 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 						if (!hasLightmap) {
 							lightmapStopped = 1;
 						} else {
-							lightmapVBuffers[mipLevel].pixels = &g_d3dLightmapScratchPixels[offset];
+							lightmapVBuffers[mipLevel].pixels = lightmapScratchPixels + offset;
 							lightmapVBuffers[mipLevel].storageType = 0;
 							lightmapVBuffers[mipLevel].raster.width = (uint32_t)width;
 							lightmapVBuffers[mipLevel].raster.height = (uint32_t)height;
@@ -1679,7 +1724,7 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 						}
 					}
 
-					offset += width * height;
+					offset += (size_t)width * (size_t)height;
 					width >>= 1;
 					height >>= 1;
 				}
@@ -1729,6 +1774,7 @@ D3DInfoNode* D3DInfo_CreateFromOptTexture(char* textureName, int textureId, OptT
 			}
 			d3dInfo->hasAlphaData = (uint8_t)(uintptr_t)alphaData;
 			d3dInfo->textureData = *textureData;
+			free(lightmapScratchPixels);
 			return d3dInfo;
 		}
 	}
@@ -1750,10 +1796,43 @@ int OptModel_UploadTextureNodesRecursive(OptNode* node, intptr_t* textureIds, in
 		void* alphaData;
 		uint16_t* palette;
 		uint16_t* brightPalette;
+		int mipLevelCount;
+		size_t mipTexelCount;
+		uint32_t textureDataAddress;
 
-		(void)maxTextureIds;
-		textureData = (OptTextureData*)node->param2;
-		palette = (uint16_t*)OptModel_AddressToPtr(g_optTextureUploadNative, textureData->paletteAddress, 2);
+		if (textureCount >= maxTextureIds) {
+			Aeron_LogError("xwa.assets", "OPT texture count exceeds allocated capacity %d", maxTextureIds);
+			return textureCount;
+		}
+		textureDataAddress = ((NativeOptNode*)node)->param2Address;
+		textureData = (OptTextureData*)OptModel_AddressToPtr(g_optTextureUploadNative, textureDataAddress,
+													   sizeof(*textureData));
+		if (textureData == NULL || textureData != node->param2) {
+			Aeron_LogError("xwa.assets", "Invalid OPT texture header address 0x%08x", textureDataAddress);
+			textureIds[textureCount] = 0;
+			return textureCount + 1;
+		}
+		mipLevelCount = D3DInfo_ComputeMipLevelCount(textureData);
+		if (!D3DInfo_ComputeMipTexelCount(textureData->width, textureData->height, mipLevelCount,
+												 &mipTexelCount) ||
+			mipTexelCount > UINT32_MAX - sizeof(*textureData) ||
+			(textureData->textureSize > 0 &&
+			 (uint64_t)(uint32_t)textureData->width * (uint64_t)(uint32_t)textureData->height ==
+				 (uint64_t)(uint32_t)textureData->textureSize &&
+			 (textureData->dataSize < 0 || (size_t)textureData->dataSize < mipTexelCount))) {
+			Aeron_LogError("xwa.assets", "Invalid OPT texture dimensions %dx%d", textureData->width,
+						  textureData->height);
+			textureIds[textureCount] = 0;
+			return textureCount + 1;
+		}
+		if (OptModel_AddressToPtr(g_optTextureUploadNative, textureDataAddress,
+									  (uint32_t)sizeof(*textureData) + (uint32_t)mipTexelCount) != textureData) {
+			Aeron_LogError("xwa.assets", "Invalid OPT texture payload address 0x%08x size %zu",
+						  textureDataAddress, mipTexelCount);
+			textureIds[textureCount] = 0;
+			return textureCount + 1;
+		}
+		palette = (uint16_t*)OptModel_AddressToPtr(g_optTextureUploadNative, textureData->paletteAddress, 0x2000);
 		if (palette == NULL) {
 			Aeron_LogError("xwa.assets", "Invalid OPT texture palette address 0x%08x",
 						   textureData->paletteAddress);
@@ -1761,7 +1840,18 @@ int OptModel_UploadTextureNodesRecursive(OptNode* node, intptr_t* textureIds, in
 			return textureCount + 1;
 		}
 		brightPalette = palette + 2048;
-		alphaData = node->childCount != 0 ? node->pChildren[0]->param2 : NULL;
+		alphaData = node->childCount != 0 && node->pChildren[0] != NULL ? node->pChildren[0]->param2 : NULL;
+		if (alphaData != NULL) {
+			NativeOptNode* alphaNode = (NativeOptNode*)node->pChildren[0];
+
+			if (alphaNode->node.param1 < 0 || (size_t)alphaNode->node.param1 < mipTexelCount ||
+				OptModel_AddressToPtr(g_optTextureUploadNative, alphaNode->param2Address,
+									  (uint32_t)mipTexelCount) != alphaData) {
+				Aeron_LogError("xwa.assets", "Invalid OPT texture alpha address 0x%08x size %zu",
+							  alphaNode->param2Address, mipTexelCount);
+				alphaData = NULL;
+			}
+		}
 		textureIds[textureCount] = (intptr_t)D3DInfo_CreateFromOptTexture(
 			node->pName, (int)node->param1, textureData, textureData + 1, alphaData, brightPalette, palette);
 		return textureCount + 1;
@@ -1774,24 +1864,63 @@ int OptModel_UploadTextureNodesRecursive(OptNode* node, intptr_t* textureIds, in
 	return textureCount;
 }
 
+static int OptModel_CountTextureNodesRecursive(const OptNode* node) {
+	int childIndex;
+	int textureCount;
+
+	if (node == NULL) {
+		return 0;
+	}
+	if (node->nodeType == OPT_TEXTURE) {
+		return 1;
+	}
+
+	textureCount = 0;
+	for (childIndex = 0; childIndex < node->childCount; ++childIndex) {
+		int childTextureCount = OptModel_CountTextureNodesRecursive(node->pChildren[childIndex]);
+
+		if (childTextureCount < 0 || textureCount > INT32_MAX - childTextureCount) {
+			return -1;
+		}
+		textureCount += childTextureCount;
+	}
+	return textureCount;
+}
+
 // FUNCTION: XWA 0x4CD030
 int OptModel_BuildHardwareData(OptimizedPolyObject* model, int modelSize) {
 	NativeOptimizedPolyObject* native;
 	int textureIndex;
+	int textureCapacity;
 	int rootIndex;
-	intptr_t textureIds[200];
+	intptr_t* textureIds;
 
 	if (model == NULL) {
 		return modelSize;
 	}
 
 	native = OptModel_AsNative(model);
+	textureCapacity = 0;
+	for (rootIndex = 0; rootIndex < model->rootNodeCount; ++rootIndex) {
+		int rootTextureCount = OptModel_CountTextureNodesRecursive(model->rootNodes[rootIndex]);
+
+		if (rootTextureCount < 0 || textureCapacity > INT32_MAX - rootTextureCount) {
+			Aeron_LogError("xwa.assets", "OPT texture count overflow");
+			return modelSize;
+		}
+		textureCapacity += rootTextureCount;
+	}
+	textureIds = textureCapacity != 0 ? (intptr_t*)calloc((size_t)textureCapacity, sizeof(*textureIds)) : NULL;
+	if (textureCapacity != 0 && textureIds == NULL) {
+		Aeron_LogError("xwa.assets", "Could not allocate %d OPT texture references", textureCapacity);
+		return modelSize;
+	}
 	g_optTextureUploadNative = native;
 	std3D_FreePalettes();
 	textureIndex = 0;
 	for (rootIndex = 0; rootIndex < model->rootNodeCount; ++rootIndex) {
-		textureIndex =
-			OptModel_UploadTextureNodesRecursive(model->rootNodes[rootIndex], textureIds, textureIndex, 200);
+		textureIndex = OptModel_UploadTextureNodesRecursive(model->rootNodes[rootIndex], textureIds, textureIndex,
+														 textureCapacity);
 	}
 	std3D_FreePalettes();
 	textureIndex = 0;
@@ -1803,6 +1932,7 @@ int OptModel_BuildHardwareData(OptimizedPolyObject* model, int modelSize) {
 		OptModel_ResolveTextureRefsRecursive(model->rootNodes[rootIndex], model, &modelSize);
 	}
 	g_optTextureUploadNative = NULL;
+	free(textureIds);
 	return modelSize;
 }
 
